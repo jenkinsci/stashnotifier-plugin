@@ -1,0 +1,11 @@
+syntax: glob
+*.class
+.DS_Store
+.classpath
+.project
+.checkstyle
+.settings
+build.properties
+target/*
+bin/*
+**/Thumbs.db
