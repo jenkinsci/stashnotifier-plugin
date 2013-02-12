@@ -13,11 +13,8 @@ import net.sf.json.JSONObject;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
@@ -28,9 +25,9 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.QueryParameter;
 
 import javax.servlet.ServletException;
-import javax.servlet.jsp.jstl.sql.ResultSupport;
 
 import java.io.IOException;
+import java.net.URL;
 
 import jenkins.model.Jenkins;
 
@@ -53,23 +50,42 @@ import jenkins.model.Jenkins;
  */
 public class HelloWorldBuilder extends Builder {
 
-	private final String name;
+	private final String stashServerBaseUrl;
+	private final String stashUserName;
+	private final String stashUserPassword;
 
 	// Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
 	@DataBoundConstructor
-		public HelloWorldBuilder(String name) {
-			this.name = name;
+		public HelloWorldBuilder(
+				String stashServerBaseUrl,
+				String stashUserName,
+				String stashUserPassword) {
+			this.stashServerBaseUrl = stashServerBaseUrl;
+			this.stashUserName = stashUserName;
+			this.stashUserPassword = stashUserPassword;
 		}
 
-	/**
-	 * We'll use this from the <tt>config.jelly</tt>.
-	 */
-	public String getName() {
-		return name;
+
+	public String getStashServerBaseUrl() {
+		return stashServerBaseUrl;
+	}
+
+	public String getStashUserName() {
+		return stashUserName;
+	}
+
+	public String getStashUserPassword() {
+		return stashUserPassword;
 	}
 
 	@Override
-		public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
+		public boolean perform(
+				AbstractBuild build, 
+				Launcher launcher, 
+				BuildListener listener) {
+		
+			listener.getLogger().println("BaseURL: " + stashServerBaseUrl);
+		
 			if (Jenkins.getInstance().getRootUrl() == null) {
 				listener.getLogger().println("Cannot notify Stash! (Jenkins Root URL not configured)");
 				return true;
@@ -103,8 +119,9 @@ public class HelloWorldBuilder extends Builder {
 			GitChangeSet changeSet) throws Exception {
 		
 		HttpResponse res = null;
-		HttpPost req = new HttpPost("http://si-nvoll.si.de.bosch.com:7990/rest/build-status/1.0/commits/" + changeSet.getCommitId());
-		req.addHeader(BasicScheme.authenticate(new UsernamePasswordCredentials("jenkins", "bios-rules5"), "UTF-8", false));
+		// HttpPost req = new HttpPost("http://si-nvoll.si.de.bosch.com:7990/rest/build-status/1.0/commits/" + changeSet.getCommitId());
+		HttpPost req = new HttpPost(stashServerBaseUrl + "/" + "/rest/build-status/1.0/commits/" + changeSet.getCommitId());
+		req.addHeader(BasicScheme.authenticate(new UsernamePasswordCredentials(stashUserName, stashUserPassword), "UTF-8", false));
 		req.addHeader("Content-type", "application/json");
 		
 		
@@ -186,25 +203,38 @@ public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 	 */
 	private boolean useFrench;
 
-	/**
-	 * Performs on-the-fly validation of the form field 'name'.
-	 *
-	 * @param value
-	 *      This parameter receives the value that the user has typed.
-	 * @return
-	 *      Indicates the outcome of the validation. This is sent to the browser.
-	 */
-	public FormValidation doCheckName(@QueryParameter String value)
+	public FormValidation doCheckStashServerBaseUrl(@QueryParameter String value) 
 		throws IOException, ServletException {
-			if (value.length() == 0)
-				return FormValidation.error("Please set a name");
-			if (value.length() < 4)
-				return FormValidation.warning("Isn't the name too short?");
+		
+		try {
+			new URL(value);
+			return FormValidation.ok();
+		} catch (Exception e) {
+			return FormValidation.error("Please specify a valid URL!");
+		}
+	}
+	
+	public FormValidation doCheckStashUserName(@QueryParameter String value)
+		throws IOException, ServletException {
+		
+		if (value.trim().equals("")) {
+			return FormValidation.error("Please specify a user name!");
+		} else {
 			return FormValidation.ok();
 		}
-
+	}
+	
+	public FormValidation doCheckStashUserPassword(@QueryParameter String value) 
+		throws IOException, ServletException {
+		
+		if (value.trim().equals("")) {
+			return FormValidation.warning("You should use a non-empty password!");
+		} else {
+			return FormValidation.ok();
+		}
+	}
+	
 	public boolean isApplicable(Class<? extends AbstractProject> aClass) {
-		// Indicates that this builder can be used with all kinds of project types 
 		return true;
 	}
 
@@ -212,11 +242,14 @@ public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 	 * This human readable name is used in the configuration screen.
 	 */
 	public String getDisplayName() {
-		return "Say hello world";
+		return "Notify Stash Instance";
 	}
 
 	@Override
-		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+		public boolean configure(
+				StaplerRequest req, 
+				JSONObject formData) throws FormException {
+		
 			// To persist global configuration information,
 			// set that to properties and call save().
 			useFrench = formData.getBoolean("useFrench");
