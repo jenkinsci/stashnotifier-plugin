@@ -10,4 +10,6 @@ This plugin uses the
 [Atlassian Stash Build status REST API](https://developer.atlassian.com/static/rest/stash/latest/stash-build-integration-rest.html)
 which was introduced with Stash 2.1. 
 
+Note: This plugin requires Jenkins `1.466` or higher.
+
 
