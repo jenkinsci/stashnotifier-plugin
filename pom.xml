@@ -7,12 +7,15 @@
 	</parent>
 
 	<groupId>org.jenkins-ci.plugins</groupId>
-	<artifactId>stashBuildReporter</artifactId>
+	<artifactId>stashNotifier</artifactId>
 	<version>1.0-SNAPSHOT</version>
+	<name>Stash Notifier</name>
 	<packaging>hpi</packaging>
+	
+	<properties>
+    	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  	</properties>
 
-	<!-- get every artifact through repo.jenkins-ci.org, which proxies all 
-	  the artifacts that we need -->
 	<repositories>
 		<repository>
 			<id>repo.jenkins-ci.org</id>
