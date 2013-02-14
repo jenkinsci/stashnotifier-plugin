@@ -28,14 +28,15 @@ import org.kohsuke.stapler.QueryParameter;
 import javax.servlet.ServletException;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.URL;
 
 import jenkins.model.Jenkins;
 
 /**
- * Notifies a configured <a href="http://www.atlassian.com/software/stash/overview">Atlassian Stash</a> instance of build results through
- * the Atlassian <a href="https://developer.atlassian.com/static/rest/stash/latest/stash-build-integration-rest.html">Stash Build REST API</a>. 
- * 
+ * Notifies a configured Atlassian Stash server instance of build results
+ * through the Stash build API.
+ * <p>
  * Only basic authentication is supported at the moment.
  * 
  * @author	Georg Gruetter
@@ -44,8 +45,13 @@ public class Notifier extends Builder {
 	
 	// attributes --------------------------------------------------------------
 
+	/** base url of Stash server, e. g. <tt>http://localhost:7990</tt>. */
 	private final String stashServerBaseUrl;
+	
+	/** name of Stash user for authentication with Stash build API. */
 	private final String stashUserName;
+	
+	/** password of Stash user for authentication with Stash build API. */
 	private final String stashUserPassword;
 	
 	// public members ----------------------------------------------------------
@@ -78,35 +84,60 @@ public class Notifier extends Builder {
 			AbstractBuild build, 
 			Launcher launcher, 
 			BuildListener listener) {
+		
+		PrintStream logger = listener.getLogger();
 
+		// exit if Jenkins root URL is not configured. Stash build API 
+		// requires valid link to build in CI system.
 		if (Jenkins.getInstance().getRootUrl() == null) {
-			listener.getLogger().println(
+			logger.println(
 					"Cannot notify Stash! (Jenkins Root URL not configured)");
 			return true;
 		}
 
+		
+		// notify Stash instance for each item in the change set of this
+		// build if the item is a {@link GitChangeSet} instance. Other
+		// types of change sets are ignored.
+		
 		HttpClient client = new DefaultHttpClient();
+		NotificationResult result;
+		GitChangeSet gitChangeSet;
+		
 		try {
-			for (Object item: build.getChangeSet().getItems()) {
-				if (item instanceof GitChangeSet) {
-					notifyStash(client, build, listener, (GitChangeSet) item);
+			for (Object changeSet: build.getChangeSet().getItems()) {
+				if (changeSet instanceof GitChangeSet) {
+					gitChangeSet = (GitChangeSet) changeSet;
+					result = notifyStash(client, build, listener, gitChangeSet);
+					if (result.indicatesSuccess) {
+						logger.println(
+							"Notified Stash for commit with id " 
+									+ gitChangeSet.getCommitId());
+					} else {
+						logger.println(
+						"Failed to notify Stash for commit "
+								+ gitChangeSet.getCommitId() 
+								+ " (" + result.message + ")");
+					}
 				} else {
-					listener.getLogger().println(
-							"-> Change: not a git changeset!");
+					logger.println("ignored change set (not a git changeset)");
 				}
 			}
 		} catch (Exception e) {
-			listener.getLogger().println(
-					"Caught exception while notifying Stash: " + e.getMessage());
+			logger.println(
+					"Caught exception while notifying Stash: " 
+					+ e.getMessage());
 		} finally {
 			client.getConnectionManager().shutdown();
 		}
+		
 		return true;
 	}
 
 
 	@Extension 
-	public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
+	public static final class DescriptorImpl 
+		extends BuildStepDescriptor<Builder> {
 
 		public FormValidation doCheckStashServerBaseUrl(
 					@QueryParameter String value) 
@@ -147,9 +178,6 @@ public class Notifier extends Builder {
 			return true;
 		}
 
-		/**
-		 * This human readable name is used in the configuration screen.
-		 */
 		public String getDisplayName() {
 			return "Notify Stash Instance";
 		}
@@ -166,13 +194,46 @@ public class Notifier extends Builder {
 	
 	// non-public members ------------------------------------------------------
 	
+	/**
+	 * Notifies the configured Stash server by POSTing the build results 
+	 * to the Stash build API.
+	 * 
+	 * @param client		the HTTP client with which to execute the request
+	 * @param build			the build to notify Stash of
+	 * @param listener		the build listener for logging
+	 * @param changeSet		the built change set
+	 */
 	@SuppressWarnings("rawtypes")
-	private void notifyStash(
-			HttpClient client, 
-			AbstractBuild build, 
-			BuildListener listener, 
-			GitChangeSet changeSet) throws Exception {
+	private NotificationResult notifyStash(
+			final HttpClient client, 
+			final AbstractBuild build, 
+			final BuildListener listener, 
+			final GitChangeSet changeSet) throws Exception {
+		
+		HttpPost req = createRequest(build, changeSet);
+		HttpResponse res = client.execute(req);
+		if (res.getStatusLine().getStatusCode() != 204) {
+			return NotificationResult.newFailure(
+					EntityUtils.toString(res.getEntity()));
+		} else {
+			return NotificationResult.newSuccess();
+		}
+	}
+	
 
+	/**
+	 * Returns the HTTP POST request ready to be sent to the Stash build API for
+	 * the given build and change set. 
+	 * 
+	 * @param build			the build to notify Stash of
+	 * @param changeSet		the change set that was built
+	 * @return				the HTTP POST request to the Stash build API
+	 */
+	@SuppressWarnings("rawtypes")
+	private HttpPost createRequest(
+			final AbstractBuild build,
+			final GitChangeSet changeSet) throws Exception {
+		
 		HttpPost req = new HttpPost(
 				stashServerBaseUrl  
 				+ "/rest/build-status/1.0/commits/" 
@@ -187,26 +248,20 @@ public class Notifier extends Builder {
 		
 		req.addHeader("Content-type", "application/json");		
 		req.setEntity(newStashBuildNotificationEntity(build));
-
-		HttpResponse res = client.execute(req);
-		if (res.getStatusLine().getStatusCode() != 204) {
-			listener.getLogger().println(
-					"Stash notification failed for commit "
-							+ changeSet.getCommitId() 
-							+ " (" + changeSet.getComment() + ")");				
-
-			HttpEntity resEntity = res.getEntity();
-			listener.getLogger().println(EntityUtils.toString(resEntity));
-		} else {
-			listener.getLogger().println(
-					"Successfully notified Stash for commit with id " 
-							+ changeSet.getCommitId());
-		}
+				
+		return req;
 	}
 	
+	/**
+	 * Returns the HTTP POST entity body with the JSON representation of the
+	 * builds result to be sent to the Stash build API.
+	 * 
+	 * @param build			the build to notify Stash of
+	 * @return				HTTP entity body for POST to Stash build API
+	 */
 	@SuppressWarnings("rawtypes")
-	private HttpEntity newStashBuildNotificationEntity(AbstractBuild build) 
-			throws Exception {
+	private HttpEntity newStashBuildNotificationEntity(
+			final AbstractBuild build) throws Exception {
 		
 		StringBuilder builder = new StringBuilder();
 		builder.append("{\"state\":\"");
@@ -231,6 +286,5 @@ public class Notifier extends Builder {
 		builder.append("\"}");
 		return new StringEntity(builder.toString());
 	}
-
 }
 
