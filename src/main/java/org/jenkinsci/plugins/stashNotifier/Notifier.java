@@ -108,7 +108,7 @@ public class Notifier extends Builder {
 			for (Object changeSet: build.getChangeSet().getItems()) {
 				if (changeSet instanceof GitChangeSet) {
 					gitChangeSet = (GitChangeSet) changeSet;
-					result = notifyStash(client, build, listener, gitChangeSet);
+					result = notifyStash(build, gitChangeSet, client, listener);
 					if (result.indicatesSuccess) {
 						logger.println(
 							"Notified Stash for commit with id " 
@@ -198,17 +198,17 @@ public class Notifier extends Builder {
 	 * Notifies the configured Stash server by POSTing the build results 
 	 * to the Stash build API.
 	 * 
-	 * @param client		the HTTP client with which to execute the request
 	 * @param build			the build to notify Stash of
-	 * @param listener		the build listener for logging
 	 * @param changeSet		the built change set
+	 * @param client		the HTTP client with which to execute the request
+	 * @param listener		the build listener for logging
 	 */
 	@SuppressWarnings("rawtypes")
 	private NotificationResult notifyStash(
+			final AbstractBuild build,
+			final GitChangeSet changeSet,
 			final HttpClient client, 
-			final AbstractBuild build, 
-			final BuildListener listener, 
-			final GitChangeSet changeSet) throws Exception {
+			final BuildListener listener) throws Exception {
 		
 		HttpPost req = createRequest(build, changeSet);
 		HttpResponse res = client.execute(req);
@@ -220,7 +220,6 @@ public class Notifier extends Builder {
 		}
 	}
 	
-
 	/**
 	 * Returns the HTTP POST request ready to be sent to the Stash build API for
 	 * the given build and change set. 
@@ -274,6 +273,9 @@ public class Notifier extends Builder {
 		}
 
 		builder.append("\", \"key\":\"");
+		builder.append(build.getProject().getName());
+		
+		builder.append("\", \"name\":\"");
 		builder.append(build.getFullDisplayName());
 
 		builder.append("\", \"description\":\"built by Jenkins @ ");
@@ -284,6 +286,7 @@ public class Notifier extends Builder {
 		builder.append(build.getUrl());
 
 		builder.append("\"}");
+		
 		return new StringEntity(builder.toString());
 	}
 }
