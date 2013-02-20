@@ -10,8 +10,8 @@ Requirements
 ============
 
 * **[Stash][] 2.1** or newer. This plugin uses the Atlassian 
-[Stash Build status REST API][] which was introduced with Stash 2.1. 
-* *Jenkins 1.466** or newer
+[Stash Build REST API][] which was introduced with Stash 2.1. 
+* **Jenkins 1.466** or newer
 
 Usage
 =====
@@ -24,8 +24,8 @@ configuration.
 2. Enter the Stash base URL, e. g. <tt>http://localhost:7990</tt> or 
 <tt>http://my.company/stash</tt>. If in doubt, go to your local Stash 
 server and check the URL in the browser. The URL 
-<tt>http://georg@localhost:7991/projects</tt> reveals the
-server base URL, which is <tt>http://localhost:7991</tt>. 
+<tt>http://georg@localhost:7991/projects</tt> e. g. reveals the
+server base URL, which is <tt>http://localhost:7991</tt> in this case. 
 2. Enter the Stash user name which is used to authenticate the plugin with
 the Stash build API.
 3. Enter the Stash users password.
@@ -37,7 +37,7 @@ Atlassians [Stash Build Integration][] wiki page.
 Authors
 =======
 
-Georg Gruetter ([Twitter](https://twitter.com/bumbleGee) [GitHub](https://github.com/gruetter))
+Georg Gruetter ([Twitter](https://twitter.com/bumbleGee), [GitHub](https://github.com/gruetter))
 
 License
 =======
