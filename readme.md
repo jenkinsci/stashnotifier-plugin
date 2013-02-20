@@ -49,3 +49,4 @@ License
 [Stash]: www.atlassian.com/software/stash
 [Stash Build Integration]: https://developer.atlassian.com/stash/docs/latest/how-tos/updating-build-status-for-commits.html
 [Stash Build REST API]: https://developer.atlassian.com/static/rest/stash/latest/stash-build-integration-rest.html
+
