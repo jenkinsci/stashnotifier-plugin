@@ -7,5 +7,6 @@ syntax: glob
 .settings
 build.properties
 target/*
+work/*
 bin/*
 **/Thumbs.db
