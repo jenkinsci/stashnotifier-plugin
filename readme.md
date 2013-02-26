@@ -19,8 +19,8 @@ Usage
 Use the Stash Notifier by adding it as a _Post Step_ in your Jenkins build job 
 configuration. 
 
-1. In your Jenkins job configuration, click on *Add post-build step* and select
-*Notify Stash Instance*
+1. In your Jenkins job configuration go to the *Post-build Actions* section, 
+click on *Add post-build action* and select *Notify Stash Instance*
 2. Enter the Stash base URL, e. g. <tt>http://localhost:7990</tt> or 
 <tt>http://my.company/stash</tt>. If in doubt, go to your local Stash 
 server and check the URL in the browser. The URL 
