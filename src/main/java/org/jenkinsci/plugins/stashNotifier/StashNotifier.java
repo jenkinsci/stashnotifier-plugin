@@ -56,7 +56,7 @@ import jenkins.model.Jenkins;
  * 
  * @author	Georg Gruetter
  */
-public class Notifier extends Builder {
+public class StashNotifier extends Builder {
 	
 	// attributes --------------------------------------------------------------
 
@@ -72,7 +72,7 @@ public class Notifier extends Builder {
 	// public members ----------------------------------------------------------
 
 	@DataBoundConstructor
-	public Notifier(
+	public StashNotifier(
 			String stashServerBaseUrl,
 			String stashUserName,
 			String stashUserPassword) {
