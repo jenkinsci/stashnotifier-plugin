@@ -23,8 +23,10 @@ import hudson.model.BuildListener;
 import hudson.model.AbstractProject;
 import hudson.model.Result;
 import hudson.plugins.git.GitChangeSet;
-import hudson.tasks.Builder;
+import hudson.tasks.Publisher;
+import hudson.tasks.Notifier;
 import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.BuildStepMonitor;
 import net.sf.json.JSONObject;
 
 import org.apache.http.HttpEntity;
@@ -56,7 +58,7 @@ import jenkins.model.Jenkins;
  * 
  * @author	Georg Gruetter
  */
-public class StashNotifier extends Builder {
+public class StashNotifier extends Notifier {
 	
 	// attributes --------------------------------------------------------------
 
@@ -70,6 +72,10 @@ public class StashNotifier extends Builder {
 	private final String stashUserPassword;
 	
 	// public members ----------------------------------------------------------
+
+	public BuildStepMonitor getRequiredMonitorService() {
+		return BuildStepMonitor.BUILD;
+	}
 
 	@DataBoundConstructor
 	public StashNotifier(
@@ -152,7 +158,7 @@ public class StashNotifier extends Builder {
 
 	@Extension 
 	public static final class DescriptorImpl 
-		extends BuildStepDescriptor<Builder> {
+		extends BuildStepDescriptor<Publisher> {
 
 		public FormValidation doCheckStashServerBaseUrl(
 					@QueryParameter String value) 
