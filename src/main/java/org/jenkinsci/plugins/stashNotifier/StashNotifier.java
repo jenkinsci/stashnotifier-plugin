@@ -47,6 +47,8 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import jenkins.model.Jenkins;
 
@@ -70,6 +72,10 @@ public class StashNotifier extends Notifier {
 	
 	/** password of Stash user for authentication with Stash build API. */
 	private final String stashUserPassword;
+	
+	/** the date formatter for git change log dates. */
+	private final SimpleDateFormat dateFormatter 
+			= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss ZZZZ");	
 	
 	// public members ----------------------------------------------------------
 
@@ -105,7 +111,7 @@ public class StashNotifier extends Notifier {
 			AbstractBuild build, 
 			Launcher launcher, 
 			BuildListener listener) {
-		
+
 		PrintStream logger = listener.getLogger();
 
 		// exit if Jenkins root URL is not configured. Stash build API 
@@ -116,20 +122,37 @@ public class StashNotifier extends Notifier {
 			return true;
 		}
 
-		
-		// notify Stash instance for each item in the change set of this
-		// build if the item is a {@link GitChangeSet} instance. Other
-		// types of change sets are ignored.
-		
-		HttpClient client = new DefaultHttpClient();
-		NotificationResult result;
-		GitChangeSet gitChangeSet;
-		
-		try {
-			for (Object changeSet: build.getChangeSet().getItems()) {
-				if (changeSet instanceof GitChangeSet) {
-					gitChangeSet = (GitChangeSet) changeSet;
-					result = notifyStash(build, gitChangeSet, client, listener);
+		if (!build.getChangeSet().isEmptySet()) {
+			
+			// notify Stash instance for each item in the change set of this
+			// build if the item is a {@link GitChangeSet} instance. Other
+			// types of change sets are ignored.
+			
+			HttpClient client = new DefaultHttpClient();
+			NotificationResult result;
+			GitChangeSet mostRecentGitChangeSet = null,
+					gitChangeSet = null;
+
+			try {
+				
+				// get the latest commit from the changeSet and use that
+				// for the notification
+				// TODO factor out method
+				
+				for (Object changeSet : build.getChangeSet()) {
+					if (changeSet instanceof GitChangeSet) {
+						gitChangeSet = (GitChangeSet) changeSet;
+						if ((mostRecentGitChangeSet == null) 
+							|| (mostRecentGitChangeSet.getTimestamp() <
+									gitChangeSet.getTimestamp())) {
+							
+							mostRecentGitChangeSet = gitChangeSet; 
+						} 
+					}
+				}
+
+				if (mostRecentGitChangeSet != null) {
+					result = notifyStash(build, mostRecentGitChangeSet, client, listener);
 					if (result.indicatesSuccess) {
 						logger.println(
 							"Notified Stash for commit with id " 
@@ -139,22 +162,21 @@ public class StashNotifier extends Notifier {
 						"Failed to notify Stash for commit "
 								+ gitChangeSet.getCommitId() 
 								+ " (" + result.message + ")");
-					}
+					}					
 				} else {
-					logger.println("ignored change set (not a git changeset)");
+					logger.println("no Git changesets found");
 				}
-			}
-		} catch (Exception e) {
-			logger.println(
-					"Caught exception while notifying Stash: " 
-					+ e.getMessage());
-		} finally {
-			client.getConnectionManager().shutdown();
+			} catch (Exception e) {
+				logger.println(
+						"Caught exception while notifying Stash: " 
+						+ e.getMessage());
+			} finally {
+				client.getConnectionManager().shutdown();
+			}			
 		}
 		
 		return true;
 	}
-
 
 	@Extension 
 	public static final class DescriptorImpl 
