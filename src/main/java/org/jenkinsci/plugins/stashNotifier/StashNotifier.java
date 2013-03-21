@@ -22,7 +22,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.AbstractProject;
 import hudson.model.Result;
-import hudson.plugins.git.GitChangeSet;
+import hudson.plugins.git.util.BuildData;
 import hudson.tasks.Publisher;
 import hudson.tasks.Notifier;
 import hudson.tasks.BuildStepDescriptor;
@@ -47,8 +47,6 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 import jenkins.model.Jenkins;
 
@@ -72,10 +70,6 @@ public class StashNotifier extends Notifier {
 	
 	/** password of Stash user for authentication with Stash build API. */
 	private final String stashUserPassword;
-	
-	/** the date formatter for git change log dates. */
-	private final SimpleDateFormat dateFormatter 
-			= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss ZZZZ");	
 	
 	// public members ----------------------------------------------------------
 
@@ -122,50 +116,28 @@ public class StashNotifier extends Notifier {
 			return true;
 		}
 
-		if (!build.getChangeSet().isEmptySet()) {
-			
-			// notify Stash instance for each item in the change set of this
-			// build if the item is a {@link GitChangeSet} instance. Other
-			// types of change sets are ignored.
+		// get the sha1 of the commit that was built
+		BuildData buildData 
+			= (BuildData) build.getAction(BuildData.class);
+		if  (buildData != null) {
+			String commitSha1 
+				= buildData.getLastBuiltRevision().getSha1String();
 			
 			HttpClient client = new DefaultHttpClient();
 			NotificationResult result;
-			GitChangeSet mostRecentGitChangeSet = null,
-					gitChangeSet = null;
 
 			try {
-				
-				// get the latest commit from the changeSet and use that
-				// for the notification
-				// TODO factor out method
-				
-				for (Object changeSet : build.getChangeSet()) {
-					if (changeSet instanceof GitChangeSet) {
-						gitChangeSet = (GitChangeSet) changeSet;
-						if ((mostRecentGitChangeSet == null) 
-							|| (mostRecentGitChangeSet.getTimestamp() <
-									gitChangeSet.getTimestamp())) {
-							
-							mostRecentGitChangeSet = gitChangeSet; 
-						} 
-					}
-				}
-
-				if (mostRecentGitChangeSet != null) {
-					result = notifyStash(build, mostRecentGitChangeSet, client, listener);
-					if (result.indicatesSuccess) {
-						logger.println(
-							"Notified Stash for commit with id " 
-									+ gitChangeSet.getCommitId());
-					} else {
-						logger.println(
-						"Failed to notify Stash for commit "
-								+ gitChangeSet.getCommitId() 
-								+ " (" + result.message + ")");
-					}					
+				result = notifyStash(build, commitSha1, client, listener);
+				if (result.indicatesSuccess) {
+					logger.println(
+						"Notified Stash for commit with id " 
+								+ commitSha1);
 				} else {
-					logger.println("no Git changesets found");
-				}
+					logger.println(
+					"Failed to notify Stash for commit "
+							+ commitSha1
+							+ " (" + result.message + ")");
+				}					
 			} catch (Exception e) {
 				logger.println(
 						"Caught exception while notifying Stash: " 
@@ -173,8 +145,10 @@ public class StashNotifier extends Notifier {
 			} finally {
 				client.getConnectionManager().shutdown();
 			}			
+		} else {
+			logger.println(
+					"found no commit info");
 		}
-		
 		return true;
 	}
 
@@ -242,18 +216,18 @@ public class StashNotifier extends Notifier {
 	 * to the Stash build API.
 	 * 
 	 * @param build			the build to notify Stash of
-	 * @param changeSet		the built change set
+	 * @param commitSha1	the SHA1 of the built commit
 	 * @param client		the HTTP client with which to execute the request
 	 * @param listener		the build listener for logging
 	 */
 	@SuppressWarnings("rawtypes")
 	private NotificationResult notifyStash(
 			final AbstractBuild build,
-			final GitChangeSet changeSet,
+			final String commitSha1,
 			final HttpClient client, 
 			final BuildListener listener) throws Exception {
 		
-		HttpPost req = createRequest(build, changeSet);
+		HttpPost req = createRequest(build, commitSha1);
 		HttpResponse res = client.execute(req);
 		if (res.getStatusLine().getStatusCode() != 204) {
 			return NotificationResult.newFailure(
@@ -268,18 +242,18 @@ public class StashNotifier extends Notifier {
 	 * the given build and change set. 
 	 * 
 	 * @param build			the build to notify Stash of
-	 * @param changeSet		the change set that was built
+	 * @param commitSha1	the SHA1 of the commit that was built
 	 * @return				the HTTP POST request to the Stash build API
 	 */
 	@SuppressWarnings("rawtypes")
 	private HttpPost createRequest(
 			final AbstractBuild build,
-			final GitChangeSet changeSet) throws Exception {
+			final String commitSha1) throws Exception {
 		
 		HttpPost req = new HttpPost(
 				stashServerBaseUrl  
 				+ "/rest/build-status/1.0/commits/" 
-				+ changeSet.getCommitId());
+				+ commitSha1);
 		
 		req.addHeader(BasicScheme.authenticate(
 				new UsernamePasswordCredentials(
@@ -333,4 +307,3 @@ public class StashNotifier extends Notifier {
 		return new StringEntity(builder.toString());
 	}
 }
-
