@@ -282,15 +282,21 @@ public class StashNotifier extends Notifier {
 
         JSONObject json = new JSONObject();
 
-        if ((build.getResult() == null) || (!build.getResult().equals(Result.SUCCESS)))
+        if ((build.getResult() == null) 
+        		|| (!build.getResult().equals(Result.SUCCESS))) {
             json.put("state", "FAILED");
-        else
+        } else {
             json.put("state", "SUCCESSFUL");
+        }
 
-        json.put("key", StringEscapeUtils.escapeJavaScript(build.getProject().getName()));
+        json.put(
+        		"key",
+        		StringEscapeUtils.escapeJavaScript(
+        				build.getProject().getName()));
 
-        // This is to replace the odd character Jenkins injects to separate nested jobs, especially
-        // when using the Cloudbees Folders plugin. These characters cause Stash to throw up
+        // This is to replace the odd character Jenkins injects to separate 
+        // nested jobs, especially when using the Cloudbees Folders plugin. 
+        // These characters cause Stash to throw up.
         String fullName = StringEscapeUtils.
                 escapeJavaScript(build.getFullDisplayName()).
                 replaceAll("\\\\u00BB", "\\/");
@@ -299,8 +305,6 @@ public class StashNotifier extends Notifier {
         json.put("description",
                 "built by Jenkins @ ".concat(Jenkins.getInstance().getRootUrl()));
         json.put("url", Jenkins.getInstance().getRootUrl().concat(build.getUrl()));
-
         return new StringEntity(json.toString());
-
 	}
 }
