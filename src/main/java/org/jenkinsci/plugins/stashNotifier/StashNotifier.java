@@ -29,6 +29,7 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import net.sf.json.JSONObject;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -276,34 +277,30 @@ public class StashNotifier extends Notifier {
 	 * @return				HTTP entity body for POST to Stash build API
 	 */
 	@SuppressWarnings("rawtypes")
-	private HttpEntity newStashBuildNotificationEntity(
-			final AbstractBuild build) throws Exception {
-		
-		StringBuilder builder = new StringBuilder();
-		builder.append("{\"state\":\"");
+	private HttpEntity newStashBuildNotificationEntity(final AbstractBuild build)
+            throws Exception {
 
-		if ((build.getResult() == null) 
-				|| (!build.getResult().equals(Result.SUCCESS))) {
-			builder.append("FAILED");
-		} else {
-			builder.append("SUCCESSFUL");
-		}
+        JSONObject json = new JSONObject();
 
-		builder.append("\", \"key\":\"");
-		builder.append(build.getProject().getName());
-		
-		builder.append("\", \"name\":\"");
-		builder.append(build.getFullDisplayName());
+        if ((build.getResult() == null) || (!build.getResult().equals(Result.SUCCESS)))
+            json.put("state", "FAILED");
+        else
+            json.put("state", "SUCCESSFUL");
 
-		builder.append("\", \"description\":\"built by Jenkins @ ");
-		builder.append(Jenkins.getInstance().getRootUrl());
+        json.put("key", StringEscapeUtils.escapeJavaScript(build.getProject().getName()));
 
-		builder.append("\", \"url\":\"");
-		builder.append(Jenkins.getInstance().getRootUrl());
-		builder.append(build.getUrl());
+        // This is to replace the odd character Jenkins injects to separate nested jobs, especially
+        // when using the Cloudbees Folders plugin. These characters cause Stash to throw up
+        String fullName = StringEscapeUtils.
+                escapeJavaScript(build.getFullDisplayName()).
+                replaceAll("\\\\u00BB", "\\/");
+        json.put("name", fullName);
 
-		builder.append("\"}");
-		
-		return new StringEntity(builder.toString());
+        json.put("description",
+                "built by Jenkins @ ".concat(Jenkins.getInstance().getRootUrl()));
+        json.put("url", Jenkins.getInstance().getRootUrl().concat(build.getUrl()));
+
+        return new StringEntity(json.toString());
+
 	}
 }
