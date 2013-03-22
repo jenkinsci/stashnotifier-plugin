@@ -34,10 +34,15 @@ That's it. If you have configured everything correctly, Jenkins will notify
 your Stash instance of subsequent builds. The result is illustrated on
 Atlassians [Stash Build Integration][] wiki page.
 
-Authors
-=======
+Maintainer
+==========
 
 Georg Gruetter ([Twitter](https://twitter.com/bumbleGee), [GitHub](https://github.com/gruetter))
+
+Contributors
+============
+Ilya Vassilewsky: @vassilewski
+Jason Stiefel: @kphonik
 
 License
 =======
