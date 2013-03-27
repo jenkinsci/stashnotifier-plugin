@@ -43,6 +43,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.QueryParameter;
 
+import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.servlet.ServletException;
 
 import java.io.IOException;
@@ -139,6 +140,9 @@ public class StashNotifier extends Notifier {
 							+ commitSha1
 							+ " (" + result.message + ")");
 				}					
+            } catch (SSLPeerUnverifiedException e) {
+				logger.println("SSLPeerUnverifiedException caught while notifying Stash (possible self-signed certificate?): " 
+                    + e.getMessage());
 			} catch (Exception e) {
 				logger.println(
 						"Caught exception while notifying Stash: " 
