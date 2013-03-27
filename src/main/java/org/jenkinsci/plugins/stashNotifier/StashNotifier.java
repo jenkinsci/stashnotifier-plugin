@@ -35,20 +35,30 @@ import org.apache.http.HttpResponse;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.conn.ClientConnectionManager;
+import org.apache.http.conn.scheme.Scheme;
+import org.apache.http.conn.scheme.SchemeRegistry;
+import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.SingleClientConnManager;
 import org.apache.http.util.EntityUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.QueryParameter;
 
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.TrustManager;
 import javax.servlet.ServletException;
 
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 
 import jenkins.model.Jenkins;
 
@@ -73,6 +83,9 @@ public class StashNotifier extends Notifier {
 	/** password of Stash user for authentication with Stash build API. */
 	private final String stashUserPassword;
 	
+	/** if true, ignore exception thrown in case of an unverified SSL peer. */
+	private final boolean ignoreUnverifiedSSLPeer;
+	
 	// public members ----------------------------------------------------------
 
 	public BuildStepMonitor getRequiredMonitorService() {
@@ -83,10 +96,13 @@ public class StashNotifier extends Notifier {
 	public StashNotifier(
 			String stashServerBaseUrl,
 			String stashUserName,
-			String stashUserPassword) {
+			String stashUserPassword,
+			boolean ignoreUnverifiedSSLPeer) {
 		this.stashServerBaseUrl = stashServerBaseUrl;
 		this.stashUserName = stashUserName;
 		this.stashUserPassword = stashUserPassword;
+		this.ignoreUnverifiedSSLPeer 
+			= ignoreUnverifiedSSLPeer;
 	}
 
 	public String getStashServerBaseUrl() {
@@ -99,6 +115,10 @@ public class StashNotifier extends Notifier {
 
 	public String getStashUserPassword() {
 		return stashUserPassword;
+	}
+	
+	public boolean ignoreUnverifiedSSLPeer() {
+		return ignoreUnverifiedSSLPeer;
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -125,7 +145,7 @@ public class StashNotifier extends Notifier {
 			String commitSha1 
 				= buildData.getLastBuiltRevision().getSha1String();
 			
-			HttpClient client = new DefaultHttpClient();
+			HttpClient client = getHttpClient(logger); 
 			NotificationResult result;
 
 			try {
@@ -141,8 +161,11 @@ public class StashNotifier extends Notifier {
 							+ " (" + result.message + ")");
 				}					
             } catch (SSLPeerUnverifiedException e) {
-				logger.println("SSLPeerUnverifiedException caught while notifying Stash (possible self-signed certificate?): " 
-                    + e.getMessage());
+	    		logger.println("SSLPeerUnverifiedException caught while "
+    				+ "notifying Stash. Make sure your SSL certificate on "
+    				+ "your Stash server is valid or check the "
+    				+ " 'Ignore unverifiable SSL certificate' checkbox in the "
+    				+ "Stash plugin configuration of this job.");
 			} catch (Exception e) {
 				logger.println(
 						"Caught exception while notifying Stash: " 
@@ -155,6 +178,52 @@ public class StashNotifier extends Notifier {
 					"found no commit info");
 		}
 		return true;
+	}
+		
+	/**
+	 * Returns the HttpClient through which the REST call is made. Uses an
+	 * unsafe X509 trust manager in case the user specified a HTTPS URL and
+	 * set the ignoreUnverifiedSSLPeer flag.
+	 * 
+	 * @param logger	the logger to log messages to
+	 * @return			the HttpClient
+	 */
+	private HttpClient getHttpClient(PrintStream logger) {
+		HttpClient client = null;
+		if (getStashServerBaseUrl().startsWith("https") 
+				&& ignoreUnverifiedSSLPeer) {
+			// add unsafe trust manager to avoid thrown
+			// SSLPeerUnverifiedException
+			try {
+				SSLContext sslContext = SSLContext.getInstance("TLS");
+				sslContext.init(
+						null, 
+						new TrustManager[] { new UnsafeX509TrustManager() }, 
+						new SecureRandom());
+				SSLSocketFactory sslSocketFactory 
+					= new SSLSocketFactory(sslContext);
+				SchemeRegistry schemeRegistry = new SchemeRegistry();
+				schemeRegistry.register(
+						new Scheme("https", 443, sslSocketFactory));
+				ClientConnectionManager connectionManager 
+					= new SingleClientConnManager(schemeRegistry);
+				client = new DefaultHttpClient(connectionManager);
+			} catch (NoSuchAlgorithmException nsae) {
+				logger.println("Couldn't establish SSL context: "
+						+ nsae.getMessage());
+			} catch (KeyManagementException kme) {
+				logger.println("Couldn't initialize SSL context: "
+						+ kme.getMessage());
+			} finally {
+				if (client == null) {
+					logger.println("Trying with safe trust manager, instead!");
+					client = new DefaultHttpClient();
+				}
+			}
+		} else {
+			client = new DefaultHttpClient();
+		}
+		return client;
 	}
 
 	@Extension 
