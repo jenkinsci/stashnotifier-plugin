@@ -41,8 +41,9 @@ Maintainers
 
 Contributors
 ============
-* Ilya Vassilewsky: ([GitHub](https://github.com/vassilevsky))
-* Jason Stiefel: ([GitHub](https://github.com/kphonik))
+* Ilya Vassilewsky ([GitHub](https://github.com/vassilevsky))
+* Jason Stiefel ([GitHub](https://github.com/kphonik))
+* Adam Parkin ([GitHub](https://github.com/pzelnip))
 
 License
 =======
