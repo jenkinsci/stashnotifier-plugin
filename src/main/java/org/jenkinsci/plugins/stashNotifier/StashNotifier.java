@@ -117,7 +117,7 @@ public class StashNotifier extends Notifier {
 		return stashUserPassword;
 	}
 	
-	public boolean ignoreUnverifiedSSLPeer() {
+	public boolean getIgnoreUnverifiedSSLPeer() {
 		return ignoreUnverifiedSSLPeer;
 	}
 
