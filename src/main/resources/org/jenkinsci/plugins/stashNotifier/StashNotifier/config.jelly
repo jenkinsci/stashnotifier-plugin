@@ -1,9 +1,10 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <!--
-  	Create text fiels for the following values
+  	Create text fields for the following values
   	- Stash server base URL
   	- Stash user name
   	- Stash password
+  	- Ignore unverified SSL certificate flag
   -->
   <f:entry title="Stash base URL" field="stashServerBaseUrl">
     <f:textbox />
@@ -13,5 +14,9 @@
   </f:entry> 
    <f:entry title="Stash user password" field="stashUserPassword">
     <f:password />
+   </f:entry>
+   <f:entry title="Ignore unverified SSL certificates" 
+   		field="ignoreUnverifiedSSLPeer">
+    <f:checkbox />
   </f:entry> 
 </j:jelly>
