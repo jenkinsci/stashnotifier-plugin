@@ -365,7 +365,8 @@ public class StashNotifier extends Notifier {
         json.put(
         		"key",
         		StringEscapeUtils.escapeJavaScript(
-        				build.getProject().getName()));
+        				build.getProject().getName()) + "-" + 
+        				Jenkins.getInstance().getRootUrl());
 
         // This is to replace the odd character Jenkins injects to separate 
         // nested jobs, especially when using the Cloudbees Folders plugin. 
