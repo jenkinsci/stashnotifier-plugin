@@ -77,7 +77,7 @@ public class StashNotifierTest extends HudsonTestCase {
 				notifier.getRequiredMonitorService());
 	}
 	
-	public void testMissingJenkinsRootUrl() {
+	public void testMissingJenkinsRootUrl() throws Exception {
 		notifier.setJenkins(jenkins);
 		when(jenkins.getRootUrl()).thenReturn(null);
 		
@@ -87,7 +87,7 @@ public class StashNotifierTest extends HudsonTestCase {
 				logger.getLastLine());
 	}
 	
-	public void testMissingCommitData() {
+	public void testMissingCommitData() throws Exception {
 		notifier.setJenkins(jenkins);
 		when(jenkins.getRootUrl()).thenReturn(rootUrl);
 		when(build.getAction(BuildData.class)).thenReturn(null);
