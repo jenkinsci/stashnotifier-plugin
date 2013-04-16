@@ -19,7 +19,8 @@ import org.jenkinsci.plugins.stashNotifier.UnsafeX509TrustManager;
 /**
  * An implementation of the {@link HttpClientFactory} that returns a
  * DefaultHttpClient that is either not configured at all (non-ssl and default
- * trusts) or configured to accept all certificates.
+ * trusts) or configured to accept all certificates.  If told to accept all
+ * certificates, an unsafe X509 trust manager is used.
  * 
  * If setup of the "trust-all" HttpClient fails, a non-configured HttpClient
  * is returned.
