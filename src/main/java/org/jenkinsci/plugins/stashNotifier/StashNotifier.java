@@ -37,16 +37,13 @@ import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
-import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.util.EntityUtils;
 import org.jenkinsci.plugins.stashNotifier.util.BasicStashRequestConfigurator;
-import org.jenkinsci.plugins.stashNotifier.util.BuildEntityFactory;
 import org.jenkinsci.plugins.stashNotifier.util.ConcreteHttpClientFactory;
+import org.jenkinsci.plugins.stashNotifier.util.ConfigurableStashNotifierService;
 import org.jenkinsci.plugins.stashNotifier.util.HttpClientFactory;
 import org.jenkinsci.plugins.stashNotifier.util.JsonBuildEntityFactory;
-import org.jenkinsci.plugins.stashNotifier.util.StashRequestConfigurator;
+import org.jenkinsci.plugins.stashNotifier.util.StashNotifierService;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -77,9 +74,7 @@ public class StashNotifier extends Notifier {
 	
 	private HttpClientFactory httpClientfactory;
 	
-	private BuildEntityFactory buildEntityFactory;
-	
-	private StashRequestConfigurator requestConfigurator;
+	private StashNotifierService notifierService;
 	
 	// public members ----------------------------------------------------------
 
@@ -100,9 +95,11 @@ public class StashNotifier extends Notifier {
 			= ignoreUnverifiedSSLPeer;
 		
 		httpClientfactory = new ConcreteHttpClientFactory();
-		buildEntityFactory = new JsonBuildEntityFactory();
-		requestConfigurator = new BasicStashRequestConfigurator(stashUserName, 
-				stashUserPassword);
+		notifierService = new ConfigurableStashNotifierService(
+				stashServerBaseUrl, 
+				new JsonBuildEntityFactory(), 
+				new BasicStashRequestConfigurator(stashUserName, 
+						stashUserPassword));
 	}
 
 	public String getStashServerBaseUrl() {
@@ -153,7 +150,7 @@ public class StashNotifier extends Notifier {
 			NotificationResult result;
 
 			try {
-				result = notifyStash(build, commitSha1, client);
+				result = notifierService.notifyStash(build, commitSha1, client);
 				if (result.indicatesSuccess) {
 					logger.println(
 						"Notified Stash for commit with id " 
@@ -239,40 +236,6 @@ public class StashNotifier extends Notifier {
 
 			save();
 			return super.configure(req,formData);
-		}
-	}
-	
-	// non-public members ------------------------------------------------------
-	
-	/**
-	 * Notifies the configured Stash server by POSTing the build results 
-	 * to the Stash build API.
-	 * 
-	 * @param build			the build to notify Stash of
-	 * @param commitSha1	the SHA1 of the built commit
-	 * @param client		the HTTP client with which to execute the request
-	 * @param listener		the build listener for logging
-	 */
-	@SuppressWarnings("rawtypes")
-	private NotificationResult notifyStash(
-			final AbstractBuild build,
-			final String commitSha1,
-			final HttpClient client) throws Exception {
-		
-		String url = stashServerBaseUrl + 
-				"/rest/build-status/1.0/commits/" + commitSha1;
-		HttpPost req = new HttpPost(url);
-		requestConfigurator.configureStashRequest(req);
-		req.addHeader("Content-type", "application/json");		
-		req.setEntity(buildEntityFactory
-				.createBuildEntity(Jenkins.getInstance(), build));
-		
-		HttpResponse res = client.execute(req);
-		if (res.getStatusLine().getStatusCode() != 204) {
-			return NotificationResult.newFailure(
-					EntityUtils.toString(res.getEntity()));
-		} else {
-			return NotificationResult.newSuccess();
 		}
 	}
 	
