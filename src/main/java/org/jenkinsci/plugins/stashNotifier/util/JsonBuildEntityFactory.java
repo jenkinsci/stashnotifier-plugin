@@ -29,8 +29,10 @@ public class JsonBuildEntityFactory implements BuildEntityFactory {
 			throws Exception {
 		JSONObject json = new JSONObject();
 
+        String baseUrl = jenkins.getRootUrl();
+
         json.put("state", getBuildState(build.getResult()));
-        json.put("key", escape(build.getProject().getName()));
+        json.put("key", escape(build.getProject().getName()) + "-" + baseUrl);
 
         // This is to replace the odd character Jenkins injects to separate 
         // nested jobs, especially when using the Cloudbees Folders plugin. 
@@ -39,7 +41,6 @@ public class JsonBuildEntityFactory implements BuildEntityFactory {
                 replaceAll("\\\\u00BB", "\\/");
         json.put("name", fullName);
 
-        String baseUrl = jenkins.getRootUrl();
         json.put("description", "built by Jenkins @ ".concat(baseUrl));
         json.put("url", baseUrl.concat(build.getUrl()));
         
