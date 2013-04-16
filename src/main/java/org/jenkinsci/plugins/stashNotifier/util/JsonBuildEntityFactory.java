@@ -20,6 +20,7 @@ public class JsonBuildEntityFactory implements BuildEntityFactory {
 	/**
 	 * {@inheritDoc}
 	 */
+	@SuppressWarnings("rawtypes")
 	public HttpEntity createBuildEntity(Jenkins jenkins, AbstractBuild build) 
 			throws Exception {
 		JSONObject json = new JSONObject();

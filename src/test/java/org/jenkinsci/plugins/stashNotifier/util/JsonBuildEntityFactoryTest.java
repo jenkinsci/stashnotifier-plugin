@@ -33,6 +33,7 @@ public class JsonBuildEntityFactoryTest extends TestCase {
 		assertEquals("SUCCESSFUL", factory.getBuildState(Result.SUCCESS));
 	}
 	
+	@SuppressWarnings("rawtypes")
 	public void testBuildEntity() throws Exception {
 		String rootUrl = "http://jenkins.localhost/";
 		Result result = Result.SUCCESS;

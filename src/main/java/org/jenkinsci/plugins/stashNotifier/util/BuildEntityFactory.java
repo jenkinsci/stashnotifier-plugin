@@ -21,6 +21,7 @@ public interface BuildEntityFactory {
 	 * @return HTTP entity body that can be POST'ed to the Stash build API
 	 * @throws Exception Any exception
 	 */
+	@SuppressWarnings("rawtypes")
 	HttpEntity createBuildEntity(Jenkins jenkins, AbstractBuild build) 
 			throws Exception;
 	
