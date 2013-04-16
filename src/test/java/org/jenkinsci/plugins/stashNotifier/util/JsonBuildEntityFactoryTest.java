@@ -58,7 +58,8 @@ public class JsonBuildEntityFactoryTest extends TestCase {
 		JSONObject object = JSONObject.fromObject(EntityUtils.toString(entity));
 		
 		assertEquals(factory.getBuildState(result), object.getString("state"));
-		assertEquals(factory.escape(projectName), object.getString("key"));
+		assertEquals(factory.escape(projectName) + "-" + rootUrl, 
+				object.getString("key"));
 		assertEquals(factory.escape(fullDisplayName), object.getString("name"));
 		assertEquals("built by Jenkins @ ".concat(rootUrl), 
 				object.getString("description"));
