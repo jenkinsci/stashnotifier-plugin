@@ -38,15 +38,15 @@ import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
 import org.apache.http.HttpResponse;
-import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.util.EntityUtils;
+import org.jenkinsci.plugins.stashNotifier.util.BasicStashRequestConfigurator;
 import org.jenkinsci.plugins.stashNotifier.util.BuildEntityFactory;
 import org.jenkinsci.plugins.stashNotifier.util.ConcreteHttpClientFactory;
 import org.jenkinsci.plugins.stashNotifier.util.HttpClientFactory;
 import org.jenkinsci.plugins.stashNotifier.util.JsonBuildEntityFactory;
+import org.jenkinsci.plugins.stashNotifier.util.StashRequestConfigurator;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -79,6 +79,8 @@ public class StashNotifier extends Notifier {
 	
 	private BuildEntityFactory buildEntityFactory;
 	
+	private StashRequestConfigurator requestConfigurator;
+	
 	// public members ----------------------------------------------------------
 
 	public BuildStepMonitor getRequiredMonitorService() {
@@ -99,6 +101,8 @@ public class StashNotifier extends Notifier {
 		
 		httpClientfactory = new ConcreteHttpClientFactory();
 		buildEntityFactory = new JsonBuildEntityFactory();
+		requestConfigurator = new BasicStashRequestConfigurator(stashUserName, 
+				stashUserPassword);
 	}
 
 	public String getStashServerBaseUrl() {
@@ -255,7 +259,14 @@ public class StashNotifier extends Notifier {
 			final String commitSha1,
 			final HttpClient client) throws Exception {
 		
-		HttpPost req = createRequest(build, commitSha1);
+		String url = stashServerBaseUrl + 
+				"/rest/build-status/1.0/commits/" + commitSha1;
+		HttpPost req = new HttpPost(url);
+		requestConfigurator.configureStashRequest(req);
+		req.addHeader("Content-type", "application/json");		
+		req.setEntity(buildEntityFactory
+				.createBuildEntity(Jenkins.getInstance(), build));
+		
 		HttpResponse res = client.execute(req);
 		if (res.getStatusLine().getStatusCode() != 204) {
 			return NotificationResult.newFailure(
@@ -263,38 +274,6 @@ public class StashNotifier extends Notifier {
 		} else {
 			return NotificationResult.newSuccess();
 		}
-	}
-	
-	/**
-	 * Returns the HTTP POST request ready to be sent to the Stash build API for
-	 * the given build and change set. 
-	 * 
-	 * @param build			the build to notify Stash of
-	 * @param commitSha1	the SHA1 of the commit that was built
-	 * @return				the HTTP POST request to the Stash build API
-	 */
-	@SuppressWarnings("rawtypes")
-	private HttpPost createRequest(
-			final AbstractBuild build,
-			final String commitSha1) throws Exception {
-		
-		HttpPost req = new HttpPost(
-				stashServerBaseUrl  
-				+ "/rest/build-status/1.0/commits/" 
-				+ commitSha1);
-		
-		req.addHeader(BasicScheme.authenticate(
-				new UsernamePasswordCredentials(
-						stashUserName, 
-						stashUserPassword), 
-				"UTF-8", 
-				false));
-		
-		req.addHeader("Content-type", "application/json");		
-		req.setEntity(buildEntityFactory
-				.createBuildEntity(Jenkins.getInstance(), build));
-				
-		return req;
 	}
 	
 }
