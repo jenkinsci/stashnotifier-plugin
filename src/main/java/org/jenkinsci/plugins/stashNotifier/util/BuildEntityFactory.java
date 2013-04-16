@@ -14,6 +14,13 @@ import org.apache.http.HttpEntity;
 public interface BuildEntityFactory {
 
 	/**
+	 * Returns the content type MIME for the type of entity that is created by
+	 * this factory.
+	 * @return The content type MIME for the type of entity created.
+	 */
+	String getContentType();
+	
+	/**
 	 * Create an entity object that should be sent to Stash containing the
 	 * information about this build.
 	 * @param jenkins the current Jenkins model instance

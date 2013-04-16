@@ -17,6 +17,10 @@ import org.apache.http.entity.StringEntity;
  */
 public class JsonBuildEntityFactory implements BuildEntityFactory {
 
+	public String getContentType() {
+		return "application/json";
+	}
+	
 	/**
 	 * {@inheritDoc}
 	 */
