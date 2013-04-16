@@ -3,15 +3,12 @@ package org.jenkinsci.plugins.stashNotifier.util;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.util.IOUtils;
-
-import java.io.StringWriter;
-
 import jenkins.model.Jenkins;
 import junit.framework.TestCase;
 import net.sf.json.JSONObject;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.util.EntityUtils;
 import org.mockito.Mockito;
 
 public class JsonBuildEntityFactoryTest extends TestCase {
@@ -54,9 +51,7 @@ public class JsonBuildEntityFactoryTest extends TestCase {
 		Mockito.when(build.getUrl()).thenReturn(buildUrl);
 
 		HttpEntity entity = factory.createBuildEntity(jenkins, build);
-		StringWriter writer = new StringWriter();
-		IOUtils.copy(entity.getContent(), writer, "UTF-8");
-		JSONObject object = JSONObject.fromObject(writer.toString());
+		JSONObject object = JSONObject.fromObject(EntityUtils.toString(entity));
 		
 		assertEquals(factory.getBuildState(result), object.getString("state"));
 		assertEquals(factory.escape(projectName), object.getString("key"));
