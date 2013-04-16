@@ -74,6 +74,8 @@ public class StashNotifier extends Notifier {
 	
 	private HttpClientFactory httpClientfactory;
 	
+	private Jenkins jenkins;
+	
 	private StashNotifierService notifierService;
 	
 	// public members ----------------------------------------------------------
@@ -91,9 +93,9 @@ public class StashNotifier extends Notifier {
 		this.stashServerBaseUrl = stashServerBaseUrl;
 		this.stashUserName = stashUserName;
 		this.stashUserPassword = stashUserPassword;
-		this.ignoreUnverifiedSSLPeer 
-			= ignoreUnverifiedSSLPeer;
+		this.ignoreUnverifiedSSLPeer = ignoreUnverifiedSSLPeer;
 		
+		jenkins = Jenkins.getInstance();
 		httpClientfactory = new ConcreteHttpClientFactory();
 		notifierService = new ConfigurableStashNotifierService(
 				stashServerBaseUrl, 
@@ -129,55 +131,51 @@ public class StashNotifier extends Notifier {
 
 		// exit if Jenkins root URL is not configured. Stash build API 
 		// requires valid link to build in CI system.
-		if (Jenkins.getInstance().getRootUrl() == null) {
+		if (jenkins.getRootUrl() == null) {
 			logger.println(
 					"Cannot notify Stash! (Jenkins Root URL not configured)");
 			return true;
 		}
 
 		// get the sha1 of the commit that was built
-		BuildData buildData 
-			= (BuildData) build.getAction(BuildData.class);
-		
-		if  (buildData != null) {
-			String commitSha1 
-				= buildData.getLastBuiltRevision().getSha1String();
-			
-			HttpClient client = httpClientfactory.getHttpClient(
-					getStashServerBaseUrl().startsWith("https"),
-					ignoreUnverifiedSSLPeer, 
-					logger);
-			NotificationResult result;
-
-			try {
-				result = notifierService.notifyStash(build, commitSha1, client);
-				if (result.indicatesSuccess) {
-					logger.println(
-						"Notified Stash for commit with id " 
-								+ commitSha1);
-				} else {
-					logger.println(
-					"Failed to notify Stash for commit "
-							+ commitSha1
-							+ " (" + result.message + ")");
-				}					
-            } catch (SSLPeerUnverifiedException e) {
-	    		logger.println("SSLPeerUnverifiedException caught while "
-    				+ "notifying Stash. Make sure your SSL certificate on "
-    				+ "your Stash server is valid or check the "
-    				+ " 'Ignore unverifiable SSL certificate' checkbox in the "
-    				+ "Stash plugin configuration of this job.");
-			} catch (Exception e) {
-				logger.println(
-						"Caught exception while notifying Stash: " 
-						+ e.getMessage());
-			} finally {
-				client.getConnectionManager().shutdown();
-			}			
-		} else {
-			logger.println(
-					"found no commit info");
+		BuildData buildData = (BuildData) build.getAction(BuildData.class);
+		if (buildData == null) {
+			logger.println("found no commit info");
+			return true;
 		}
+
+		String commitSha1 = buildData.getLastBuiltRevision().getSha1String();
+		
+		HttpClient client = httpClientfactory.getHttpClient(
+				getStashServerBaseUrl().startsWith("https"),
+				ignoreUnverifiedSSLPeer, 
+				logger);
+
+		try {
+			NotificationResult result = 
+					notifierService.notifyStash(build, commitSha1, client);
+			String message;
+			if (result.indicatesSuccess) {
+				message = "Notified Stash for commit with id " + commitSha1;
+			} else {
+				message = "Failed to notify Stash for commit "
+						+ commitSha1 
+						+ " (" + result.message + ")";
+			}					
+			logger.println(message);
+        } catch (SSLPeerUnverifiedException e) {
+    		logger.println("SSLPeerUnverifiedException caught while "
+				+ "notifying Stash. Make sure your SSL certificate on "
+				+ "your Stash server is valid or check the "
+				+ " 'Ignore unverifiable SSL certificate' checkbox in the "
+				+ "Stash plugin configuration of this job.");
+		} catch (Exception e) {
+			logger.println(
+					"Caught exception while notifying Stash: " 
+					+ e.getMessage());
+		} finally {
+			client.getConnectionManager().shutdown();
+		}			
 		return true;
 	}
 		
@@ -230,13 +228,33 @@ public class StashNotifier extends Notifier {
 		}
 
 		@Override
-		public boolean configure(
-				StaplerRequest req, 
-				JSONObject formData) throws FormException {
-
+		public boolean configure(StaplerRequest req, JSONObject formData) 
+				throws FormException {
+			
 			save();
 			return super.configure(req,formData);
 		}
+	}
+	
+	/**
+	 * Added for testing purposes
+	 */
+	protected void setHttpClientfactory(HttpClientFactory httpClientfactory) {
+		this.httpClientfactory = httpClientfactory;
+	}
+	
+	/**
+	 * Added for testing purposes
+	 */
+	protected void setJenkins(Jenkins jenkins) {
+		this.jenkins = jenkins;
+	}
+	
+	/**
+	 * Added for testing purposes
+	 */
+	protected void setNotifierService(StashNotifierService notifierService) {
+		this.notifierService = notifierService;
 	}
 	
 }
