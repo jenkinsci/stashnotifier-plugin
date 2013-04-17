@@ -15,12 +15,12 @@ import java.io.PrintStream;
 import javax.net.ssl.SSLPeerUnverifiedException;
 
 import jenkins.model.Jenkins;
+import junit.framework.TestCase;
 
 import org.apache.http.client.HttpClient;
 import org.apache.http.conn.ClientConnectionManager;
 import org.jenkinsci.plugins.stashNotifier.util.HttpClientFactory;
 import org.jenkinsci.plugins.stashNotifier.util.StashNotifierService;
-import org.jvnet.hudson.test.HudsonTestCase;
 
 /**
  * Test case for the {@link StashNotifier} class.
@@ -28,7 +28,7 @@ import org.jvnet.hudson.test.HudsonTestCase;
  * @author Michael Irwin
  */
 @SuppressWarnings("rawtypes")
-public class StashNotifierTest extends HudsonTestCase {
+public class StashNotifierTest extends TestCase {
 
 	private StashNotifier notifier;
 	private String rootUrl, baseUrl, username, password, commitSha1;
