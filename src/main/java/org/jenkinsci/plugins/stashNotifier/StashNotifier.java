@@ -95,7 +95,6 @@ public class StashNotifier extends Notifier {
 		this.stashUserPassword = stashUserPassword;
 		this.ignoreUnverifiedSSLPeer = ignoreUnverifiedSSLPeer;
 		
-		jenkins = Jenkins.getInstance();
 		httpClientfactory = new ConcreteHttpClientFactory();
 		notifierService = new ConfigurableStashNotifierService(
 				stashServerBaseUrl, 
@@ -131,7 +130,7 @@ public class StashNotifier extends Notifier {
 
 		// exit if Jenkins root URL is not configured. Stash build API 
 		// requires valid link to build in CI system.
-		if (jenkins.getRootUrl() == null) {
+		if (getJenkins().getRootUrl() == null) {
 			logger.println(
 					"Cannot notify Stash! (Jenkins Root URL not configured)");
 			return true;
@@ -248,6 +247,15 @@ public class StashNotifier extends Notifier {
 	 */
 	protected void setJenkins(Jenkins jenkins) {
 		this.jenkins = jenkins;
+	}
+	
+	/**
+	 * Get the current Jenkins instance.
+	 */
+	private Jenkins getJenkins() {
+		if (jenkins == null)
+			jenkins = Jenkins.getInstance();
+		return jenkins;
 	}
 	
 	/**
