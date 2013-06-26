@@ -10,3 +10,5 @@ target/*
 work/*
 bin/*
 **/Thumbs.db
+stashNotifier.iml
+.idea/*
