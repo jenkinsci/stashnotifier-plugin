@@ -366,6 +366,7 @@ public class StashNotifier extends Notifier {
         		"key",
         		StringEscapeUtils.escapeJavaScript(
         				build.getProject().getName()) + "-" + 
+        				build.getNumber() + "-" + 
         				Jenkins.getInstance().getRootUrl());
 
         // This is to replace the odd character Jenkins injects to separate 
