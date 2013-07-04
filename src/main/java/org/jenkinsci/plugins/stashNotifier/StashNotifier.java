@@ -270,7 +270,11 @@ public class StashNotifier extends Notifier {
         }
 
         public String getStashUser() {
-            return stashUser;
+        	if ((stashUser != null) && (stashUser.trim().equals(""))) {
+        		return null;
+        	} else {
+	            return stashUser;
+        	}
         }
 
         public Secret getStashPassword() {
@@ -285,7 +289,11 @@ public class StashNotifier extends Notifier {
         }
 
         public String getStashRootUrl() {
-            return stashRootUrl;
+        	if ((stashRootUrl == null) || (stashRootUrl.trim().equals(""))) {
+        		return null;
+        	} else {
+	            return stashRootUrl;
+        	}
         }
 
         public boolean isIgnoreUnverifiedSsl() {
@@ -324,7 +332,7 @@ public class StashNotifier extends Notifier {
 				throws IOException, ServletException {
 
 			if (value.trim().equals("") 
-					&& ((stashUser == null) || stashUser.equals(""))) {
+					&& ((stashUser == null) || stashUser.trim().equals(""))) {
 				return FormValidation.error(
 						"Please specify a user name here or in the global "
 						+ "configuration!");
