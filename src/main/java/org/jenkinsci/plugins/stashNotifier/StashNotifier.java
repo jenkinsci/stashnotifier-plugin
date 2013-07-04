@@ -296,21 +296,38 @@ public class StashNotifier extends Notifier {
 					@QueryParameter String value) 
 				throws IOException, ServletException {
 
-			try {
-                if (!value.trim().equals("")) {
-				    new URL(value);
-                }
-				return FormValidation.ok();
-			} catch (Exception e) {
-				return FormValidation.error("Please specify a valid URL!");
+			// calculate effective url from global and local config
+			String url = value;
+			if ((url != null) && (!url.trim().equals(""))) {
+				url = url.trim();
+			} else {
+				url = stashRootUrl != null ? stashRootUrl.trim() : null;
+			}
+
+			if ((url == null) || url.equals("")) {
+				return FormValidation.error(
+						"Please specify a valid URL here or in the global " 
+						+ "configuration");
+			} else {
+				try {
+					new URL(url);
+					return FormValidation.ok();
+				} catch (Exception e) {
+					return FormValidation.error(
+						"Please specify a valid URL here or in the global "
+						+ "configuration!");
+				}
 			}
 		}
-/*
+
 		public FormValidation doCheckStashUserName(@QueryParameter String value)
 				throws IOException, ServletException {
 
-			if (value.trim().equals("")) {
-				return FormValidation.error("Please specify a user name!");
+			if (value.trim().equals("") 
+					&& ((stashUser == null) || stashUser.equals(""))) {
+				return FormValidation.error(
+						"Please specify a user name here or in the global "
+						+ "configuration!");
 			} else {
 				return FormValidation.ok();
 			}
@@ -320,14 +337,17 @@ public class StashNotifier extends Notifier {
 					@QueryParameter String value) 
 				throws IOException, ServletException {
 
-			if (value.trim().equals("")) {
+			if (value.trim().equals("") 
+					&& ((stashPassword == null) 
+						|| stashPassword.getPlainText().trim().equals(""))) { 
 				return FormValidation.warning(
-						"You should use a non-empty password!");
+						"You should use a non-empty password here or in the "
+						+ "global configuration!");
 			} else {
 				return FormValidation.ok();
 			}
 		}
-*/
+
 		@SuppressWarnings("rawtypes")
 		public boolean isApplicable(Class<? extends AbstractProject> aClass) {
 			return true;
@@ -463,4 +483,3 @@ public class StashNotifier extends Notifier {
         return new StringEntity(json.toString());
 	}
 }
-//{"description":"built by Jenkins @ http://mir.duncllc.com:8070/","key":"Test-http://mir.duncllc.com:8070/","name":"Test #5","state":"SUCCESSFUL","url":"http://mir.duncllc.com:8070/job/Test/5/"}
