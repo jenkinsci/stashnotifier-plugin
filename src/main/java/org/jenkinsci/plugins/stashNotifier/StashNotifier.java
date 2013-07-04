@@ -27,6 +27,7 @@ import hudson.tasks.Publisher;
 import hudson.tasks.Notifier;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
+import hudson.util.Secret;
 import net.sf.json.JSONObject;
 
 import org.apache.commons.lang.StringEscapeUtils;
@@ -101,7 +102,7 @@ public class StashNotifier extends Notifier {
 		this.stashServerBaseUrl = stashServerBaseUrl;
 		this.stashUserName = stashUserName;
 		this.stashUserPassword = stashUserPassword;
-		this.ignoreUnverifiedSSLPeer 
+		this.ignoreUnverifiedSSLPeer
 			= ignoreUnverifiedSSLPeer;
 	}
 
@@ -190,8 +191,13 @@ public class StashNotifier extends Notifier {
 	 */
 	private HttpClient getHttpClient(PrintStream logger) {
 		HttpClient client = null;
+        boolean ignoreUnverifiedSSL = ignoreUnverifiedSSLPeer;
+        DescriptorImpl descriptor = getDescriptor();
+        if (!ignoreUnverifiedSSL) {
+            ignoreUnverifiedSSL = descriptor.isIgnoreUnverifiedSsl();
+        }
 		if (getStashServerBaseUrl().startsWith("https") 
-				&& ignoreUnverifiedSSLPeer) {
+				&& ignoreUnverifiedSSL) {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
 			try {
@@ -226,27 +232,102 @@ public class StashNotifier extends Notifier {
 		return client;
 	}
 
-	@Extension 
+    /**
+     * Hudson defines a method {@link Builder#getDescriptor()}, which
+     * returns the corresponding {@link Descriptor} object.
+     *
+     * Since we know that it's actually {@link DescriptorImpl}, override
+     * the method and give a better return type, so that we can access
+     * {@link DescriptorImpl} methods more easily.
+     *
+     * This is not necessary, but just a coding style preference.
+     */
+    @Override
+    public DescriptorImpl getDescriptor() {
+        // see Descriptor javadoc for more about what a descriptor is.
+        return (DescriptorImpl)super.getDescriptor();
+    }
+
+    @Extension
 	public static final class DescriptorImpl 
 		extends BuildStepDescriptor<Publisher> {
 
-		public FormValidation doCheckStashServerBaseUrl(
+        /**
+         * To persist global configuration information,
+         * simply store it in a field and call save().
+         *
+         * <p>
+         * If you don't want fields to be persisted, use <tt>transient</tt>.
+         */
+
+        private String stashUser;
+        private Secret stashPassword;
+        private String stashRootUrl;
+        private boolean ignoreUnverifiedSsl;
+
+        public DescriptorImpl() {
+            load();
+        }
+
+        public String getStashUser() {
+            return stashUser;
+        }
+
+        public Secret getStashPassword() {
+            return stashPassword;
+        }
+
+        public String getEncryptedStashPassword() {
+            if (stashPassword != null)
+                return stashPassword.getEncryptedValue();
+            else
+                return null;
+        }
+
+        public String getStashRootUrl() {
+            return stashRootUrl;
+        }
+
+        public boolean isIgnoreUnverifiedSsl() {
+            return ignoreUnverifiedSsl;
+        }
+
+        public FormValidation doCheckStashServerBaseUrl(
 					@QueryParameter String value) 
 				throws IOException, ServletException {
 
-			try {
-				new URL(value);
-				return FormValidation.ok();
-			} catch (Exception e) {
-				return FormValidation.error("Please specify a valid URL!");
+			// calculate effective url from global and local config
+			String url = value;
+			if ((url != null) && (!url.trim().equals(""))) {
+				url = url.trim();
+			} else {
+				url = stashRootUrl != null ? stashRootUrl.trim() : null;
+			}
+
+			if ((url == null) || url.equals("")) {
+				return FormValidation.error(
+						"Please specify a valid URL here or in the global " 
+						+ "configuration");
+			} else {
+				try {
+					new URL(url);
+					return FormValidation.ok();
+				} catch (Exception e) {
+					return FormValidation.error(
+						"Please specify a valid URL here or in the global "
+						+ "configuration!");
+				}
 			}
 		}
 
 		public FormValidation doCheckStashUserName(@QueryParameter String value)
 				throws IOException, ServletException {
 
-			if (value.trim().equals("")) {
-				return FormValidation.error("Please specify a user name!");
+			if (value.trim().equals("") 
+					&& ((stashUser == null) || stashUser.equals(""))) {
+				return FormValidation.error(
+						"Please specify a user name here or in the global "
+						+ "configuration!");
 			} else {
 				return FormValidation.ok();
 			}
@@ -256,9 +337,12 @@ public class StashNotifier extends Notifier {
 					@QueryParameter String value) 
 				throws IOException, ServletException {
 
-			if (value.trim().equals("")) {
+			if (value.trim().equals("") 
+					&& ((stashPassword == null) 
+						|| stashPassword.getPlainText().trim().equals(""))) { 
 				return FormValidation.warning(
-						"You should use a non-empty password!");
+						"You should use a non-empty password here or in the "
+						+ "global configuration!");
 			} else {
 				return FormValidation.ok();
 			}
@@ -278,6 +362,12 @@ public class StashNotifier extends Notifier {
 				StaplerRequest req, 
 				JSONObject formData) throws FormException {
 
+            // to persist global configuration information,
+            // set that to properties and call save().
+            stashUser = formData.getString("stashUser");
+            stashPassword = Secret.fromString(formData.getString("stashPassword"));
+            stashRootUrl = formData.getString("stashRootUrl");
+            ignoreUnverifiedSsl = formData.getBoolean("ignoreUnverifiedSsl");
 			save();
 			return super.configure(req,formData);
 		}
@@ -323,16 +413,27 @@ public class StashNotifier extends Notifier {
 	private HttpPost createRequest(
 			final AbstractBuild build,
 			final String commitSha1) throws Exception {
+        String url = stashServerBaseUrl;
+        String username = stashUserName;
+        String pwd = stashUserPassword;
+        DescriptorImpl descriptor = getDescriptor();
+
+        if ("".equals(url) || url == null)
+            url = descriptor.getStashRootUrl();
+        if ("".equals(username) || username == null)
+            username = descriptor.getStashUser();
+        if ("".equals(pwd) || pwd == null)
+            pwd = descriptor.getStashPassword().getPlainText();
 		
 		HttpPost req = new HttpPost(
-				stashServerBaseUrl  
+				url
 				+ "/rest/build-status/1.0/commits/" 
 				+ commitSha1);
 		
 		req.addHeader(BasicScheme.authenticate(
 				new UsernamePasswordCredentials(
-						stashUserName, 
-						stashUserPassword), 
+						username,
+						pwd),
 				"UTF-8", 
 				false));
 		
