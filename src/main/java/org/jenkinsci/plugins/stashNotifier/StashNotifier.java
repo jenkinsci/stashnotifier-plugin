@@ -174,8 +174,8 @@ public class StashNotifier extends Notifier {
     				+ "Stash plugin configuration of this job.");
 			} catch (Exception e) {
 				logger.println(
-						"Caught exception while notifying Stash: " 
-						+ e.getMessage());
+						"Caught exception while notifying Stash:");
+				e.printStackTrace(logger);
 			} finally {
 				client.getConnectionManager().shutdown();
 			}			
@@ -193,10 +193,12 @@ public class StashNotifier extends Notifier {
 				EnvVars environment = build.getEnvironment(listener);
 				return environment.expand(commitSha1);
 			} catch (IOException e) {
-				logger.println("Unable to expand commit SHA value " + e.getMessage());
+				logger.println("Unable to expand commit SHA value");
+				e.printStackTrace(logger);
 				return null;
 			} catch (InterruptedException e) {
-				logger.println("Unable to expand commit SHA value " + e.getMessage());
+				logger.println("Unable to expand commit SHA value");
+				e.printStackTrace(logger);
 				return null;
 			}
 		}
@@ -244,11 +246,11 @@ public class StashNotifier extends Notifier {
 					= new SingleClientConnManager(schemeRegistry);
 				client = new DefaultHttpClient(connectionManager);
 			} catch (NoSuchAlgorithmException nsae) {
-				logger.println("Couldn't establish SSL context: "
-						+ nsae.getMessage());
+				logger.println("Couldn't establish SSL context:");
+				nsae.printStackTrace(logger);
 			} catch (KeyManagementException kme) {
-				logger.println("Couldn't initialize SSL context: "
-						+ kme.getMessage());
+				logger.println("Couldn't initialize SSL context:");
+				kme.printStackTrace(logger);
 			} finally {
 				if (client == null) {
 					logger.println("Trying with safe trust manager, instead!");
