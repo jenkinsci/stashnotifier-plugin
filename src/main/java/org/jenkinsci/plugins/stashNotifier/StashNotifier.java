@@ -15,6 +15,7 @@
  */
  package org.jenkinsci.plugins.stashNotifier;
  
+import hudson.EnvVars;
 import hudson.Launcher;
 import hudson.Extension;
 import hudson.util.FormValidation;
@@ -86,6 +87,9 @@ public class StashNotifier extends Notifier {
 	
 	/** if true, ignore exception thrown in case of an unverified SSL peer. */
 	private final boolean ignoreUnverifiedSSLPeer;
+
+	/** specify the commit from config */
+	private final String commitSha1;
 	
 	// public members ----------------------------------------------------------
 
@@ -98,12 +102,14 @@ public class StashNotifier extends Notifier {
 			String stashServerBaseUrl,
 			String stashUserName,
 			String stashUserPassword,
-			boolean ignoreUnverifiedSSLPeer) {
+			boolean ignoreUnverifiedSSLPeer,
+			String commitSha1) {
 		this.stashServerBaseUrl = stashServerBaseUrl;
 		this.stashUserName = stashUserName;
 		this.stashUserPassword = stashUserPassword;
 		this.ignoreUnverifiedSSLPeer
 			= ignoreUnverifiedSSLPeer;
+		this.commitSha1 = commitSha1;
 	}
 
 	public String getStashServerBaseUrl() {
@@ -120,6 +126,10 @@ public class StashNotifier extends Notifier {
 	
 	public boolean getIgnoreUnverifiedSSLPeer() {
 		return ignoreUnverifiedSSLPeer;
+	}
+	
+	public String getCommitSha1() {
+		return commitSha1;
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -139,13 +149,8 @@ public class StashNotifier extends Notifier {
 			return true;
 		}
 
-		// get the sha1 of the commit that was built
-		BuildData buildData 
-			= (BuildData) build.getAction(BuildData.class);
-		if  (buildData != null) {
-			String commitSha1 
-				= buildData.getLastBuiltRevision().getSha1String();
-			
+		String commitSha1 = lookupCommitSha1(build, listener);
+		if  (commitSha1 != null) {
 			HttpClient client = getHttpClient(logger); 
 			NotificationResult result;
 
@@ -181,6 +186,30 @@ public class StashNotifier extends Notifier {
 		return true;
 	}
 		
+	private String lookupCommitSha1(AbstractBuild build, BuildListener listener) {
+		if (commitSha1 != null && commitSha1.trim().length() > 0) {
+			PrintStream logger = listener.getLogger();
+			try {
+				EnvVars environment = build.getEnvironment(listener);
+				return environment.expand(commitSha1);
+			} catch (IOException e) {
+				logger.println("Unable to expand commit SHA value " + e.getMessage());
+				return null;
+			} catch (InterruptedException e) {
+				logger.println("Unable to expand commit SHA value " + e.getMessage());
+				return null;
+			}
+		}
+		
+		// get the sha1 of the commit that was built
+		BuildData buildData = (BuildData) build.getAction(BuildData.class);
+		if  (buildData != null) {
+			return buildData.getLastBuiltRevision().getSha1String();
+		}
+
+		return null;
+	}
+
 	/**
 	 * Returns the HttpClient through which the REST call is made. Uses an
 	 * unsafe X509 trust manager in case the user specified a HTTPS URL and
