@@ -35,6 +35,7 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.conn.ClientConnectionManager;
@@ -57,6 +58,7 @@ import javax.servlet.ServletException;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -132,13 +134,21 @@ public class StashNotifier extends Notifier {
 		return commitSha1;
 	}
 
-	@SuppressWarnings("rawtypes")
 	@Override
-	public boolean perform(
-			AbstractBuild build, 
-			Launcher launcher, 
-			BuildListener listener) {
+	public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener) {
+		return processJenkinsEvent(build, listener, StashBuildState.INPROGRESS);
+	}
+	
+	@Override
+	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) {
+		if ((build.getResult() == null) || (!build.getResult().equals(Result.SUCCESS))) {
+			return processJenkinsEvent(build, listener, StashBuildState.FAILED);
+		} else {
+			return processJenkinsEvent(build, listener, StashBuildState.SUCCESSFUL);
+		}
+	}
 
+	private boolean processJenkinsEvent(final AbstractBuild<?, ?> build, final BuildListener listener, final StashBuildState state) {
 		PrintStream logger = listener.getLogger();
 
 		// exit if Jenkins root URL is not configured. Stash build API 
@@ -151,11 +161,8 @@ public class StashNotifier extends Notifier {
 
 		String commitSha1 = lookupCommitSha1(build, listener);
 		if  (commitSha1 != null) {
-			HttpClient client = getHttpClient(logger); 
-			NotificationResult result;
-
 			try {
-				result = notifyStash(build, commitSha1, client, listener);
+				NotificationResult result = notifyStash(logger, build, commitSha1, listener, state);
 				if (result.indicatesSuccess) {
 					logger.println(
 						"Notified Stash for commit with id " 
@@ -173,20 +180,16 @@ public class StashNotifier extends Notifier {
     				+ " 'Ignore unverifiable SSL certificate' checkbox in the "
     				+ "Stash plugin configuration of this job.");
 			} catch (Exception e) {
-				logger.println(
-						"Caught exception while notifying Stash:");
+				logger.println("Caught exception while notifying Stash with id " + commitSha1);
 				e.printStackTrace(logger);
-			} finally {
-				client.getConnectionManager().shutdown();
 			}			
 		} else {
-			logger.println(
-					"found no commit info");
+			logger.println("found no commit info");
 		}
 		return true;
 	}
-		
-	private String lookupCommitSha1(AbstractBuild build, BuildListener listener) {
+
+	private String lookupCommitSha1(@SuppressWarnings("rawtypes") AbstractBuild build, BuildListener listener) {
 		if (commitSha1 != null && commitSha1.trim().length() > 0) {
 			PrintStream logger = listener.getLogger();
 			try {
@@ -418,41 +421,45 @@ public class StashNotifier extends Notifier {
 	 * Notifies the configured Stash server by POSTing the build results 
 	 * to the Stash build API.
 	 * 
+	 * @param logger		the logger to use
 	 * @param build			the build to notify Stash of
 	 * @param commitSha1	the SHA1 of the built commit
 	 * @param client		the HTTP client with which to execute the request
 	 * @param listener		the build listener for logging
+	 * @param state			the state of the build as defined by the Stash API.
 	 */
-	@SuppressWarnings("rawtypes")
 	private NotificationResult notifyStash(
-			final AbstractBuild build,
+			final PrintStream logger, 
+			final AbstractBuild<?, ?> build,
 			final String commitSha1,
-			final HttpClient client, 
-			final BuildListener listener) throws Exception {
-		
-		HttpPost req = createRequest(build, commitSha1);
-		HttpResponse res = client.execute(req);
-		if (res.getStatusLine().getStatusCode() != 204) {
-			return NotificationResult.newFailure(
-					EntityUtils.toString(res.getEntity()));
-		} else {
-			return NotificationResult.newSuccess();
+			final BuildListener listener,
+			final StashBuildState state) throws Exception {
+		HttpEntity stashBuildNotificationEntity = newStashBuildNotificationEntity(build, state);
+		HttpPost req = createRequest(stashBuildNotificationEntity, commitSha1);
+		HttpClient client = getHttpClient(logger);
+		try {
+			HttpResponse res = client.execute(req);
+			if (res.getStatusLine().getStatusCode() != 204) {
+				return NotificationResult.newFailure(
+						EntityUtils.toString(res.getEntity()));
+			} else {
+				return NotificationResult.newSuccess();
+			}
+		} finally {
+			client.getConnectionManager().shutdown();
 		}
 	}
-	
+
 	/**
 	 * Returns the HTTP POST request ready to be sent to the Stash build API for
 	 * the given build and change set. 
 	 * 
-	 * @param build			the build to notify Stash of
+	 * @param stashBuildNotificationEntity	a entity containing the parameters for Stash
 	 * @param commitSha1	the SHA1 of the commit that was built
 	 * @return				the HTTP POST request to the Stash build API
 	 */
-	@SuppressWarnings("rawtypes")
-	private HttpPost createRequest(
-			final AbstractBuild build,
-			final String commitSha1) throws Exception {
-        String url = stashServerBaseUrl;
+	private HttpPost createRequest(final HttpEntity stashBuildNotificationEntity, final String commitSha1) {
+		String url = stashServerBaseUrl;
         String username = stashUserName;
         String pwd = stashUserPassword;
         DescriptorImpl descriptor = getDescriptor();
@@ -476,8 +483,8 @@ public class StashNotifier extends Notifier {
 				"UTF-8", 
 				false));
 		
-		req.addHeader("Content-type", "application/json");		
-		req.setEntity(newStashBuildNotificationEntity(build));
+		req.addHeader("Content-type", "application/json");
+		req.setEntity(stashBuildNotificationEntity);
 				
 		return req;
 	}
@@ -489,18 +496,10 @@ public class StashNotifier extends Notifier {
 	 * @param build			the build to notify Stash of
 	 * @return				HTTP entity body for POST to Stash build API
 	 */
-	@SuppressWarnings("rawtypes")
-	private HttpEntity newStashBuildNotificationEntity(final AbstractBuild build)
-            throws Exception {
+	private HttpEntity newStashBuildNotificationEntity(final AbstractBuild<?, ?> build, final StashBuildState state) throws UnsupportedEncodingException {
+		JSONObject json = new JSONObject();
 
-        JSONObject json = new JSONObject();
-
-        if ((build.getResult() == null) 
-        		|| (!build.getResult().equals(Result.SUCCESS))) {
-            json.put("state", "FAILED");
-        } else {
-            json.put("state", "SUCCESSFUL");
-        }
+        json.put("state", state.name());
 
         json.put(
         		"key",
