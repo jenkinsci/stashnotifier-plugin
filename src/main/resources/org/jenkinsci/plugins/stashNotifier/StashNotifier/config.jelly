@@ -22,6 +22,9 @@
   </f:entry>
    <f:entry title="Commit SHA-1" field="commitSha1">
     <f:textbox />
-  </f:entry> 
+  </f:entry>
+  <f:entry title="Keep repeated builds in Stash" field="includeBuildNumberInKey">
+    <f:checkbox />
+  </f:entry>
  </f:advanced>
 </j:jelly>

@@ -93,6 +93,8 @@ public class StashNotifier extends Notifier {
 	/** specify the commit from config */
 	private final String commitSha1;
 	
+	private final boolean includeBuildNumberInKey;
+	
 	// public members ----------------------------------------------------------
 
 	public BuildStepMonitor getRequiredMonitorService() {
@@ -105,13 +107,15 @@ public class StashNotifier extends Notifier {
 			String stashUserName,
 			String stashUserPassword,
 			boolean ignoreUnverifiedSSLPeer,
-			String commitSha1) {
+			String commitSha1,
+			boolean includeBuildNumberInKey) {
 		this.stashServerBaseUrl = stashServerBaseUrl;
 		this.stashUserName = stashUserName;
 		this.stashUserPassword = stashUserPassword;
 		this.ignoreUnverifiedSSLPeer
 			= ignoreUnverifiedSSLPeer;
 		this.commitSha1 = commitSha1;
+		this.includeBuildNumberInKey = includeBuildNumberInKey;
 	}
 
 	public String getStashServerBaseUrl() {
@@ -134,6 +138,10 @@ public class StashNotifier extends Notifier {
 		return commitSha1;
 	}
 
+	public boolean getIncludeBuildNumberInKey() {
+		return includeBuildNumberInKey;
+	}
+	
 	@Override
 	public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener) {
 		return processJenkinsEvent(build, listener, StashBuildState.INPROGRESS);
@@ -298,6 +306,7 @@ public class StashNotifier extends Notifier {
         private Secret stashPassword;
         private String stashRootUrl;
         private boolean ignoreUnverifiedSsl;
+        private boolean includeBuildNumberInKey;
 
         public DescriptorImpl() {
             load();
@@ -334,6 +343,10 @@ public class StashNotifier extends Notifier {
             return ignoreUnverifiedSsl;
         }
 
+        public boolean isIncludeBuildNumberInKey() {
+            return includeBuildNumberInKey;
+        }
+        
         public FormValidation doCheckStashServerBaseUrl(
 					@QueryParameter String value) 
 				throws IOException, ServletException {
@@ -410,6 +423,7 @@ public class StashNotifier extends Notifier {
             stashPassword = Secret.fromString(formData.getString("stashPassword"));
             stashRootUrl = formData.getString("stashRootUrl");
             ignoreUnverifiedSsl = formData.getBoolean("ignoreUnverifiedSsl");
+            includeBuildNumberInKey = formData.getBoolean("includeBuildNumberInKey");
 			save();
 			return super.configure(req,formData);
 		}
@@ -501,12 +515,7 @@ public class StashNotifier extends Notifier {
 
         json.put("state", state.name());
 
-        json.put(
-        		"key",
-        		StringEscapeUtils.escapeJavaScript(
-        				build.getProject().getName()) + "-" + 
-        				build.getNumber() + "-" + 
-        				Jenkins.getInstance().getRootUrl());
+        json.put("key", getBuildKey(build));
 
         // This is to replace the odd character Jenkins injects to separate 
         // nested jobs, especially when using the Cloudbees Folders plugin. 
@@ -520,5 +529,15 @@ public class StashNotifier extends Notifier {
                 "built by Jenkins @ ".concat(Jenkins.getInstance().getRootUrl()));
         json.put("url", Jenkins.getInstance().getRootUrl().concat(build.getUrl()));
         return new StringEntity(json.toString());
+	}
+
+	private String getBuildKey(final AbstractBuild<?, ?> build) {
+		StringBuilder key = new StringBuilder();
+		key.append(build.getProject().getName());
+        if (includeBuildNumberInKey || getDescriptor().isIncludeBuildNumberInKey()) {
+			key.append('-').append(build.getNumber());
+		}
+		key.append('-').append(Jenkins.getInstance().getRootUrl());
+		return StringEscapeUtils.escapeJavaScript(key.toString());
 	}
 }
