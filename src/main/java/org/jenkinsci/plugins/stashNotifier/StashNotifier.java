@@ -525,8 +525,7 @@ public class StashNotifier extends Notifier {
                 replaceAll("\\\\u00BB", "\\/");
         json.put("name", fullName);
 
-        json.put("description",
-                "built by Jenkins @ ".concat(Jenkins.getInstance().getRootUrl()));
+        json.put("description", getBuildDescription(build, state));
         json.put("url", Jenkins.getInstance().getRootUrl().concat(build.getUrl()));
         return new StringEntity(json.toString());
 	}
@@ -539,5 +538,18 @@ public class StashNotifier extends Notifier {
 		}
 		key.append('-').append(Jenkins.getInstance().getRootUrl());
 		return StringEscapeUtils.escapeJavaScript(key.toString());
+	}
+
+	private String getBuildDescription(final AbstractBuild<?, ?> build, final StashBuildState state) {
+		if (build.getDescription() != null && build.getDescription().trim().length() > 0) {
+			return build.getDescription();
+		} else {
+			switch (state) {
+			case INPROGRESS:
+	            return "building on Jenkins @ " + Jenkins.getInstance().getRootUrl();
+			default:
+	            return "built by Jenkins @ " + Jenkins.getInstance().getRootUrl();
+			}
+		}
 	}
 }
