@@ -18,5 +18,8 @@
       <f:entry title="Ignore unverified SSL certificates" description="Check this if you need to connect to Stash server via https which uses an invalid or self signed SSL certificate">
           <f:checkbox name="stashNotifier.ignoreUnverifiedSsl" value="${descriptor.isIgnoreUnverifiedSsl()}"/>
       </f:entry>
+      <f:entry title="Keep repeated builds in Stash" field="includeBuildNumberInKey">
+          <f:checkbox name="stashNotifier.includeBuildNumberInKey" value="${descriptor.isIncludeBuildNumberInKey()}"/>
+      </f:entry>
   </f:section>
 </j:jelly>
