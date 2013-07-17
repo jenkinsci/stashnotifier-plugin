@@ -39,18 +39,10 @@ Maintainers
 
 * Georg Gruetter ([Twitter](https://twitter.com/bumbleGee), [GitHub](https://github.com/gruetter))
 
-Contributors
-============
-* Ilya Vassilewsky ([GitHub](https://github.com/vassilevsky))
-* Jason Stiefel ([GitHub](https://github.com/kphonik))
-* Adam Parkin ([GitHub](https://github.com/pzelnip))
-
 License
 =======
 
 [Apache 2.0 License](http://www.apache.org/licenses/LICENSE-2.0.html)
-
-
 
 [Stash]: www.atlassian.com/software/stash
 [Stash Build Integration]: https://developer.atlassian.com/stash/docs/latest/how-tos/updating-build-status-for-commits.html
