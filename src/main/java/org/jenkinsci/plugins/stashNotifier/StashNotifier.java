@@ -35,7 +35,6 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.conn.ClientConnectionManager;
@@ -71,8 +70,6 @@ import jenkins.model.Jenkins;
  * through the Stash build API.
  * <p>
  * Only basic authentication is supported at the moment.
- * 
- * @author	Georg Gruetter
  */
 public class StashNotifier extends Notifier {
 	
@@ -93,6 +90,7 @@ public class StashNotifier extends Notifier {
 	/** specify the commit from config */
 	private final String commitSha1;
 	
+	/** if true, the build number is included in the Stash notification. */
 	private final boolean includeBuildNumberInKey;
 	
 	// public members ----------------------------------------------------------
@@ -148,15 +146,36 @@ public class StashNotifier extends Notifier {
 	}
 	
 	@Override
-	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) {
-		if ((build.getResult() == null) || (!build.getResult().equals(Result.SUCCESS))) {
-			return processJenkinsEvent(build, listener, StashBuildState.FAILED);
+	public boolean perform(
+			AbstractBuild<?, ?> build, 
+			Launcher launcher, 
+			BuildListener listener) {
+		
+		if ((build.getResult() == null) 
+				|| (!build.getResult().equals(Result.SUCCESS))) {
+			return processJenkinsEvent(
+					build, listener, StashBuildState.FAILED);
 		} else {
-			return processJenkinsEvent(build, listener, StashBuildState.SUCCESSFUL);
+			return processJenkinsEvent(
+					build, listener, StashBuildState.SUCCESSFUL);
 		}
 	}
 
-	private boolean processJenkinsEvent(final AbstractBuild<?, ?> build, final BuildListener listener, final StashBuildState state) {
+	/**
+	 * Processes the Jenkins events triggered before and after the build and
+	 * initiates the Stash notification.
+	 * 
+	 * @param build		the build to notify Stash of
+	 * @param listener	the Jenkins build listener
+	 * @param state		the state of the build (in progress, success, failed)
+	 * @return			always true in order not to abort the Job in case of
+	 * 					notification failures
+	 */
+	private boolean processJenkinsEvent(
+			final AbstractBuild<?, ?> build, 
+			final BuildListener listener, 
+			final StashBuildState state) {
+		
 		PrintStream logger = listener.getLogger();
 
 		// exit if Jenkins root URL is not configured. Stash build API 
@@ -170,7 +189,8 @@ public class StashNotifier extends Notifier {
 		String commitSha1 = lookupCommitSha1(build, listener);
 		if  (commitSha1 != null) {
 			try {
-				NotificationResult result = notifyStash(logger, build, commitSha1, listener, state);
+				NotificationResult result 
+					= notifyStash(logger, build, commitSha1, listener, state);
 				if (result.indicatesSuccess) {
 					logger.println(
 						"Notified Stash for commit with id " 
@@ -188,7 +208,8 @@ public class StashNotifier extends Notifier {
     				+ " 'Ignore unverifiable SSL certificate' checkbox in the "
     				+ "Stash plugin configuration of this job.");
 			} catch (Exception e) {
-				logger.println("Caught exception while notifying Stash with id " + commitSha1);
+				logger.println("Caught exception while notifying Stash with id " 
+					+ commitSha1);
 				e.printStackTrace(logger);
 			}			
 		} else {
@@ -197,7 +218,10 @@ public class StashNotifier extends Notifier {
 		return true;
 	}
 
-	private String lookupCommitSha1(@SuppressWarnings("rawtypes") AbstractBuild build, BuildListener listener) {
+	private String lookupCommitSha1(
+			@SuppressWarnings("rawtypes") AbstractBuild build, 
+			BuildListener listener) {
+		
 		if (commitSha1 != null && commitSha1.trim().length() > 0) {
 			PrintStream logger = listener.getLogger();
 			try {
@@ -419,11 +443,16 @@ public class StashNotifier extends Notifier {
 
             // to persist global configuration information,
             // set that to properties and call save().
-            stashUser = formData.getString("stashUser");
-            stashPassword = Secret.fromString(formData.getString("stashPassword"));
-            stashRootUrl = formData.getString("stashRootUrl");
-            ignoreUnverifiedSsl = formData.getBoolean("ignoreUnverifiedSsl");
-            includeBuildNumberInKey = formData.getBoolean("includeBuildNumberInKey");
+            stashUser 
+            	= formData.getString("stashUser");
+            stashPassword 
+            	= Secret.fromString(formData.getString("stashPassword"));
+            stashRootUrl 
+            	= formData.getString("stashRootUrl");
+            ignoreUnverifiedSsl 
+            	= formData.getBoolean("ignoreUnverifiedSsl");
+            includeBuildNumberInKey 
+            	= formData.getBoolean("includeBuildNumberInKey");
 			save();
 			return super.configure(req,formData);
 		}
@@ -448,7 +477,8 @@ public class StashNotifier extends Notifier {
 			final String commitSha1,
 			final BuildListener listener,
 			final StashBuildState state) throws Exception {
-		HttpEntity stashBuildNotificationEntity = newStashBuildNotificationEntity(build, state);
+		HttpEntity stashBuildNotificationEntity 
+			= newStashBuildNotificationEntity(build, state);
 		HttpPost req = createRequest(stashBuildNotificationEntity, commitSha1);
 		HttpClient client = getHttpClient(logger);
 		try {
@@ -468,11 +498,15 @@ public class StashNotifier extends Notifier {
 	 * Returns the HTTP POST request ready to be sent to the Stash build API for
 	 * the given build and change set. 
 	 * 
-	 * @param stashBuildNotificationEntity	a entity containing the parameters for Stash
+	 * @param stashBuildNotificationEntity	a entity containing the parameters 
+	 * 										for Stash
 	 * @param commitSha1	the SHA1 of the commit that was built
 	 * @return				the HTTP POST request to the Stash build API
 	 */
-	private HttpPost createRequest(final HttpEntity stashBuildNotificationEntity, final String commitSha1) {
+	private HttpPost createRequest(
+			final HttpEntity stashBuildNotificationEntity, 
+			final String commitSha1) {
+		
 		String url = stashServerBaseUrl;
         String username = stashUserName;
         String pwd = stashUserPassword;
@@ -510,7 +544,10 @@ public class StashNotifier extends Notifier {
 	 * @param build			the build to notify Stash of
 	 * @return				HTTP entity body for POST to Stash build API
 	 */
-	private HttpEntity newStashBuildNotificationEntity(final AbstractBuild<?, ?> build, final StashBuildState state) throws UnsupportedEncodingException {
+	private HttpEntity newStashBuildNotificationEntity(
+			final AbstractBuild<?, ?> build, 
+			final StashBuildState state) throws UnsupportedEncodingException {
+		
 		JSONObject json = new JSONObject();
 
         json.put("state", state.name());
@@ -526,29 +563,54 @@ public class StashNotifier extends Notifier {
         json.put("name", fullName);
 
         json.put("description", getBuildDescription(build, state));
-        json.put("url", Jenkins.getInstance().getRootUrl().concat(build.getUrl()));
+        json.put("url", Jenkins.getInstance()
+        		.getRootUrl().concat(build.getUrl()));
+        
         return new StringEntity(json.toString());
 	}
 
+	/**
+	 * Returns the build key used in the Stash notification. Includes the 
+	 * build number depending on the user setting.
+	 * 
+	 * @param 	build	the build to notify Stash of
+	 * @return	the build key for the Stash notification
+	 */
 	private String getBuildKey(final AbstractBuild<?, ?> build) {
 		StringBuilder key = new StringBuilder();
 		key.append(build.getProject().getName());
-        if (includeBuildNumberInKey || getDescriptor().isIncludeBuildNumberInKey()) {
+        if (includeBuildNumberInKey 
+        		|| getDescriptor().isIncludeBuildNumberInKey()) {
 			key.append('-').append(build.getNumber());
 		}
 		key.append('-').append(Jenkins.getInstance().getRootUrl());
 		return StringEscapeUtils.escapeJavaScript(key.toString());
 	}
 
-	private String getBuildDescription(final AbstractBuild<?, ?> build, final StashBuildState state) {
-		if (build.getDescription() != null && build.getDescription().trim().length() > 0) {
+	/**
+	 * Returns the description of the build used for the Stash notification. 
+	 * Uses the build description provided by the Jenkins job, if available.
+	 * 
+	 * @param build		the build to be described
+	 * @param state		the state of the build
+	 * @return			the description of the build
+	 */
+	private String getBuildDescription(
+			final AbstractBuild<?, ?> build, 
+			final StashBuildState state) {
+		
+		if (build.getDescription() != null 
+				&& build.getDescription().trim().length() > 0) {
+			
 			return build.getDescription();
 		} else {
 			switch (state) {
 			case INPROGRESS:
-	            return "building on Jenkins @ " + Jenkins.getInstance().getRootUrl();
+	            return "building on Jenkins @ " 
+					+ Jenkins.getInstance().getRootUrl();
 			default:
-	            return "built by Jenkins @ " + Jenkins.getInstance().getRootUrl();
+	            return "built by Jenkins @ " 
+	            	+ Jenkins.getInstance().getRootUrl();
 			}
 		}
 	}

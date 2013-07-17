@@ -1,3 +1,6 @@
 <div>
-  The commit SHA-1 to use when notifying Stash. For example $GIT_COMMIT. If left empty it will attempt to get the commit SHA-1 using the git plugin.
+  Enter a 40-digit SHA1 commit id or the Jenkins variable prefixed with '$'
+  (e. g. <em>$GIT_COMMIT</em>) when you want a the notification to be 
+  attached to a specific commit in Stash. If left empty, Jenkins will use the
+  commit that was build by the git plugin.
 </div>
