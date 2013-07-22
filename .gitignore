@@ -12,3 +12,4 @@ bin/*
 **/Thumbs.db
 stashNotifier.i*
 .idea/*
+/target
