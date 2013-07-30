@@ -41,6 +41,7 @@ import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
 import org.apache.http.conn.ssl.SSLSocketFactory;
+import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -49,6 +50,8 @@ import org.apache.http.util.EntityUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.QueryParameter;
+
+
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -62,6 +65,10 @@ import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.security.KeyStoreException;
+import java.security.UnrecoverableKeyException;
 
 import jenkins.model.Jenkins;
 
@@ -249,7 +256,7 @@ public class StashNotifier extends Notifier {
 
 	/**
 	 * Returns the HttpClient through which the REST call is made. Uses an
-	 * unsafe X509 trust manager in case the user specified a HTTPS URL and
+	 * unsafe TrustStrategy in case the user specified a HTTPS URL and
 	 * set the ignoreUnverifiedSSLPeer flag.
 	 * 
 	 * @param logger	the logger to log messages to
@@ -267,13 +274,15 @@ public class StashNotifier extends Notifier {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
 			try {
-				SSLContext sslContext = SSLContext.getInstance("TLS");
-				sslContext.init(
-						null, 
-						new TrustManager[] { new UnsafeX509TrustManager() }, 
-						new SecureRandom());
+				TrustStrategy easyStrategy = new TrustStrategy() {
+				    public boolean isTrusted(X509Certificate[] chain, String authType)
+				            throws CertificateException {
+				        return true;
+				    }
+				};
+
 				SSLSocketFactory sslSocketFactory 
-					= new SSLSocketFactory(sslContext);
+					= new SSLSocketFactory(easyStrategy);
 				SchemeRegistry schemeRegistry = new SchemeRegistry();
 				schemeRegistry.register(
 						new Scheme("https", 443, sslSocketFactory));
@@ -286,6 +295,12 @@ public class StashNotifier extends Notifier {
 			} catch (KeyManagementException kme) {
 				logger.println("Couldn't initialize SSL context:");
 				kme.printStackTrace(logger);
+			} catch (KeyStoreException kse) {
+				logger.println("Couldn't initialize SSL context:");
+				kse.printStackTrace(logger);
+			} catch (UnrecoverableKeyException uke) {
+				logger.println("Couldn't initialize SSL context:");
+				uke.printStackTrace(logger);
 			} finally {
 				if (client == null) {
 					logger.println("Trying with safe trust manager, instead!");
