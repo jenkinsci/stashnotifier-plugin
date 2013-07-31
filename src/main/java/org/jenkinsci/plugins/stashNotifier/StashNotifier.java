@@ -19,6 +19,7 @@ import hudson.EnvVars;
 import hudson.Launcher;
 import hudson.Extension;
 import hudson.util.FormValidation;
+import hudson.ProxyConfiguration;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.AbstractProject;
@@ -33,11 +34,14 @@ import net.sf.json.JSONObject;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.conn.ClientConnectionManager;
+import org.apache.http.conn.params.ConnRoutePNames;
+import org.apache.http.conn.scheme.PlainSocketFactory;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
 import org.apache.http.conn.ssl.SSLSocketFactory;
@@ -295,6 +299,14 @@ public class StashNotifier extends Notifier {
 		} else {
 			client = new DefaultHttpClient();
 		}
+		
+		ProxyConfiguration proxy = Jenkins.getInstance().proxy;
+		if(proxy != null && !proxy.name.isEmpty() && !proxy.name.startsWith("http")){
+			SchemeRegistry schemeRegistry = client.getConnectionManager().getSchemeRegistry();
+			schemeRegistry.register(new Scheme("http", proxy.port, new PlainSocketFactory()));
+			client.getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, new HttpHost(proxy.name, proxy.port));
+		}
+		
 		return client;
 	}
 
