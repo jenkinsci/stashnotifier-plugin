@@ -71,6 +71,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.KeyStoreException;
 import java.security.UnrecoverableKeyException;
+import java.util.regex.Pattern;
 
 import jenkins.model.Jenkins;
 
@@ -314,13 +315,37 @@ public class StashNotifier extends Notifier {
 		}
 		
 		ProxyConfiguration proxy = Jenkins.getInstance().proxy;
-		if(proxy != null && !proxy.name.isEmpty() && !proxy.name.startsWith("http")){
+		if(proxy != null && !proxy.name.isEmpty() && !proxy.name.startsWith("http") && !isHostOnNoProxyList(proxy)){
 			SchemeRegistry schemeRegistry = client.getConnectionManager().getSchemeRegistry();
 			schemeRegistry.register(new Scheme("http", proxy.port, new PlainSocketFactory()));
 			client.getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, new HttpHost(proxy.name, proxy.port));
 		}
 		
 		return client;
+	}
+	
+	/**
+	 * Returns whether or not the stash host is on the noProxy list
+	 * as defined in the Jenkins proxy settings
+	 * 
+	 * @param host     the stash URL
+	 * @param proxy    the ProxyConfiguration
+	 * @return         whether or not the host is on the noProxy list
+	 */
+	private boolean isHostOnNoProxyList(ProxyConfiguration proxy) {
+	    String host = getStashServerBaseUrl();
+	    if ("".equals(host) || host == null) {
+	        DescriptorImpl descriptor = getDescriptor();
+	        host = descriptor.getStashRootUrl();
+	    }
+	    if (host != null && proxy.noProxyHost != null) {
+            for (Pattern p : ProxyConfiguration.getNoProxyHostPatterns(proxy.noProxyHost)) {
+                if (p.matcher(host).matches()) {
+                    return true;
+                }
+            }
+	    }
+	    return false;
 	}
 
     /**
