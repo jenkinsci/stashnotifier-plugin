@@ -92,7 +92,7 @@ public class StashNotifier extends Notifier {
 	private final String stashUserName;
 	
 	/** password of Stash user for authentication with Stash build API. */
-	private final String stashUserPassword;
+	private final Secret stashUserPassword;
 	
 	/** if true, ignore exception thrown in case of an unverified SSL peer. */
 	private final boolean ignoreUnverifiedSSLPeer;
@@ -119,7 +119,7 @@ public class StashNotifier extends Notifier {
 			boolean includeBuildNumberInKey) {
 		this.stashServerBaseUrl = stashServerBaseUrl;
 		this.stashUserName = stashUserName;
-		this.stashUserPassword = stashUserPassword;
+		this.stashUserPassword = Secret.fromString(stashUserPassword);
 		this.ignoreUnverifiedSSLPeer
 			= ignoreUnverifiedSSLPeer;
 		this.commitSha1 = commitSha1;
@@ -135,7 +135,7 @@ public class StashNotifier extends Notifier {
 	}
 
 	public String getStashUserPassword() {
-		return stashUserPassword;
+		return stashUserPassword.getEncryptedValue();
 	}
 	
 	public boolean getIgnoreUnverifiedSSLPeer() {
@@ -559,7 +559,7 @@ public class StashNotifier extends Notifier {
 		
 		String url = stashServerBaseUrl;
         String username = stashUserName;
-        String pwd = stashUserPassword;
+        String pwd = Secret.toString(stashUserPassword);
         DescriptorImpl descriptor = getDescriptor();
 
         if ("".equals(url) || url == null)
