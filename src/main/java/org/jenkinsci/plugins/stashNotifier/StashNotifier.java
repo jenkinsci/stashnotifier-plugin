@@ -117,7 +117,9 @@ public class StashNotifier extends Notifier {
 			boolean ignoreUnverifiedSSLPeer,
 			String commitSha1,
 			boolean includeBuildNumberInKey) {
-		this.stashServerBaseUrl = stashServerBaseUrl;
+		this.stashServerBaseUrl = stashServerBaseUrl.endsWith("/")
+                ? stashServerBaseUrl.substring(0, stashServerBaseUrl.length()-2)
+                : stashServerBaseUrl;
 		this.stashUserName = stashUserName;
 		this.stashUserPassword = Secret.fromString(stashUserPassword);
 		this.ignoreUnverifiedSSLPeer
