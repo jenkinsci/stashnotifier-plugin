@@ -135,7 +135,7 @@ public class StashNotifier extends Notifier {
 	}
 
 	public String getStashUserPassword() {
-		return Secret.toString(stashUserPassword);
+		return stashUserPassword.getEncryptedValue();
 	}
 	
 	public boolean getIgnoreUnverifiedSSLPeer() {
