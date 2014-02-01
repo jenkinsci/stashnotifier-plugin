@@ -51,6 +51,7 @@ import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.SingleClientConnManager;
 import org.apache.http.util.EntityUtils;
+import org.eclipse.jgit.lib.ObjectId;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.QueryParameter;
@@ -71,6 +72,9 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.KeyStoreException;
 import java.security.UnrecoverableKeyException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.regex.Pattern;
 
 import jenkins.model.Jenkins;
@@ -198,8 +202,8 @@ public class StashNotifier extends Notifier {
 			return true;
 		}
 
-		String commitSha1 = lookupCommitSha1(build, listener);
-		if  (commitSha1 != null) {
+		Collection<String> commitSha1s = lookupCommitSha1s(build, listener);
+		for  (String commitSha1 : commitSha1s) {
 			try {
 				NotificationResult result 
 					= notifyStash(logger, build, commitSha1, listener, state);
@@ -224,39 +228,50 @@ public class StashNotifier extends Notifier {
 					+ commitSha1);
 				e.printStackTrace(logger);
 			}			
-		} else {
+		}
+		if (commitSha1s.isEmpty()) {
 			logger.println("found no commit info");
 		}
 		return true;
 	}
 
-	private String lookupCommitSha1(
-			@SuppressWarnings("rawtypes") AbstractBuild build, 
+	private Collection<String> lookupCommitSha1s(
+			@SuppressWarnings("rawtypes") AbstractBuild build,
 			BuildListener listener) {
 		
 		if (commitSha1 != null && commitSha1.trim().length() > 0) {
 			PrintStream logger = listener.getLogger();
 			try {
 				EnvVars environment = build.getEnvironment(listener);
-				return environment.expand(commitSha1);
+				return Arrays.asList(environment.expand(commitSha1));
 			} catch (IOException e) {
 				logger.println("Unable to expand commit SHA value");
 				e.printStackTrace(logger);
-				return null;
+				return Arrays.asList();
 			} catch (InterruptedException e) {
 				logger.println("Unable to expand commit SHA value");
 				e.printStackTrace(logger);
-				return null;
+				return Arrays.asList();
 			}
 		}
 		
 		// get the sha1 of the commit that was built
+
 		BuildData buildData = (BuildData) build.getAction(BuildData.class);
 		if  (buildData != null) {
-			return buildData.getLastBuiltRevision().getSha1String();
+
+			Collection<String> sha1s = new ArrayList<String>();
+			for (String branch : buildData.getBuildsByBranchName().keySet()) {
+				ObjectId sha1 = buildData.getLastBuildOfBranch(branch).getSHA1();
+				// Apparently this could be null (at least Revision is checking for it)
+				if (sha1 != null) {
+					sha1s.add(sha1.name());
+				}
+			}
+			return sha1s;
 		}
 
-		return null;
+		return Arrays.asList();
 	}
 
 	/**
