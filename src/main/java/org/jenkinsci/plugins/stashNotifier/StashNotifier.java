@@ -51,7 +51,6 @@ import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.SingleClientConnManager;
 import org.apache.http.util.EntityUtils;
-import org.eclipse.jgit.lib.ObjectId;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.QueryParameter;
@@ -72,9 +71,9 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.KeyStoreException;
 import java.security.UnrecoverableKeyException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.regex.Pattern;
 
 import jenkins.model.Jenkins;
@@ -254,24 +253,19 @@ public class StashNotifier extends Notifier {
 				return Arrays.asList();
 			}
 		}
-		
-		// get the sha1 of the commit that was built
 
-		BuildData buildData = (BuildData) build.getAction(BuildData.class);
-		if  (buildData != null) {
-
-			Collection<String> sha1s = new ArrayList<String>();
-			for (String branch : buildData.getBuildsByBranchName().keySet()) {
-				ObjectId sha1 = buildData.getLastBuildOfBranch(branch).getSHA1();
-				// Apparently this could be null (at least Revision is checking for it)
-				if (sha1 != null) {
-					sha1s.add(sha1.name());
-				}
+		// Use a set to remove duplicates
+		Collection<String> sha1s = new HashSet<String>();
+		// MultiSCM may add multiple BuildData actions for each SCM, but we are covered in any case
+		for (BuildData buildData : build.getActions(BuildData.class)) {
+			// get the sha1 of the commit that was built
+			String sha1 = buildData.getLastBuiltRevision().getSha1String();
+			// Should never be null, but may be blank
+			if (!sha1.isEmpty()) {
+				sha1s.add(sha1);
 			}
-			return sha1s;
 		}
-
-		return Arrays.asList();
+		return sha1s;
 	}
 
 	/**
