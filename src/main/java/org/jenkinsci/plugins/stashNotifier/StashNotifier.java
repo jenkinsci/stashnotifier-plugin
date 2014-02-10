@@ -71,6 +71,10 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.KeyStoreException;
 import java.security.UnrecoverableKeyException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.regex.Pattern;
 
 import jenkins.model.Jenkins;
 
@@ -91,7 +95,7 @@ public class StashNotifier extends Notifier {
 	private final String stashUserName;
 	
 	/** password of Stash user for authentication with Stash build API. */
-	private final String stashUserPassword;
+	private final Secret stashUserPassword;
 	
 	/** if true, ignore exception thrown in case of an unverified SSL peer. */
 	private final boolean ignoreUnverifiedSSLPeer;
@@ -116,9 +120,11 @@ public class StashNotifier extends Notifier {
 			boolean ignoreUnverifiedSSLPeer,
 			String commitSha1,
 			boolean includeBuildNumberInKey) {
-		this.stashServerBaseUrl = stashServerBaseUrl;
+		this.stashServerBaseUrl = stashServerBaseUrl.endsWith("/")
+                ? stashServerBaseUrl.substring(0, stashServerBaseUrl.length()-1)
+                : stashServerBaseUrl;
 		this.stashUserName = stashUserName;
-		this.stashUserPassword = stashUserPassword;
+		this.stashUserPassword = Secret.fromString(stashUserPassword);
 		this.ignoreUnverifiedSSLPeer
 			= ignoreUnverifiedSSLPeer;
 		this.commitSha1 = commitSha1;
@@ -134,7 +140,7 @@ public class StashNotifier extends Notifier {
 	}
 
 	public String getStashUserPassword() {
-		return stashUserPassword;
+		return stashUserPassword.getEncryptedValue();
 	}
 	
 	public boolean getIgnoreUnverifiedSSLPeer() {
@@ -195,8 +201,8 @@ public class StashNotifier extends Notifier {
 			return true;
 		}
 
-		String commitSha1 = lookupCommitSha1(build, listener);
-		if  (commitSha1 != null) {
+		Collection<String> commitSha1s = lookupCommitSha1s(build, listener);
+		for  (String commitSha1 : commitSha1s) {
 			try {
 				NotificationResult result 
 					= notifyStash(logger, build, commitSha1, listener, state);
@@ -221,39 +227,45 @@ public class StashNotifier extends Notifier {
 					+ commitSha1);
 				e.printStackTrace(logger);
 			}			
-		} else {
+		}
+		if (commitSha1s.isEmpty()) {
 			logger.println("found no commit info");
 		}
 		return true;
 	}
 
-	private String lookupCommitSha1(
-			@SuppressWarnings("rawtypes") AbstractBuild build, 
+	private Collection<String> lookupCommitSha1s(
+			@SuppressWarnings("rawtypes") AbstractBuild build,
 			BuildListener listener) {
 		
 		if (commitSha1 != null && commitSha1.trim().length() > 0) {
 			PrintStream logger = listener.getLogger();
 			try {
 				EnvVars environment = build.getEnvironment(listener);
-				return environment.expand(commitSha1);
+				return Arrays.asList(environment.expand(commitSha1));
 			} catch (IOException e) {
 				logger.println("Unable to expand commit SHA value");
 				e.printStackTrace(logger);
-				return null;
+				return Arrays.asList();
 			} catch (InterruptedException e) {
 				logger.println("Unable to expand commit SHA value");
 				e.printStackTrace(logger);
-				return null;
+				return Arrays.asList();
 			}
 		}
-		
-		// get the sha1 of the commit that was built
-		BuildData buildData = (BuildData) build.getAction(BuildData.class);
-		if  (buildData != null) {
-			return buildData.getLastBuiltRevision().getSha1String();
-		}
 
-		return null;
+		// Use a set to remove duplicates
+		Collection<String> sha1s = new HashSet<String>();
+		// MultiSCM may add multiple BuildData actions for each SCM, but we are covered in any case
+		for (BuildData buildData : build.getActions(BuildData.class)) {
+			// get the sha1 of the commit that was built
+			String sha1 = buildData.getLastBuiltRevision().getSha1String();
+			// Should never be null, but may be blank
+			if (!sha1.isEmpty()) {
+				sha1s.add(sha1);
+			}
+		}
+		return sha1s;
 	}
 
 	/**
@@ -314,13 +326,37 @@ public class StashNotifier extends Notifier {
 		}
 		
 		ProxyConfiguration proxy = Jenkins.getInstance().proxy;
-		if(proxy != null && !proxy.name.isEmpty() && !proxy.name.startsWith("http")){
+		if(proxy != null && !proxy.name.isEmpty() && !proxy.name.startsWith("http") && !isHostOnNoProxyList(proxy)){
 			SchemeRegistry schemeRegistry = client.getConnectionManager().getSchemeRegistry();
 			schemeRegistry.register(new Scheme("http", proxy.port, new PlainSocketFactory()));
 			client.getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, new HttpHost(proxy.name, proxy.port));
 		}
 		
 		return client;
+	}
+	
+	/**
+	 * Returns whether or not the stash host is on the noProxy list
+	 * as defined in the Jenkins proxy settings
+	 * 
+	 * @param host     the stash URL
+	 * @param proxy    the ProxyConfiguration
+	 * @return         whether or not the host is on the noProxy list
+	 */
+	private boolean isHostOnNoProxyList(ProxyConfiguration proxy) {
+	    String host = getStashServerBaseUrl();
+	    if ("".equals(host) || host == null) {
+	        DescriptorImpl descriptor = getDescriptor();
+	        host = descriptor.getStashRootUrl();
+	    }
+	    if (host != null && proxy.noProxyHost != null) {
+            for (Pattern p : ProxyConfiguration.getNoProxyHostPatterns(proxy.noProxyHost)) {
+                if (p.matcher(host).matches()) {
+                    return true;
+                }
+            }
+	    }
+	    return false;
 	}
 
     /**
@@ -534,7 +570,7 @@ public class StashNotifier extends Notifier {
 		
 		String url = stashServerBaseUrl;
         String username = stashUserName;
-        String pwd = stashUserPassword;
+        String pwd = Secret.toString(stashUserPassword);
         DescriptorImpl descriptor = getDescriptor();
 
         if ("".equals(url) || url == null)
