@@ -109,7 +109,7 @@ public class StashNotifier extends Notifier {
 	// public members ----------------------------------------------------------
 
 	public BuildStepMonitor getRequiredMonitorService() {
-		return BuildStepMonitor.BUILD;
+		return BuildStepMonitor.NONE;
 	}
 
 	@DataBoundConstructor
