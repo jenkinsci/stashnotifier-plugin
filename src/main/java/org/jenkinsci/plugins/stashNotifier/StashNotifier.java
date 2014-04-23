@@ -279,12 +279,16 @@ public class StashNotifier extends Notifier {
 	private HttpClient getHttpClient(PrintStream logger) {
 		HttpClient client = null;
         boolean ignoreUnverifiedSSL = ignoreUnverifiedSSLPeer;
+        String url = stashServerBaseUrl;
         DescriptorImpl descriptor = getDescriptor();
+        if ("".equals(url) || url == null) {
+            url = descriptor.getStashRootUrl();
+        }
         if (!ignoreUnverifiedSSL) {
             ignoreUnverifiedSSL = descriptor.isIgnoreUnverifiedSsl();
         }
-		if (getStashServerBaseUrl().startsWith("https") 
-				&& ignoreUnverifiedSSL) {
+        if (url.startsWith("https") 
+                && ignoreUnverifiedSSL) {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
 			try {
