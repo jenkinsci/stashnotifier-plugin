@@ -1,27 +1,29 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <f:section title="Stash Notifier">
       <f:entry title="Stash Root Url" 
+               field="stashRootUrl" 
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-stashRootUrl.html">
-          <f:textbox name="stashNotifier.stashRootUrl" default="${descriptor.getStashRootUrl()}"/>
+          <f:textbox />
       </f:entry>
-      <f:entry title="Stash User" 
+      <f:entry title="Stash User"
+               field="stashUser" 
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-stashUser.html">
-          <f:textbox name="stashNotifier.stashUser" default="${descriptor.getStashUser()}"/>
+          <f:textbox />
       </f:entry>
       <f:entry title="Stash Password" 
+               field="stashPassword"
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-stashPassword.html">
-          <f:password name="stashNotifier.stashPassword" value="${descriptor.getEncryptedStashPassword()}" />
+          <f:password />
       </f:entry>
       <f:entry title="Ignore unverified SSL certificates" 
+               field="ignoreUnverifiedSsl"
       		   help="${rootURL}/plugin/stashNotifier/help-globalConfig-ignoreUnverifiedSSL.html">
-          <f:checkbox name="stashNotifier.ignoreUnverifiedSsl" 
-                   	  checked="${descriptor.isIgnoreUnverifiedSsl()}"/>
+          <f:checkbox />
       </f:entry>
       <f:entry title="Keep repeated builds in Stash" 
                field="includeBuildNumberInKey"
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-includeBuildNumberInKey.html">
-          <f:checkbox name="stashNotifier.includeBuildNumberInKey" 
-                      value="${descriptor.isIncludeBuildNumberInKey()}"/>
+          <f:checkbox />
       </f:entry>
   </f:section>
 </j:jelly>
