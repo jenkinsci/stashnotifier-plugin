@@ -627,7 +627,7 @@ public class StashNotifier extends Notifier {
                 replaceAll("\\\\u00BB", "\\/");
         json.put("name", fullName);
 
-        json.put("description", getBuildDescription(build, state));
+        json.put("description", StringEscapeUtils.escapeJavaScript(getBuildDescription(build, state)));
         json.put("url", Jenkins.getInstance()
         		.getRootUrl().concat(build.getUrl()));
         
