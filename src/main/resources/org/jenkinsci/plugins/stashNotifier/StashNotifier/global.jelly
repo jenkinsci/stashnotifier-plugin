@@ -1,26 +1,31 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <f:section title="Stash Notifier">
-      <f:entry title="Stash Root Url" 
-               field="stashRootUrl" 
+      <f:entry title="Stash Root Url"
+               field="stashRootUrl"
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-stashRootUrl.html">
           <f:textbox />
       </f:entry>
       <f:entry title="Stash User"
-               field="stashUser" 
+               field="stashUser"
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-stashUser.html">
           <f:textbox />
       </f:entry>
-      <f:entry title="Stash Password" 
+      <f:entry title="Stash Password"
                field="stashPassword"
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-stashPassword.html">
           <f:password />
       </f:entry>
-      <f:entry title="Ignore unverified SSL certificates" 
+      <f:entry title="Stash Cookie"
+               field="stashCookie"
+               help="${rootURL}/plugin/stashNotifier/help-globalConfig-stashCookie.html">
+          <f:textbox />
+      </f:entry>
+      <f:entry title="Ignore unverified SSL certificates"
                field="ignoreUnverifiedSsl"
-      		   help="${rootURL}/plugin/stashNotifier/help-globalConfig-ignoreUnverifiedSSL.html">
+             help="${rootURL}/plugin/stashNotifier/help-globalConfig-ignoreUnverifiedSSL.html">
           <f:checkbox />
       </f:entry>
-      <f:entry title="Keep repeated builds in Stash" 
+      <f:entry title="Keep repeated builds in Stash"
                field="includeBuildNumberInKey"
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-includeBuildNumberInKey.html">
           <f:checkbox />
