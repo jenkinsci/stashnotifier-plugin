@@ -14,24 +14,24 @@
  * limitations under the License.
  */
  package org.jenkinsci.plugins.stashNotifier;
- 
+
 import hudson.EnvVars;
-import hudson.Launcher;
 import hudson.Extension;
-import hudson.util.FormValidation;
+import hudson.Launcher;
 import hudson.ProxyConfiguration;
 import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
 import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.plugins.git.util.BuildData;
-import hudson.tasks.Publisher;
-import hudson.tasks.Notifier;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Notifier;
+import hudson.tasks.Publisher;
+import hudson.util.FormValidation;
 import hudson.util.Secret;
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
-
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
@@ -39,44 +39,47 @@ import org.apache.http.HttpResponse;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.ClientConnectionManager;
+import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.conn.scheme.PlainSocketFactory;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLContexts;
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.impl.conn.SingleClientConnManager;
 import org.apache.http.util.EntityUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.net.ssl.TrustManager;
 import javax.servlet.ServletException;
-
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.security.KeyManagementException;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.security.KeyStoreException;
-import java.security.UnrecoverableKeyException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.regex.Pattern;
-
-import jenkins.model.Jenkins;
 
 /**
  * Notifies a configured Atlassian Stash server instance of build results
@@ -292,6 +295,7 @@ public class StashNotifier extends Notifier {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
 			try {
+				HttpClientBuilder builder = HttpClientBuilder.create();
 				TrustStrategy easyStrategy = new TrustStrategy() {
 				    public boolean isTrusted(X509Certificate[] chain, String authType)
 				            throws CertificateException {
@@ -299,14 +303,24 @@ public class StashNotifier extends Notifier {
 				    }
 				};
 
-				SSLSocketFactory sslSocketFactory 
-					= new SSLSocketFactory(easyStrategy);
-				SchemeRegistry schemeRegistry = new SchemeRegistry();
-				schemeRegistry.register(
-						new Scheme("https", 443, sslSocketFactory));
-				ClientConnectionManager connectionManager 
-					= new SingleClientConnManager(schemeRegistry);
-				client = new DefaultHttpClient(connectionManager);
+				SSLContext sslContext = SSLContexts.custom()
+						.loadTrustMaterial(null, easyStrategy)
+						.useTLS().build();
+				SSLConnectionSocketFactory sslConnSocketFactory
+						= new SSLConnectionSocketFactory(sslContext,
+						SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+				builder.setSSLSocketFactory(sslConnSocketFactory);
+
+				Registry<ConnectionSocketFactory> registry
+						= RegistryBuilder.<ConnectionSocketFactory>create()
+							.register("https", sslConnSocketFactory)
+							.build();
+
+				HttpClientConnectionManager ccm
+						= new BasicHttpClientConnectionManager(registry);
+
+				builder.setConnectionManager(ccm);
+				client = builder.build();
 			} catch (NoSuchAlgorithmException nsae) {
 				logger.println("Couldn't establish SSL context:");
 				nsae.printStackTrace(logger);
@@ -316,17 +330,14 @@ public class StashNotifier extends Notifier {
 			} catch (KeyStoreException kse) {
 				logger.println("Couldn't initialize SSL context:");
 				kse.printStackTrace(logger);
-			} catch (UnrecoverableKeyException uke) {
-				logger.println("Couldn't initialize SSL context:");
-				uke.printStackTrace(logger);
 			} finally {
 				if (client == null) {
 					logger.println("Trying with safe trust manager, instead!");
-					client = new DefaultHttpClient();
+					client = HttpClientBuilder.create().build();
 				}
 			}
 		} else {
-			client = new DefaultHttpClient();
+			client = HttpClientBuilder.create().build();
 		}
 		
 		ProxyConfiguration proxy = Jenkins.getInstance().proxy;
