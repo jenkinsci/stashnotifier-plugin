@@ -259,10 +259,20 @@ public class StashNotifier extends Notifier {
 		// MultiSCM may add multiple BuildData actions for each SCM, but we are covered in any case
 		for (BuildData buildData : build.getActions(BuildData.class)) {
 			// get the sha1 of the commit that was built
-			String sha1 = buildData.getLastBuiltRevision().getSha1String();
+
+			String lastBuiltSha1 = buildData.getLastBuiltRevision().getSha1String();
+
 			// Should never be null, but may be blank
-			if (!sha1.isEmpty()) {
-				sha1s.add(sha1);
+			if (!lastBuiltSha1.isEmpty()) {
+				sha1s.add(lastBuiltSha1);
+			}
+
+			// This might be different than the lastBuiltSha1 if using "Merge before build"
+			String markedSha1 = buildData.lastBuild.getMarked().getSha1String();
+
+			// Should never be null, but may be blank
+			if (!markedSha1.isEmpty()) {
+				sha1s.add(markedSha1);
 			}
 		}
 		return sha1s;
