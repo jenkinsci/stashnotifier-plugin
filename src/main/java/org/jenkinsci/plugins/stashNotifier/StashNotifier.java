@@ -642,7 +642,7 @@ public class StashNotifier extends Notifier {
         json.put("url", Jenkins.getInstance()
         		.getRootUrl().concat(build.getUrl()));
         
-        return new StringEntity(json.toString());
+        return new StringEntity(json.toString(), "UTF-8");
 	}
 
 	/**
