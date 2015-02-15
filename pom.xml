@@ -8,7 +8,7 @@
 
 	<groupId>org.jenkins-ci.plugins</groupId>
 	<artifactId>stashNotifier</artifactId>
-	<version>1.8-SNAPSHOT</version>
+	<version>1.8</version>
 	<name>Stash Notifier</name>
 	<description>
 		Jenkins plugin to notify Atlassian Stash git repository servers of
@@ -29,13 +29,6 @@
 			<url>http://maven.jenkins-ci.org:8081/content/repositories/releases/</url>
 		</repository>
 	</distributionManagement>
-
-	<developers>
-		<developer>
-			<id>gruetter</id>
-			<name>Georg Gruetter</name>
-		</developer>
-	</developers>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
