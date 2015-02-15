@@ -14,24 +14,24 @@
  * limitations under the License.
  */
  package org.jenkinsci.plugins.stashNotifier;
- 
+
 import hudson.EnvVars;
-import hudson.Launcher;
 import hudson.Extension;
-import hudson.util.FormValidation;
+import hudson.Launcher;
 import hudson.ProxyConfiguration;
 import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
 import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.plugins.git.util.BuildData;
-import hudson.tasks.Publisher;
-import hudson.tasks.Notifier;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Notifier;
+import hudson.tasks.Publisher;
+import hudson.util.FormValidation;
 import hudson.util.Secret;
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
-
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
@@ -39,44 +39,44 @@ import org.apache.http.HttpResponse;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.conn.ClientConnectionManager;
-import org.apache.http.conn.params.ConnRoutePNames;
-import org.apache.http.conn.scheme.PlainSocketFactory;
-import org.apache.http.conn.scheme.Scheme;
-import org.apache.http.conn.scheme.SchemeRegistry;
-import org.apache.http.conn.ssl.SSLSocketFactory;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.HttpClientConnectionManager;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLContexts;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.conn.SingleClientConnManager;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.net.ssl.TrustManager;
 import javax.servlet.ServletException;
-
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.SocketAddress;
 import java.net.URL;
 import java.security.KeyManagementException;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.security.KeyStoreException;
-import java.security.UnrecoverableKeyException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.regex.Pattern;
-
-import jenkins.model.Jenkins;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 
 /**
  * Notifies a configured Atlassian Stash server instance of build results
@@ -259,10 +259,20 @@ public class StashNotifier extends Notifier {
 		// MultiSCM may add multiple BuildData actions for each SCM, but we are covered in any case
 		for (BuildData buildData : build.getActions(BuildData.class)) {
 			// get the sha1 of the commit that was built
-			String sha1 = buildData.getLastBuiltRevision().getSha1String();
+
+			String lastBuiltSha1 = buildData.getLastBuiltRevision().getSha1String();
+
 			// Should never be null, but may be blank
-			if (!sha1.isEmpty()) {
-				sha1s.add(sha1);
+			if (!lastBuiltSha1.isEmpty()) {
+				sha1s.add(lastBuiltSha1);
+			}
+
+			// This might be different than the lastBuiltSha1 if using "Merge before build"
+			String markedSha1 = buildData.lastBuild.getMarked().getSha1String();
+
+			// Should never be null, but may be blank
+			if (!markedSha1.isEmpty()) {
+				sha1s.add(markedSha1);
 			}
 		}
 		return sha1s;
@@ -276,18 +286,20 @@ public class StashNotifier extends Notifier {
 	 * @param logger	the logger to log messages to
 	 * @return			the HttpClient
 	 */
-	private HttpClient getHttpClient(PrintStream logger) {
-		HttpClient client = null;
+	private HttpClient getHttpClient(PrintStream logger) throws Exception {
         boolean ignoreUnverifiedSSL = ignoreUnverifiedSSLPeer;
-        String url = stashServerBaseUrl;
+        String stashServer = stashServerBaseUrl;
         DescriptorImpl descriptor = getDescriptor();
-        if ("".equals(url) || url == null) {
-            url = descriptor.getStashRootUrl();
+        if ("".equals(stashServer) || stashServer == null) {
+            stashServer = descriptor.getStashRootUrl();
         }
         if (!ignoreUnverifiedSSL) {
             ignoreUnverifiedSSL = descriptor.isIgnoreUnverifiedSsl();
         }
-        if (url.startsWith("https") 
+
+        URL url = new URL(stashServer);
+        HttpClientBuilder builder = HttpClientBuilder.create();
+        if (url.getProtocol().equals("https")
                 && ignoreUnverifiedSSL) {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
@@ -299,14 +311,23 @@ public class StashNotifier extends Notifier {
 				    }
 				};
 
-				SSLSocketFactory sslSocketFactory 
-					= new SSLSocketFactory(easyStrategy);
-				SchemeRegistry schemeRegistry = new SchemeRegistry();
-				schemeRegistry.register(
-						new Scheme("https", 443, sslSocketFactory));
-				ClientConnectionManager connectionManager 
-					= new SingleClientConnManager(schemeRegistry);
-				client = new DefaultHttpClient(connectionManager);
+				SSLContext sslContext = SSLContexts.custom()
+						.loadTrustMaterial(null, easyStrategy)
+						.useTLS().build();
+				SSLConnectionSocketFactory sslConnSocketFactory
+						= new SSLConnectionSocketFactory(sslContext,
+						SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+				builder.setSSLSocketFactory(sslConnSocketFactory);
+
+				Registry<ConnectionSocketFactory> registry
+						= RegistryBuilder.<ConnectionSocketFactory>create()
+							.register("https", sslConnSocketFactory)
+							.build();
+
+				HttpClientConnectionManager ccm
+						= new BasicHttpClientConnectionManager(registry);
+
+				builder.setConnectionManager(ccm);
 			} catch (NoSuchAlgorithmException nsae) {
 				logger.println("Couldn't establish SSL context:");
 				nsae.printStackTrace(logger);
@@ -316,52 +337,37 @@ public class StashNotifier extends Notifier {
 			} catch (KeyStoreException kse) {
 				logger.println("Couldn't initialize SSL context:");
 				kse.printStackTrace(logger);
-			} catch (UnrecoverableKeyException uke) {
-				logger.println("Couldn't initialize SSL context:");
-				uke.printStackTrace(logger);
-			} finally {
-				if (client == null) {
-					logger.println("Trying with safe trust manager, instead!");
-					client = new DefaultHttpClient();
-				}
 			}
-		} else {
-			client = new DefaultHttpClient();
-		}
-		
-		ProxyConfiguration proxy = Jenkins.getInstance().proxy;
-		if(proxy != null && !proxy.name.isEmpty() && !proxy.name.startsWith("http") && !isHostOnNoProxyList(proxy)){
-			SchemeRegistry schemeRegistry = client.getConnectionManager().getSchemeRegistry();
-			schemeRegistry.register(new Scheme("http", proxy.port, new PlainSocketFactory()));
-			client.getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, new HttpHost(proxy.name, proxy.port));
-		}
-		
-		return client;
-	}
-	
-	/**
-	 * Returns whether or not the stash host is on the noProxy list
-	 * as defined in the Jenkins proxy settings
-	 * 
-	 * @param host     the stash URL
-	 * @param proxy    the ProxyConfiguration
-	 * @return         whether or not the host is on the noProxy list
-	 */
-	private boolean isHostOnNoProxyList(ProxyConfiguration proxy) {
-	    String host = getStashServerBaseUrl();
-	    if ("".equals(host) || host == null) {
-	        DescriptorImpl descriptor = getDescriptor();
-	        host = descriptor.getStashRootUrl();
-	    }
-	    if (host != null && proxy.noProxyHost != null) {
-            for (Pattern p : ProxyConfiguration.getNoProxyHostPatterns(proxy.noProxyHost)) {
-                if (p.matcher(host).matches()) {
-                    return true;
+        }
+
+        // Configure the proxy, if needed
+        // Using the Jenkins methods handles the noProxyHost settings
+        ProxyConfiguration proxyConfig = Jenkins.getInstance().proxy;
+        if (proxyConfig != null) {
+            Proxy proxy = proxyConfig.createProxy(url.getHost());
+            if (proxy != null && proxy.type() == Proxy.Type.HTTP) {
+                SocketAddress addr = proxy.address();
+                if (addr != null && addr instanceof InetSocketAddress) {
+                    InetSocketAddress proxyAddr = (InetSocketAddress) addr;
+                    HttpHost proxyHost = new HttpHost(proxyAddr.getAddress().getHostAddress(), proxyAddr.getPort());
+                    builder = builder.setProxy(proxyHost);
+
+                    String proxyUser = proxyConfig.getUserName();
+                    if (proxyUser != null) {
+                        String proxyPass = proxyConfig.getPassword();
+                        CredentialsProvider cred = new BasicCredentialsProvider();
+                        cred.setCredentials(new AuthScope(proxyHost),
+                                new UsernamePasswordCredentials(proxyUser, proxyPass));
+                        builder = builder
+                                .setDefaultCredentialsProvider(cred)
+                                .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
+                    }
                 }
             }
-	    }
-	    return false;
-	}
+        }
+
+        return builder.build();
+    }
 
     /**
      * Hudson defines a method {@link Builder#getDescriptor()}, which
@@ -631,7 +637,7 @@ public class StashNotifier extends Notifier {
         json.put("url", Jenkins.getInstance()
         		.getRootUrl().concat(build.getUrl()));
         
-        return new StringEntity(json.toString());
+        return new StringEntity(json.toString(), "UTF-8");
 	}
 
 	/**

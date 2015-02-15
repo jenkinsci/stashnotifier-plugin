@@ -8,7 +8,7 @@
 
 	<groupId>org.jenkins-ci.plugins</groupId>
 	<artifactId>stashNotifier</artifactId>
-	<version>1.7</version>
+	<version>1.8</version>
 	<name>Stash Notifier</name>
 	<description>
 		Jenkins plugin to notify Atlassian Stash git repository servers of
@@ -30,13 +30,6 @@
 		</repository>
 	</distributionManagement>
 
-	<developers>
-		<developer>
-			<id>gruetter</id>
-			<name>Georg Gruetter</name>
-		</developer>
-	</developers>
-
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
@@ -52,12 +45,12 @@
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>
-			<version>4.1</version>
+			<version>4.3.5</version>
 		</dependency>
 		<dependency>
-			<groupId>org.jenkinsci.plugins</groupId>
+			<groupId>org.jenkins-ci.plugins</groupId>
 			<artifactId>git</artifactId>
-			<version>1.1.26</version>
+			<version>2.0</version>
 			<type>jar</type>
 		</dependency>
 	</dependencies>
