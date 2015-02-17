@@ -30,6 +30,13 @@
 		</repository>
 	</distributionManagement>
 
+	<developers>
+		<developer>
+			<id>gruetter</id>
+			<name>Georg Gruetter</name>
+		</developer>
+	</developers>
+
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
