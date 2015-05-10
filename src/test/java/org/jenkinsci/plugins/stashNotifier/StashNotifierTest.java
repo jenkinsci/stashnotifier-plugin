@@ -104,4 +104,10 @@ public class StashNotifierTest
 	public void test_prebuild_normal() {
 		assertTrue(sn.prebuild(build, buildListener));
 	}
+
+	@Test
+	public void test_prebuild_null_revision() {
+		when(build.getActions(BuildData.class)).thenReturn(Collections.singletonList(mock(BuildData.class)));
+		assertTrue(sn.prebuild(build, buildListener));
+	}
 }
