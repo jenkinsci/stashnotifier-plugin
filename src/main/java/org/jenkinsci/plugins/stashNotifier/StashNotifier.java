@@ -24,6 +24,7 @@ import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.plugins.git.util.BuildData;
+import hudson.plugins.git.Revision;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
@@ -259,8 +260,11 @@ public class StashNotifier extends Notifier {
 		// MultiSCM may add multiple BuildData actions for each SCM, but we are covered in any case
 		for (BuildData buildData : build.getActions(BuildData.class)) {
 			// get the sha1 of the commit that was built
-
-			String lastBuiltSha1 = buildData.getLastBuiltRevision().getSha1String();
+			Revision lastBuiltRevision = buildData.getLastBuiltRevision();
+			if (lastBuiltRevision == null) {
+				continue;
+			}
+			String lastBuiltSha1 = lastBuiltRevision.getSha1String();
 
 			// Should never be null, but may be blank
 			if (!lastBuiltSha1.isEmpty()) {
