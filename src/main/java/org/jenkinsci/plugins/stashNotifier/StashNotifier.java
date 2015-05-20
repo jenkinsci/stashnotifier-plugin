@@ -86,6 +86,9 @@ import org.apache.http.impl.client.ProxyAuthenticationStrategy;
  */
 public class StashNotifier extends Notifier {
 	
+	public static final int MAX_FIELD_LENGTH = 255;
+	public static final int MAX_URL_FIELD_LENGTH = 450;
+
 	// attributes --------------------------------------------------------------
 
 	/** base url of Stash server, e. g. <tt>http://localhost:7990</tt>. */
@@ -623,7 +626,7 @@ public class StashNotifier extends Notifier {
 
         json.put("state", state.name());
 
-        json.put("key", getBuildKey(build));
+        json.put("key", abbreviate(getBuildKey(build), MAX_FIELD_LENGTH));
 
         // This is to replace the odd character Jenkins injects to separate 
         // nested jobs, especially when using the Cloudbees Folders plugin. 
@@ -631,13 +634,26 @@ public class StashNotifier extends Notifier {
         String fullName = StringEscapeUtils.
                 escapeJavaScript(build.getFullDisplayName()).
                 replaceAll("\\\\u00BB", "\\/");
-        json.put("name", fullName);
+        json.put("name", abbreviate(fullName, MAX_FIELD_LENGTH));
 
-        json.put("description", getBuildDescription(build, state));
-        json.put("url", Jenkins.getInstance()
-        		.getRootUrl().concat(build.getUrl()));
+		json.put("description", abbreviate(getBuildDescription(build, state), MAX_FIELD_LENGTH));
+		json.put("url", abbreviate(Jenkins.getInstance()
+				.getRootUrl().concat(build.getUrl()), MAX_URL_FIELD_LENGTH));
         
         return new StringEntity(json.toString(), "UTF-8");
+	}
+
+	private static String abbreviate(String text, int maxWidth) {
+		if (text == null) {
+			return null;
+		}
+		if (maxWidth < 4) {
+			throw new IllegalArgumentException("Minimum abbreviation width is 4");
+		}
+		if (text.length() <= maxWidth) {
+			return text;
+		}
+		return text.substring(0, maxWidth - 3) + "...";
 	}
 
 	/**
