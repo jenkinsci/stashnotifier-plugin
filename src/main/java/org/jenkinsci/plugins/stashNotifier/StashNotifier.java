@@ -94,22 +94,28 @@ public class StashNotifier extends Notifier {
 
 	/** base url of Stash server, e. g. <tt>http://localhost:7990</tt>. */
 	private final String stashServerBaseUrl;
-	
+
 	/** name of Stash user for authentication with Stash build API. */
 	private final String stashUserName;
-	
+
 	/** password of Stash user for authentication with Stash build API. */
 	private final Secret stashUserPassword;
-	
+
 	/** if true, ignore exception thrown in case of an unverified SSL peer. */
 	private final boolean ignoreUnverifiedSSLPeer;
 
 	/** specify the commit from config */
 	private final String commitSha1;
-	
+
 	/** if true, the build number is included in the Stash notification. */
 	private final boolean includeBuildNumberInKey;
-	
+
+	/** specify project key manually */
+	private final String projectKey;
+
+	/** append parent project key to key formation */
+	private final boolean prependParentProjectKey;
+
 	// public members ----------------------------------------------------------
 
 	public BuildStepMonitor getRequiredMonitorService() {
@@ -123,7 +129,9 @@ public class StashNotifier extends Notifier {
 			String stashUserPassword,
 			boolean ignoreUnverifiedSSLPeer,
 			String commitSha1,
-			boolean includeBuildNumberInKey) {
+			boolean includeBuildNumberInKey,
+			String projectKey,
+			boolean prependParentProjectKey) {
 		this.stashServerBaseUrl = stashServerBaseUrl.endsWith("/")
                 ? stashServerBaseUrl.substring(0, stashServerBaseUrl.length()-1)
                 : stashServerBaseUrl;
@@ -133,6 +141,8 @@ public class StashNotifier extends Notifier {
 			= ignoreUnverifiedSSLPeer;
 		this.commitSha1 = commitSha1;
 		this.includeBuildNumberInKey = includeBuildNumberInKey;
+		this.projectKey = projectKey;
+		this.prependParentProjectKey = prependParentProjectKey;
 	}
 
 	public String getStashServerBaseUrl() {
@@ -146,11 +156,11 @@ public class StashNotifier extends Notifier {
 	public String getStashUserPassword() {
 		return stashUserPassword.getEncryptedValue();
 	}
-	
+
 	public boolean getIgnoreUnverifiedSSLPeer() {
 		return ignoreUnverifiedSSLPeer;
 	}
-	
+
 	public String getCommitSha1() {
 		return commitSha1;
 	}
@@ -158,19 +168,27 @@ public class StashNotifier extends Notifier {
 	public boolean getIncludeBuildNumberInKey() {
 		return includeBuildNumberInKey;
 	}
-	
-	@Override
+
+    public String getProjectKey() {
+        return projectKey;
+    }
+
+    public boolean getPrependParentProjectKey() {
+        return prependParentProjectKey;
+    }
+
+    @Override
 	public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener) {
 		return processJenkinsEvent(build, listener, StashBuildState.INPROGRESS);
 	}
-	
+
 	@Override
 	public boolean perform(
-			AbstractBuild<?, ?> build, 
-			Launcher launcher, 
+			AbstractBuild<?, ?> build,
+			Launcher launcher,
 			BuildListener listener) {
-		
-		if ((build.getResult() == null) 
+
+		if ((build.getResult() == null)
 				|| (!build.getResult().equals(Result.SUCCESS))) {
 			return processJenkinsEvent(
 					build, listener, StashBuildState.FAILED);
@@ -183,7 +201,7 @@ public class StashNotifier extends Notifier {
 	/**
 	 * Processes the Jenkins events triggered before and after the build and
 	 * initiates the Stash notification.
-	 * 
+	 *
 	 * @param build		the build to notify Stash of
 	 * @param listener	the Jenkins build listener
 	 * @param state		the state of the build (in progress, success, failed)
@@ -191,13 +209,13 @@ public class StashNotifier extends Notifier {
 	 * 					notification failures
 	 */
 	private boolean processJenkinsEvent(
-			final AbstractBuild<?, ?> build, 
-			final BuildListener listener, 
+			final AbstractBuild<?, ?> build,
+			final BuildListener listener,
 			final StashBuildState state) {
-		
+
 		PrintStream logger = listener.getLogger();
 
-		// exit if Jenkins root URL is not configured. Stash build API 
+		// exit if Jenkins root URL is not configured. Stash build API
 		// requires valid link to build in CI system.
 		if (Jenkins.getInstance().getRootUrl() == null) {
 			logger.println(
@@ -208,18 +226,18 @@ public class StashNotifier extends Notifier {
 		Collection<String> commitSha1s = lookupCommitSha1s(build, listener);
 		for  (String commitSha1 : commitSha1s) {
 			try {
-				NotificationResult result 
+				NotificationResult result
 					= notifyStash(logger, build, commitSha1, listener, state);
 				if (result.indicatesSuccess) {
 					logger.println(
-						"Notified Stash for commit with id " 
+						"Notified Stash for commit with id "
 								+ commitSha1);
 				} else {
 					logger.println(
 					"Failed to notify Stash for commit "
 							+ commitSha1
 							+ " (" + result.message + ")");
-				}					
+				}
             } catch (SSLPeerUnverifiedException e) {
 	    		logger.println("SSLPeerUnverifiedException caught while "
     				+ "notifying Stash. Make sure your SSL certificate on "
@@ -227,10 +245,10 @@ public class StashNotifier extends Notifier {
     				+ " 'Ignore unverifiable SSL certificate' checkbox in the "
     				+ "Stash plugin configuration of this job.");
 			} catch (Exception e) {
-				logger.println("Caught exception while notifying Stash with id " 
+				logger.println("Caught exception while notifying Stash with id "
 					+ commitSha1);
 				e.printStackTrace(logger);
-			}			
+			}
 		}
 		if (commitSha1s.isEmpty()) {
 			logger.println("found no commit info");
@@ -241,7 +259,7 @@ public class StashNotifier extends Notifier {
 	private Collection<String> lookupCommitSha1s(
 			@SuppressWarnings("rawtypes") AbstractBuild build,
 			BuildListener listener) {
-		
+
 		if (commitSha1 != null && commitSha1.trim().length() > 0) {
 			PrintStream logger = listener.getLogger();
 			try {
@@ -289,7 +307,7 @@ public class StashNotifier extends Notifier {
 	 * Returns the HttpClient through which the REST call is made. Uses an
 	 * unsafe TrustStrategy in case the user specified a HTTPS URL and
 	 * set the ignoreUnverifiedSSLPeer flag.
-	 * 
+	 *
 	 * @param logger	the logger to log messages to
 	 * @return			the HttpClient
 	 */
@@ -393,7 +411,7 @@ public class StashNotifier extends Notifier {
     }
 
     @Extension
-	public static final class DescriptorImpl 
+	public static final class DescriptorImpl
 		extends BuildStepDescriptor<Publisher> {
 
         /**
@@ -409,8 +427,10 @@ public class StashNotifier extends Notifier {
         private String stashRootUrl;
         private boolean ignoreUnverifiedSsl;
         private boolean includeBuildNumberInKey;
+		private String projectKey;
+		private boolean prependParentProjectKey;
 
-        public DescriptorImpl() {
+		public DescriptorImpl() {
             load();
         }
 
@@ -448,9 +468,17 @@ public class StashNotifier extends Notifier {
         public boolean isIncludeBuildNumberInKey() {
             return includeBuildNumberInKey;
         }
-        
-        public FormValidation doCheckStashServerBaseUrl(
-					@QueryParameter String value) 
+
+		public String getProjectKey() {
+			return projectKey;
+		}
+
+		public boolean isPrependParentProjectKey() {
+			return prependParentProjectKey;
+		}
+
+		public FormValidation doCheckStashServerBaseUrl(
+					@QueryParameter String value)
 				throws IOException, ServletException {
 
 			// calculate effective url from global and local config
@@ -463,7 +491,7 @@ public class StashNotifier extends Notifier {
 
 			if ((url == null) || url.equals("")) {
 				return FormValidation.error(
-						"Please specify a valid URL here or in the global " 
+						"Please specify a valid URL here or in the global "
 						+ "configuration");
 			} else {
 				try {
@@ -480,7 +508,7 @@ public class StashNotifier extends Notifier {
 		public FormValidation doCheckStashUserName(@QueryParameter String value)
 				throws IOException, ServletException {
 
-			if (value.trim().equals("") 
+			if (value.trim().equals("")
 					&& ((stashUser == null) || stashUser.trim().equals(""))) {
 				return FormValidation.error(
 						"Please specify a user name here or in the global "
@@ -491,12 +519,12 @@ public class StashNotifier extends Notifier {
 		}
 
 		public FormValidation doCheckStashUserPassword(
-					@QueryParameter String value) 
+					@QueryParameter String value)
 				throws IOException, ServletException {
 
-			if (value.trim().equals("") 
-					&& ((stashPassword == null) 
-						|| stashPassword.getPlainText().trim().equals(""))) { 
+			if (value.trim().equals("")
+					&& ((stashPassword == null)
+						|| stashPassword.getPlainText().trim().equals(""))) {
 				return FormValidation.warning(
 						"You should use a non-empty password here or in the "
 						+ "global configuration!");
@@ -516,32 +544,39 @@ public class StashNotifier extends Notifier {
 
 		@Override
 		public boolean configure(
-				StaplerRequest req, 
+				StaplerRequest req,
 				JSONObject formData) throws FormException {
 
             // to persist global configuration information,
             // set that to properties and call save().
-            stashUser 
+            stashUser
             	= formData.getString("stashUser");
-            stashPassword 
+            stashPassword
             	= Secret.fromString(formData.getString("stashPassword"));
-            stashRootUrl 
+            stashRootUrl
             	= formData.getString("stashRootUrl");
-            ignoreUnverifiedSsl 
+            ignoreUnverifiedSsl
             	= formData.getBoolean("ignoreUnverifiedSsl");
-            includeBuildNumberInKey 
+            includeBuildNumberInKey
             	= formData.getBoolean("includeBuildNumberInKey");
+            if (formData.has("projectKey")) {
+                projectKey
+                        = formData.getString("projectKey");
+            }
+            prependParentProjectKey
+                = formData.getBoolean("prependParentProjectKey");
+
 			save();
 			return super.configure(req,formData);
 		}
 	}
-	
+
 	// non-public members ------------------------------------------------------
-	
+
 	/**
-	 * Notifies the configured Stash server by POSTing the build results 
+	 * Notifies the configured Stash server by POSTing the build results
 	 * to the Stash build API.
-	 * 
+	 *
 	 * @param logger		the logger to use
 	 * @param build			the build to notify Stash of
 	 * @param commitSha1	the SHA1 of the built commit
@@ -550,13 +585,13 @@ public class StashNotifier extends Notifier {
 	 * @param state			the state of the build as defined by the Stash API.
 	 */
 	private NotificationResult notifyStash(
-			final PrintStream logger, 
+			final PrintStream logger,
 			final AbstractBuild<?, ?> build,
 			final String commitSha1,
 			final BuildListener listener,
 			final StashBuildState state) throws Exception {
-		HttpEntity stashBuildNotificationEntity 
-			= newStashBuildNotificationEntity(build, state);
+		HttpEntity stashBuildNotificationEntity
+			= newStashBuildNotificationEntity(build, state, listener);
 		HttpPost req = createRequest(stashBuildNotificationEntity, commitSha1);
 		HttpClient client = getHttpClient(logger);
 		try {
@@ -574,17 +609,17 @@ public class StashNotifier extends Notifier {
 
 	/**
 	 * Returns the HTTP POST request ready to be sent to the Stash build API for
-	 * the given build and change set. 
-	 * 
-	 * @param stashBuildNotificationEntity	a entity containing the parameters 
+	 * the given build and change set.
+	 *
+	 * @param stashBuildNotificationEntity	a entity containing the parameters
 	 * 										for Stash
 	 * @param commitSha1	the SHA1 of the commit that was built
 	 * @return				the HTTP POST request to the Stash build API
 	 */
 	private HttpPost createRequest(
-			final HttpEntity stashBuildNotificationEntity, 
+			final HttpEntity stashBuildNotificationEntity,
 			final String commitSha1) {
-		
+
 		String url = stashServerBaseUrl;
         String username = stashUserName;
         String pwd = Secret.toString(stashUserPassword);
@@ -596,41 +631,42 @@ public class StashNotifier extends Notifier {
             username = descriptor.getStashUser();
         if ("".equals(pwd) || pwd == null)
             pwd = descriptor.getStashPassword().getPlainText();
-		
+
 		HttpPost req = new HttpPost(
 				url
-				+ "/rest/build-status/1.0/commits/" 
+				+ "/rest/build-status/1.0/commits/"
 				+ commitSha1);
-		
+
 		req.addHeader(BasicScheme.authenticate(
 				new UsernamePasswordCredentials(
 						username,
 						pwd),
-				"UTF-8", 
+				"UTF-8",
 				false));
-		
+
 		req.addHeader("Content-type", "application/json");
 		req.setEntity(stashBuildNotificationEntity);
-				
+
 		return req;
 	}
-	
+
 	/**
 	 * Returns the HTTP POST entity body with the JSON representation of the
 	 * builds result to be sent to the Stash build API.
-	 * 
+	 *
 	 * @param build			the build to notify Stash of
 	 * @return				HTTP entity body for POST to Stash build API
 	 */
 	private HttpEntity newStashBuildNotificationEntity(
-			final AbstractBuild<?, ?> build, 
-			final StashBuildState state) throws UnsupportedEncodingException {
-		
+			final AbstractBuild<?, ?> build,
+			final StashBuildState state,
+            BuildListener listener) throws UnsupportedEncodingException {
+
 		JSONObject json = new JSONObject();
 
         json.put("state", state.name());
 
-        json.put("key", abbreviate(getBuildKey(build), MAX_FIELD_LENGTH));
+        json.put("key", abbreviate(getBuildKey(build, listener), MAX_FIELD_LENGTH));
 
         // This is to replace the odd character Jenkins injects to separate 
         // nested jobs, especially when using the Cloudbees Folders plugin. 
@@ -661,46 +697,88 @@ public class StashNotifier extends Notifier {
 	}
 
 	/**
-	 * Returns the build key used in the Stash notification. Includes the 
-	 * build number depending on the user setting.
-	 * 
-	 * @param 	build	the build to notify Stash of
-	 * @return	the build key for the Stash notification
+	 * Return the old-fashion build key
+	 *
+	 * @param  build the build to notify Stash of
+	 * @return default build key
 	 */
-	private String getBuildKey(final AbstractBuild<?, ?> build) {
+	private String getDefaultBuildKey(final AbstractBuild<?, ?> build) {
 		StringBuilder key = new StringBuilder();
+
 		key.append(build.getProject().getName());
-        if (includeBuildNumberInKey 
-        		|| getDescriptor().isIncludeBuildNumberInKey()) {
+		if (includeBuildNumberInKey
+				|| getDescriptor().isIncludeBuildNumberInKey()) {
 			key.append('-').append(build.getNumber());
 		}
 		key.append('-').append(Jenkins.getInstance().getRootUrl());
+
+		return key.toString();
+	}
+
+		/**
+         * Returns the build key used in the Stash notification. Includes the
+         * build number depending on the user setting.
+         *
+         * @param 	build	the build to notify Stash of
+         * @return	the build key for the Stash notification
+         */
+	private String getBuildKey(final AbstractBuild<?, ?> build,
+							   BuildListener listener) {
+
+		StringBuilder key = new StringBuilder();
+
+		if (prependParentProjectKey || getDescriptor().isPrependParentProjectKey()){
+			if (null != build.getParent().getParent()) {
+				key.append(build.getParent().getParent().getFullName()).append('-');
+			}
+		}
+
+		String overriddenKey = (projectKey != null && projectKey.trim().length() > 0) ? projectKey : getDescriptor().getProjectKey();
+
+		if (overriddenKey != null && overriddenKey.trim().length() > 0) {
+			PrintStream logger = listener.getLogger();
+			try {
+				EnvVars environment = build.getEnvironment(listener);
+				key.append(environment.expand(projectKey));
+			} catch (IOException e) {
+				logger.println("Cannot expand build key from parameter. Processing with default build key");
+				e.printStackTrace(logger);
+				key.append(getDefaultBuildKey(build));
+			} catch (InterruptedException e) {
+				logger.println("Cannot expand build key from parameter. Processing with default build key");
+				e.printStackTrace(logger);
+				key.append(getDefaultBuildKey(build));
+			}
+		} else {
+			key.append(getDefaultBuildKey(build));
+		}
+
 		return StringEscapeUtils.escapeJavaScript(key.toString());
 	}
 
 	/**
-	 * Returns the description of the build used for the Stash notification. 
+	 * Returns the description of the build used for the Stash notification.
 	 * Uses the build description provided by the Jenkins job, if available.
-	 * 
+	 *
 	 * @param build		the build to be described
 	 * @param state		the state of the build
 	 * @return			the description of the build
 	 */
 	private String getBuildDescription(
-			final AbstractBuild<?, ?> build, 
+			final AbstractBuild<?, ?> build,
 			final StashBuildState state) {
-		
-		if (build.getDescription() != null 
+
+		if (build.getDescription() != null
 				&& build.getDescription().trim().length() > 0) {
-			
+
 			return build.getDescription();
 		} else {
 			switch (state) {
 			case INPROGRESS:
-	            return "building on Jenkins @ " 
+	            return "building on Jenkins @ "
 					+ Jenkins.getInstance().getRootUrl();
 			default:
-	            return "built by Jenkins @ " 
+	            return "built by Jenkins @ "
 	            	+ Jenkins.getInstance().getRootUrl();
 			}
 		}

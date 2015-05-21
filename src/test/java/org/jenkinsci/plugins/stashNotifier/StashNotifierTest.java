@@ -42,7 +42,9 @@ public class StashNotifierTest
 			"tiger",
 			true,
 			null,
-			true
+			true,
+			null,
+			false
 		);
 	}
 

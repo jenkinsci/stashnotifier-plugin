@@ -19,11 +19,17 @@
    <f:entry title="Commit SHA-1" field="commitSha1">
     <f:textbox />
   </f:entry>
-   <f:entry title="Ignore unverified SSL certificates" 
+   <f:entry title="Ignore unverified SSL certificates"
    		field="ignoreUnverifiedSSLPeer">
     <f:checkbox />
   </f:entry>
   <f:entry title="Keep repeated builds in Stash" field="includeBuildNumberInKey">
+    <f:checkbox />
+  </f:entry>
+  <f:entry title="Override project key" field="projectKey">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="Prepend parent project name to key" field="prependParentProjectKey">
     <f:checkbox />
   </f:entry>
  </f:advanced>
