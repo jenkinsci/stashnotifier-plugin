@@ -15,28 +15,33 @@
  */
  package org.jenkinsci.plugins.stashNotifier;
 
+import com.cloudbees.plugins.credentials.Credentials;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.*;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.ProxyConfiguration;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.BuildListener;
-import hudson.model.Result;
-import hudson.plugins.git.util.BuildData;
+import hudson.model.*;
 import hudson.plugins.git.Revision;
+import hudson.plugins.git.util.BuildData;
+import hudson.security.ACL;
+import hudson.security.AccessControlled;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
-import hudson.util.Secret;
+import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
+import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
@@ -45,13 +50,17 @@ import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLContextBuilder;
 import org.apache.http.conn.ssl.SSLContexts;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -69,15 +78,13 @@ import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 
 /**
  * Notifies a configured Atlassian Stash server instance of build results
@@ -86,7 +93,7 @@ import org.apache.http.impl.client.ProxyAuthenticationStrategy;
  * Only basic authentication is supported at the moment.
  */
 public class StashNotifier extends Notifier {
-	
+
 	public static final int MAX_FIELD_LENGTH = 255;
 	public static final int MAX_URL_FIELD_LENGTH = 450;
 
@@ -95,11 +102,8 @@ public class StashNotifier extends Notifier {
 	/** base url of Stash server, e. g. <tt>http://localhost:7990</tt>. */
 	private final String stashServerBaseUrl;
 
-	/** name of Stash user for authentication with Stash build API. */
-	private final String stashUserName;
-
-	/** password of Stash user for authentication with Stash build API. */
-	private final Secret stashUserPassword;
+	/** The id of the credentials to use. */
+	private String credentialsId;
 
 	/** if true, ignore exception thrown in case of an unverified SSL peer. */
 	private final boolean ignoreUnverifiedSSLPeer;
@@ -125,8 +129,7 @@ public class StashNotifier extends Notifier {
 	@DataBoundConstructor
 	public StashNotifier(
 			String stashServerBaseUrl,
-			String stashUserName,
-			String stashUserPassword,
+			String credentialsId,
 			boolean ignoreUnverifiedSSLPeer,
 			String commitSha1,
 			boolean includeBuildNumberInKey,
@@ -135,8 +138,7 @@ public class StashNotifier extends Notifier {
 		this.stashServerBaseUrl = stashServerBaseUrl.endsWith("/")
                 ? stashServerBaseUrl.substring(0, stashServerBaseUrl.length()-1)
                 : stashServerBaseUrl;
-		this.stashUserName = stashUserName;
-		this.stashUserPassword = Secret.fromString(stashUserPassword);
+		this.credentialsId = credentialsId;
 		this.ignoreUnverifiedSSLPeer
 			= ignoreUnverifiedSSLPeer;
 		this.commitSha1 = commitSha1;
@@ -145,16 +147,12 @@ public class StashNotifier extends Notifier {
 		this.prependParentProjectKey = prependParentProjectKey;
 	}
 
+	public String getCredentialsId() {
+		return credentialsId;
+	}
+
 	public String getStashServerBaseUrl() {
 		return stashServerBaseUrl;
-	}
-
-	public String getStashUserName() {
-		return stashUserName;
-	}
-
-	public String getStashUserPassword() {
-		return stashUserPassword.getEncryptedValue();
 	}
 
 	public boolean getIgnoreUnverifiedSSLPeer() {
@@ -315,6 +313,10 @@ public class StashNotifier extends Notifier {
         boolean ignoreUnverifiedSSL = ignoreUnverifiedSSLPeer;
         String stashServer = stashServerBaseUrl;
         DescriptorImpl descriptor = getDescriptor();
+
+        Credentials credentials = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(StandardCredentials.class, /** TODO? item **/
+				Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<DomainRequirement>()), CredentialsMatchers.withId(descriptor.credentialsId));
+
         if ("".equals(stashServer) || stashServer == null) {
             stashServer = descriptor.getStashRootUrl();
         }
@@ -325,23 +327,13 @@ public class StashNotifier extends Notifier {
         URL url = new URL(stashServer);
         HttpClientBuilder builder = HttpClientBuilder.create();
         if (url.getProtocol().equals("https")
-                && ignoreUnverifiedSSL) {
+                && (ignoreUnverifiedSSL || credentials instanceof CertificateCredentials)) {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
 			try {
-				TrustStrategy easyStrategy = new TrustStrategy() {
-				    public boolean isTrusted(X509Certificate[] chain, String authType)
-				            throws CertificateException {
-				        return true;
-				    }
-				};
-
-				SSLContext sslContext = SSLContexts.custom()
-						.loadTrustMaterial(null, easyStrategy)
-						.useTLS().build();
 				SSLConnectionSocketFactory sslConnSocketFactory
-						= new SSLConnectionSocketFactory(sslContext,
-						SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+						= new SSLConnectionSocketFactory(buildSslContext(ignoreUnverifiedSSL,credentials),
+                        ignoreUnverifiedSSL ? SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER : null);
 				builder.setSSLSocketFactory(sslConnSocketFactory);
 
 				Registry<ConnectionSocketFactory> registry
@@ -380,7 +372,7 @@ public class StashNotifier extends Notifier {
                     String proxyUser = proxyConfig.getUserName();
                     if (proxyUser != null) {
                         String proxyPass = proxyConfig.getPassword();
-                        CredentialsProvider cred = new BasicCredentialsProvider();
+                        BasicCredentialsProvider cred = new BasicCredentialsProvider();
                         cred.setCredentials(new AuthScope(proxyHost),
                                 new UsernamePasswordCredentials(proxyUser, proxyPass));
                         builder = builder
@@ -395,6 +387,36 @@ public class StashNotifier extends Notifier {
     }
 
     /**
+     * Helper in place to allow us to define out HttpClient SSL context
+     *
+     * @param ignoreUnverifiedSSL
+     * @param credentials
+     * @return
+     * @throws UnrecoverableKeyException
+     * @throws NoSuchAlgorithmException
+     * @throws KeyStoreException
+     * @throws KeyManagementException
+     */
+	private SSLContext buildSslContext(boolean ignoreUnverifiedSSL, Credentials credentials) throws UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+
+		SSLContextBuilder customContext = SSLContexts.custom();
+		if (credentials instanceof CertificateCredentials) {
+			customContext  = customContext.loadKeyMaterial(((CertificateCredentials) credentials).getKeyStore(),((CertificateCredentials) credentials).getPassword().getPlainText().toCharArray());
+		}
+		if (ignoreUnverifiedSSL) {
+			TrustStrategy easyStrategy = new TrustStrategy() {
+				public boolean isTrusted(X509Certificate[] chain, String authType)
+						throws CertificateException {
+					return true;
+				}
+			};
+			customContext = SSLContexts.custom()
+					.loadTrustMaterial(null, easyStrategy);
+		}
+		return customContext.useTLS().build();
+}
+
+	/**
      * Hudson defines a method {@link Builder#getDescriptor()}, which
      * returns the corresponding {@link Descriptor} object.
      *
@@ -422,8 +444,7 @@ public class StashNotifier extends Notifier {
          * If you don't want fields to be persisted, use <tt>transient</tt>.
          */
 
-        private String stashUser;
-        private Secret stashPassword;
+        private String credentialsId;
         private String stashRootUrl;
         private boolean ignoreUnverifiedSsl;
         private boolean includeBuildNumberInKey;
@@ -434,24 +455,13 @@ public class StashNotifier extends Notifier {
             load();
         }
 
-        public String getStashUser() {
-        	if ((stashUser != null) && (stashUser.trim().equals(""))) {
-        		return null;
-        	} else {
-	            return stashUser;
-        	}
-        }
+		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath ItemGroup context) {
+            if (!(context instanceof AccessControlled ? (AccessControlled) context : Jenkins.getInstance()).hasPermission(Computer.CONFIGURE)) {
+				return new ListBoxModel();
+			}
 
-        public Secret getStashPassword() {
-            return stashPassword;
-        }
-
-        public String getEncryptedStashPassword() {
-            if (stashPassword != null)
-                return stashPassword.getEncryptedValue();
-            else
-                return null;
-        }
+			return new StandardListBoxModel().withEmptySelection().withAll(CredentialsProvider.lookupCredentials(StandardCredentials.class, context, null, new ArrayList<DomainRequirement>()));
+		}
 
         public String getStashRootUrl() {
         	if ((stashRootUrl == null) || (stashRootUrl.trim().equals(""))) {
@@ -461,7 +471,11 @@ public class StashNotifier extends Notifier {
         	}
         }
 
-        public boolean isIgnoreUnverifiedSsl() {
+		public String getCredentialsId() {
+			return credentialsId;
+		}
+
+		public boolean isIgnoreUnverifiedSsl() {
             return ignoreUnverifiedSsl;
         }
 
@@ -489,6 +503,11 @@ public class StashNotifier extends Notifier {
 				url = stashRootUrl != null ? stashRootUrl.trim() : null;
 			}
 
+			if ((credentialsId == null) || credentialsId.equals("")) {
+				return FormValidation.error(
+						"Please specify the credentials to use");
+			}
+
 			if ((url == null) || url.equals("")) {
 				return FormValidation.error(
 						"Please specify a valid URL here or in the global "
@@ -502,34 +521,6 @@ public class StashNotifier extends Notifier {
 						"Please specify a valid URL here or in the global "
 						+ "configuration!");
 				}
-			}
-		}
-
-		public FormValidation doCheckStashUserName(@QueryParameter String value)
-				throws IOException, ServletException {
-
-			if (value.trim().equals("")
-					&& ((stashUser == null) || stashUser.trim().equals(""))) {
-				return FormValidation.error(
-						"Please specify a user name here or in the global "
-						+ "configuration!");
-			} else {
-				return FormValidation.ok();
-			}
-		}
-
-		public FormValidation doCheckStashUserPassword(
-					@QueryParameter String value)
-				throws IOException, ServletException {
-
-			if (value.trim().equals("")
-					&& ((stashPassword == null)
-						|| stashPassword.getPlainText().trim().equals(""))) {
-				return FormValidation.warning(
-						"You should use a non-empty password here or in the "
-						+ "global configuration!");
-			} else {
-				return FormValidation.ok();
 			}
 		}
 
@@ -549,16 +540,16 @@ public class StashNotifier extends Notifier {
 
             // to persist global configuration information,
             // set that to properties and call save().
-            stashUser
-            	= formData.getString("stashUser");
-            stashPassword
-            	= Secret.fromString(formData.getString("stashPassword"));
             stashRootUrl
             	= formData.getString("stashRootUrl");
             ignoreUnverifiedSsl
             	= formData.getBoolean("ignoreUnverifiedSsl");
             includeBuildNumberInKey
             	= formData.getBoolean("includeBuildNumberInKey");
+			if (formData.has("credentialsId")) {
+				credentialsId
+						= formData.getString("credentialsId");
+			}
             if (formData.has("projectKey")) {
                 projectKey
                         = formData.getString("projectKey");
@@ -580,7 +571,6 @@ public class StashNotifier extends Notifier {
 	 * @param logger		the logger to use
 	 * @param build			the build to notify Stash of
 	 * @param commitSha1	the SHA1 of the built commit
-	 * @param client		the HTTP client with which to execute the request
 	 * @param listener		the build listener for logging
 	 * @param state			the state of the build as defined by the Stash API.
 	 */
@@ -621,28 +611,27 @@ public class StashNotifier extends Notifier {
 			final String commitSha1) {
 
 		String url = stashServerBaseUrl;
-        String username = stashUserName;
-        String pwd = Secret.toString(stashUserPassword);
         DescriptorImpl descriptor = getDescriptor();
 
         if ("".equals(url) || url == null)
             url = descriptor.getStashRootUrl();
-        if ("".equals(username) || username == null)
-            username = descriptor.getStashUser();
-        if ("".equals(pwd) || pwd == null)
-            pwd = descriptor.getStashPassword().getPlainText();
 
 		HttpPost req = new HttpPost(
 				url
 				+ "/rest/build-status/1.0/commits/"
 				+ commitSha1);
 
-		req.addHeader(BasicScheme.authenticate(
-				new UsernamePasswordCredentials(
-						username,
-						pwd),
-				"UTF-8",
-				false));
+        Credentials credentials = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(StandardCredentials.class, /** TODO? item **/
+                Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<DomainRequirement>()), CredentialsMatchers.withId(descriptor.credentialsId));
+
+        if (credentials instanceof com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) {
+            req.addHeader(BasicScheme.authenticate(
+                    new UsernamePasswordCredentials(
+                            ((com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) credentials).getUsername(),
+                            ((com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) credentials).getPassword().getPlainText()),
+                    "UTF-8",
+                    false));
+        }
 
 		req.addHeader("Content-type", "application/json");
 		req.setEntity(stashBuildNotificationEntity);
@@ -678,8 +667,8 @@ public class StashNotifier extends Notifier {
 
 		json.put("description", abbreviate(getBuildDescription(build, state), MAX_FIELD_LENGTH));
 		json.put("url", abbreviate(Jenkins.getInstance()
-				.getRootUrl().concat(build.getUrl()), MAX_URL_FIELD_LENGTH));
-        
+                .getRootUrl().concat(build.getUrl()), MAX_URL_FIELD_LENGTH));
+
         return new StringEntity(json.toString(), "UTF-8");
 	}
 
