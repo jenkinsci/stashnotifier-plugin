@@ -460,7 +460,7 @@ public class StashNotifier extends Notifier {
 				return new ListBoxModel();
 			}
 
-			return new StandardListBoxModel().withEmptySelection().withAll(CredentialsProvider.lookupCredentials(StandardCredentials.class, context, null, new ArrayList<DomainRequirement>()));
+			return new StandardListBoxModel().withEmptySelection().withMatching(new StashCredentialMatcher(),CredentialsProvider.lookupCredentials(StandardCredentials.class, context, null, new ArrayList<DomainRequirement>()));
 		}
 
         public String getStashRootUrl() {
