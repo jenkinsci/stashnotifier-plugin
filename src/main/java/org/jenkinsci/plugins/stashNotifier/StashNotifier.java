@@ -410,7 +410,7 @@ public class StashNotifier extends Notifier {
 					return true;
 				}
 			};
-			customContext = SSLContexts.custom()
+			customContext = customContext
 					.loadTrustMaterial(null, easyStrategy);
 		}
 		return customContext.useTLS().build();
