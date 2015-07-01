@@ -325,20 +325,15 @@ public class StashNotifier extends Notifier {
 	 * @return			the HttpClient
 	 */
 	private HttpClient getHttpClient(PrintStream logger) throws Exception {
-        boolean ignoreUnverifiedSSL = ignoreUnverifiedSSLPeer;
         String stashServer = stashServerBaseUrl;
         DescriptorImpl descriptor = getDescriptor();
         if ("".equals(stashServer) || stashServer == null) {
             stashServer = descriptor.getStashRootUrl();
         }
-        if (!ignoreUnverifiedSSL) {
-            ignoreUnverifiedSSL = descriptor.isIgnoreUnverifiedSsl();
-        }
 
         URL url = new URL(stashServer);
         HttpClientBuilder builder = HttpClientBuilder.create();
-        if (url.getProtocol().equals("https")
-                && ignoreUnverifiedSSL) {
+        if (ignoreUnverifiedSSLPeer && url.getProtocol().equals("https")) {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
 			try {
@@ -613,8 +608,7 @@ public class StashNotifier extends Notifier {
 		
 		try {
 			// first collect all existing builds if cleanup old previous builds is required
-			if ((cleanupBuildsOnSuccess || getDescriptor().isCleanupBuildsOnSuccess())
-					&& StashBuildState.SUCCESSFUL.equals(state)) {
+			if (cleanupBuildsOnSuccess && StashBuildState.SUCCESSFUL.equals(state)) {
 				logger.println("Cleaning previous builds for " + commitSha1);
 				HttpGet req = createGetRequest(commitSha1);
 				HttpResponse res = client.execute(req);
@@ -801,8 +795,7 @@ public class StashNotifier extends Notifier {
 		StringBuilder key = new StringBuilder();
 
 		key.append(build.getProject().getName());
-		if (includeBuildNumberInKey
-				|| getDescriptor().isIncludeBuildNumberInKey()) {
+		if (includeBuildNumberInKey) {
 			key.append('-').append(build.getNumber());
 		}
 		key.append('-').append(Jenkins.getInstance().getRootUrl());
@@ -822,7 +815,7 @@ public class StashNotifier extends Notifier {
 
 		StringBuilder key = new StringBuilder();
 
-		if (prependParentProjectKey || getDescriptor().isPrependParentProjectKey()){
+		if (prependParentProjectKey){
 			if (null != build.getParent().getParent()) {
 				key.append(build.getParent().getParent().getFullName()).append('-');
 			}
