@@ -26,6 +26,9 @@
   <f:entry title="Keep repeated builds in Stash" field="includeBuildNumberInKey">
     <f:checkbox />
   </f:entry>
+  <f:entry title="Cleanup Stash builds on success" field="cleanupBuildsOnSuccess">
+    <f:checkbox />
+  </f:entry>
   <f:entry title="Override project key" field="projectKey">
     <f:textbox />
   </f:entry>

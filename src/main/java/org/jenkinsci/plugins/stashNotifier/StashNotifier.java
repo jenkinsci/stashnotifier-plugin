@@ -32,14 +32,18 @@ import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
+
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.HttpClientConnectionManager;
@@ -59,12 +63,14 @@ import org.kohsuke.stapler.StaplerRequest;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.servlet.ServletException;
+
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
@@ -74,6 +80,8 @@ import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
+
 import org.apache.http.auth.AuthScope;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
@@ -109,6 +117,9 @@ public class StashNotifier extends Notifier {
 
 	/** if true, the build number is included in the Stash notification. */
 	private final boolean includeBuildNumberInKey;
+	
+	/** if true, previous builds will be set on SUCCESS and description edited. */
+	private final boolean cleanupBuildsOnSuccess;
 
 	/** specify project key manually */
 	private final String projectKey;
@@ -130,6 +141,7 @@ public class StashNotifier extends Notifier {
 			boolean ignoreUnverifiedSSLPeer,
 			String commitSha1,
 			boolean includeBuildNumberInKey,
+			boolean cleanupBuildsOnSuccess,
 			String projectKey,
 			boolean prependParentProjectKey) {
 		this.stashServerBaseUrl = stashServerBaseUrl.endsWith("/")
@@ -141,6 +153,7 @@ public class StashNotifier extends Notifier {
 			= ignoreUnverifiedSSLPeer;
 		this.commitSha1 = commitSha1;
 		this.includeBuildNumberInKey = includeBuildNumberInKey;
+		this.cleanupBuildsOnSuccess = cleanupBuildsOnSuccess;
 		this.projectKey = projectKey;
 		this.prependParentProjectKey = prependParentProjectKey;
 	}
@@ -429,6 +442,7 @@ public class StashNotifier extends Notifier {
         private boolean includeBuildNumberInKey;
 		private String projectKey;
 		private boolean prependParentProjectKey;
+		private boolean cleanupBuildsOnSuccess;
 
 		public DescriptorImpl() {
             load();
@@ -475,6 +489,10 @@ public class StashNotifier extends Notifier {
 
 		public boolean isPrependParentProjectKey() {
 			return prependParentProjectKey;
+		}
+		
+		public boolean isCleanupBuildsOnSuccess() {
+			return cleanupBuildsOnSuccess;
 		}
 
 		public FormValidation doCheckStashServerBaseUrl(
@@ -565,6 +583,7 @@ public class StashNotifier extends Notifier {
             }
             prependParentProjectKey
                 = formData.getBoolean("prependParentProjectKey");
+            cleanupBuildsOnSuccess = formData.getBoolean("cleanupBuildsOnSuccess");
 
 			save();
 			return super.configure(req,formData);
@@ -590,11 +609,50 @@ public class StashNotifier extends Notifier {
 			final String commitSha1,
 			final BuildListener listener,
 			final StashBuildState state) throws Exception {
-		HttpEntity stashBuildNotificationEntity
-			= newStashBuildNotificationEntity(build, state, listener);
-		HttpPost req = createRequest(stashBuildNotificationEntity, commitSha1);
 		HttpClient client = getHttpClient(logger);
+		
 		try {
+			// first collect all existing builds if cleanup old previous builds is required
+			if ((cleanupBuildsOnSuccess || getDescriptor().isCleanupBuildsOnSuccess())
+					&& StashBuildState.SUCCESSFUL.equals(state)) {
+				logger.println("Cleaning previous builds for " + commitSha1);
+				HttpGet req = createGetRequest(commitSha1);
+				HttpResponse res = client.execute(req);
+				if (res.getStatusLine().getStatusCode() != 200) {
+					return NotificationResult.newFailure(
+							EntityUtils.toString(res.getEntity()));
+				} else {
+					// TODO gather all statuses being verifying isLastPage and getting the next page
+					// however it is extremely unlikely that a commit has that many builds on it
+					JSONObject buildStatusesPage = JSONObject.fromObject(EntityUtils.toString(res.getEntity()));
+					JSONArray buildStatuses = buildStatusesPage.getJSONArray("values");
+					@SuppressWarnings("unchecked")
+					Iterator<JSONObject> iterator = buildStatuses.iterator();
+					while(iterator.hasNext()) {
+						JSONObject buildStatus = iterator.next();
+						// only change status for unsuccessful builds
+						String buildState = buildStatus.getString("state");
+						if (!StashBuildState.SUCCESSFUL.name().equalsIgnoreCase(buildState)) {
+							HttpEntity stashBuildNotificationEntity	= newStashBuildNotificationEntity(
+									StashBuildState.SUCCESSFUL, 
+									buildStatus.getString("key"),
+									"(" + buildState.toLowerCase() + ") " + buildStatus.getString("name"), 
+									"Status changed by Jenkins @ " + Jenkins.getInstance().getRootUrl(), 
+									buildStatus.getString("url"));
+							HttpPost buildStatusReq = createPostRequest(stashBuildNotificationEntity, commitSha1);
+							HttpResponse buildStatusRes = client.execute(buildStatusReq);
+							if (buildStatusRes.getStatusLine().getStatusCode() != 204) {
+								return NotificationResult.newFailure(
+										EntityUtils.toString(buildStatusRes.getEntity()));
+							}
+						}
+					}					
+				}
+			}
+			
+			HttpEntity stashBuildNotificationEntity
+				= newStashBuildNotificationEntity(build, state, listener);
+			HttpPost req = createPostRequest(stashBuildNotificationEntity, commitSha1);
 			HttpResponse res = client.execute(req);
 			if (res.getStatusLine().getStatusCode() != 204) {
 				return NotificationResult.newFailure(
@@ -606,7 +664,20 @@ public class StashNotifier extends Notifier {
 			client.getConnectionManager().shutdown();
 		}
 	}
-
+	
+	/**
+	 * Returns the HTTP GET request ready to be sent to the Stash build API for
+	 * the given build and change set.
+	 *
+	 * @param commitSha1	the SHA1 of the commit that was built
+	 * @return				the HTTP GET request to the Stash build API
+	 */
+	private HttpGet createGetRequest(final String commitSha1) {
+		HttpGet req = new HttpGet();
+		prepareRequest(req, commitSha1);
+		return req;
+	}
+	
 	/**
 	 * Returns the HTTP POST request ready to be sent to the Stash build API for
 	 * the given build and change set.
@@ -616,8 +687,22 @@ public class StashNotifier extends Notifier {
 	 * @param commitSha1	the SHA1 of the commit that was built
 	 * @return				the HTTP POST request to the Stash build API
 	 */
-	private HttpPost createRequest(
+	private HttpPost createPostRequest(
 			final HttpEntity stashBuildNotificationEntity,
+			final String commitSha1) {
+		HttpPost req = new HttpPost();
+		prepareRequest(req, commitSha1);
+		req.setEntity(stashBuildNotificationEntity);
+		return req;
+	}
+	
+	/**
+	 * Prepares an HTTP request to be sent to the Stash build API for
+	 * the given build and change set.
+	 *
+	 * @param commitSha1	the SHA1 of the commit that was built
+	 */
+	private void prepareRequest(final HttpRequestBase base,
 			final String commitSha1) {
 
 		String url = stashServerBaseUrl;
@@ -632,22 +717,18 @@ public class StashNotifier extends Notifier {
         if ("".equals(pwd) || pwd == null)
             pwd = descriptor.getStashPassword().getPlainText();
 
-		HttpPost req = new HttpPost(
-				url
+        base.setURI(URI.create(url
 				+ "/rest/build-status/1.0/commits/"
-				+ commitSha1);
+				+ commitSha1));
 
-		req.addHeader(BasicScheme.authenticate(
+		base.addHeader(BasicScheme.authenticate(
 				new UsernamePasswordCredentials(
 						username,
 						pwd),
 				"UTF-8",
 				false));
 
-		req.addHeader("Content-type", "application/json");
-		req.setEntity(stashBuildNotificationEntity);
-
-		return req;
+		base.addHeader("Content-type", "application/json");
 	}
 
 	/**
@@ -662,24 +743,38 @@ public class StashNotifier extends Notifier {
 			final StashBuildState state,
             BuildListener listener) throws UnsupportedEncodingException {
 
+		return newStashBuildNotificationEntity(
+				state, 
+				getBuildKey(build, listener), 
+				
+				// This is to replace the odd character Jenkins injects to separate 
+		        // nested jobs, especially when using the Cloudbees Folders plugin. 
+		        // These characters cause Stash to throw up.
+		        StringEscapeUtils.escapeJavaScript(build.getFullDisplayName()).
+                	replaceAll("\\\\u00BB", "\\/"), 
+                	
+                getBuildDescription(build, state), 
+                Jenkins.getInstance().getRootUrl().concat(build.getUrl()));
+	}
+	
+	/**
+	 * Returns the HTTP POST entity body with the JSON representation of the
+	 * builds result to be sent to the Stash build API.
+	 *
+	 * @return				HTTP entity body for POST to Stash build API
+	 */
+	private HttpEntity newStashBuildNotificationEntity(
+			final StashBuildState state,
+			final String key,
+			final String name,
+			final String description,
+			final String url) throws UnsupportedEncodingException {
 		JSONObject json = new JSONObject();
-
         json.put("state", state.name());
-
-        json.put("key", abbreviate(getBuildKey(build, listener), MAX_FIELD_LENGTH));
-
-        // This is to replace the odd character Jenkins injects to separate 
-        // nested jobs, especially when using the Cloudbees Folders plugin. 
-        // These characters cause Stash to throw up.
-        String fullName = StringEscapeUtils.
-                escapeJavaScript(build.getFullDisplayName()).
-                replaceAll("\\\\u00BB", "\\/");
-        json.put("name", abbreviate(fullName, MAX_FIELD_LENGTH));
-
-		json.put("description", abbreviate(getBuildDescription(build, state), MAX_FIELD_LENGTH));
-		json.put("url", abbreviate(Jenkins.getInstance()
-				.getRootUrl().concat(build.getUrl()), MAX_URL_FIELD_LENGTH));
-        
+        json.put("key", abbreviate(key, MAX_FIELD_LENGTH));
+        json.put("name", abbreviate(name, MAX_FIELD_LENGTH));
+		json.put("description", abbreviate(description, MAX_FIELD_LENGTH));
+		json.put("url", abbreviate(url, MAX_URL_FIELD_LENGTH));
         return new StringEntity(json.toString(), "UTF-8");
 	}
 

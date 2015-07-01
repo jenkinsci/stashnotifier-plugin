@@ -43,6 +43,7 @@ public class StashNotifierTest
 			true,
 			null,
 			true,
+			false,
 			null,
 			false
 		);

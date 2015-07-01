@@ -25,6 +25,11 @@
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-includeBuildNumberInKey.html">
           <f:checkbox />
       </f:entry>
+	  <f:entry title="Cleanup Stash builds on success" 
+	  		   field="cleanupBuildsOnSuccess"
+	  		   help="${rootURL}/plugin/stashNotifier/help-globalConfig-cleanupBuildsOnSuccess.html">
+    	  <f:checkbox />
+  	  </f:entry>
       <f:entry title="Prepend parent project name to key"
                field="prependParentProjectKey"
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-prependParentProjectKey.html">
