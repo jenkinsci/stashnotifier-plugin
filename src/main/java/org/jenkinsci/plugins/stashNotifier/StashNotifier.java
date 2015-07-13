@@ -38,6 +38,7 @@ import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
@@ -491,6 +492,18 @@ public class StashNotifier extends Notifier {
 			return prependParentProjectKey;
 		}
 
+		public FormValidation doCheckCredentialsId(@QueryParameter String value)
+				throws IOException, ServletException {
+
+			if (value.trim().equals("")) {
+				return FormValidation.error(
+						"Please specify the credentials to use");
+			} else {
+				return FormValidation.ok();
+			}
+		}
+
+
 		public FormValidation doCheckStashServerBaseUrl(
 					@QueryParameter String value)
 				throws IOException, ServletException {
@@ -501,11 +514,6 @@ public class StashNotifier extends Notifier {
 				url = url.trim();
 			} else {
 				url = stashRootUrl != null ? stashRootUrl.trim() : null;
-			}
-
-			if ((credentialsId == null) || credentialsId.equals("")) {
-				return FormValidation.error(
-						"Please specify the credentials to use");
 			}
 
 			if ((url == null) || url.equals("")) {
@@ -546,6 +554,7 @@ public class StashNotifier extends Notifier {
             	= formData.getBoolean("ignoreUnverifiedSsl");
             includeBuildNumberInKey
             	= formData.getBoolean("includeBuildNumberInKey");
+
 			if (formData.has("credentialsId")) {
 				credentialsId
 						= formData.getString("credentialsId");
@@ -621,17 +630,26 @@ public class StashNotifier extends Notifier {
 				+ "/rest/build-status/1.0/commits/"
 				+ commitSha1);
 
-        Credentials credentials = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(StandardCredentials.class, /** TODO? item **/
-                Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<DomainRequirement>()), CredentialsMatchers.withId(descriptor.credentialsId));
+		// If we have a credential defined then we need to determine if it
+		// is a basic auth
 
-        if (credentials instanceof com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) {
-            req.addHeader(BasicScheme.authenticate(
-                    new UsernamePasswordCredentials(
-                            ((com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) credentials).getUsername(),
-                            ((com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) credentials).getPassword().getPlainText()),
-                    "UTF-8",
-                    false));
-        }
+		System.out.println("credentials "+descriptor.getCredentialsId());
+
+		if (StringUtils.isNotBlank(descriptor.getCredentialsId())) {
+			System.out.println("Found credentials");
+			Credentials credentials = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(StandardCredentials.class,
+					Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<DomainRequirement>()), CredentialsMatchers.withId(descriptor.credentialsId));
+			if (credentials instanceof com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) {
+				System.out.println("Adding basic auth");
+
+				req.addHeader(BasicScheme.authenticate(
+						new UsernamePasswordCredentials(
+								((com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) credentials).getUsername(),
+								((com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) credentials).getPassword().getPlainText()),
+						"UTF-8",
+						false));
+			}
+		}
 
 		req.addHeader("Content-type", "application/json");
 		req.setEntity(stashBuildNotificationEntity);
@@ -704,13 +722,13 @@ public class StashNotifier extends Notifier {
 		return key.toString();
 	}
 
-		/**
-         * Returns the build key used in the Stash notification. Includes the
-         * build number depending on the user setting.
-         *
-         * @param 	build	the build to notify Stash of
-         * @return	the build key for the Stash notification
-         */
+	/**
+	 * Returns the build key used in the Stash notification. Includes the
+	 * build number depending on the user setting.
+	 *
+	 * @param 	build	the build to notify Stash of
+	 * @return	the build key for the Stash notification
+	 */
 	private String getBuildKey(final AbstractBuild<?, ?> build,
 							   BuildListener listener) {
 
