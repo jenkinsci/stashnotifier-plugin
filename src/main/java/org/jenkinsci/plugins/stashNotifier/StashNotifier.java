@@ -136,6 +136,7 @@ public class StashNotifier extends Notifier {
 			boolean includeBuildNumberInKey,
 			String projectKey,
 			boolean prependParentProjectKey) {
+
 		this.stashServerBaseUrl = stashServerBaseUrl.endsWith("/")
                 ? stashServerBaseUrl.substring(0, stashServerBaseUrl.length()-1)
                 : stashServerBaseUrl;
@@ -307,16 +308,17 @@ public class StashNotifier extends Notifier {
 	 * unsafe TrustStrategy in case the user specified a HTTPS URL and
 	 * set the ignoreUnverifiedSSLPeer flag.
 	 *
-	 * @param logger	the logger to log messages to
+	 * @param logger    the logger to log messages to
+	 * @param build
 	 * @return			the HttpClient
 	 */
-	private HttpClient getHttpClient(PrintStream logger) throws Exception {
+	private HttpClient getHttpClient(PrintStream logger, AbstractBuild<?, ?> build) throws Exception {
         boolean ignoreUnverifiedSSL = ignoreUnverifiedSSLPeer;
         String stashServer = stashServerBaseUrl;
         DescriptorImpl descriptor = getDescriptor();
 
-        Credentials credentials = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(StandardCredentials.class, /** TODO? item **/
-				Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<DomainRequirement>()), CredentialsMatchers.withId(descriptor.credentialsId));
+		Credentials credentials = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(CertificateCredentials.class,
+				Jenkins.getInstance(), ACL.SYSTEM), CredentialsMatchers.withId(getCredentialsId()));
 
         if ("".equals(stashServer) || stashServer == null) {
             stashServer = descriptor.getStashRootUrl();
@@ -592,7 +594,7 @@ public class StashNotifier extends Notifier {
 		HttpEntity stashBuildNotificationEntity
 			= newStashBuildNotificationEntity(build, state, listener);
 		HttpPost req = createRequest(stashBuildNotificationEntity, commitSha1);
-		HttpClient client = getHttpClient(logger);
+		HttpClient client = getHttpClient(logger,build);
 		try {
 			HttpResponse res = client.execute(req);
 			if (res.getStatusLine().getStatusCode() != 204) {
@@ -632,16 +634,11 @@ public class StashNotifier extends Notifier {
 
 		// If we have a credential defined then we need to determine if it
 		// is a basic auth
+		if (StringUtils.isNotBlank(getCredentialsId())) {
 
-		System.out.println("credentials "+descriptor.getCredentialsId());
-
-		if (StringUtils.isNotBlank(descriptor.getCredentialsId())) {
-			System.out.println("Found credentials");
-			Credentials credentials = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(StandardCredentials.class,
-					Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<DomainRequirement>()), CredentialsMatchers.withId(descriptor.credentialsId));
+			Credentials credentials = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials.class,
+					Jenkins.getInstance(), ACL.SYSTEM), CredentialsMatchers.withId(getCredentialsId()));
 			if (credentials instanceof com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) {
-				System.out.println("Adding basic auth");
-
 				req.addHeader(BasicScheme.authenticate(
 						new UsernamePasswordCredentials(
 								((com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) credentials).getUsername(),
