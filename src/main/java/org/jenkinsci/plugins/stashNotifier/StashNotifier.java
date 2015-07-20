@@ -317,8 +317,14 @@ public class StashNotifier extends Notifier {
         String stashServer = stashServerBaseUrl;
         DescriptorImpl descriptor = getDescriptor();
 
+		// Determine if we are using the local or global settings
+		String credentialsId = getCredentialsId();
+		if (StringUtils.isBlank(credentialsId)) {
+			credentialsId = descriptor.getCredentialsId();
+		}
+
 		Credentials credentials = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(CertificateCredentials.class,
-				Jenkins.getInstance(), ACL.SYSTEM), CredentialsMatchers.withId(getCredentialsId()));
+				Jenkins.getInstance(), ACL.SYSTEM), CredentialsMatchers.withId(credentialsId));
 
         if ("".equals(stashServer) || stashServer == null) {
             stashServer = descriptor.getStashRootUrl();
@@ -557,7 +563,7 @@ public class StashNotifier extends Notifier {
             includeBuildNumberInKey
             	= formData.getBoolean("includeBuildNumberInKey");
 
-			if (formData.has("credentialsId")) {
+			if (formData.has("credentialsId") && StringUtils.isNotBlank(formData.getString("credentialsId"))) {
 				credentialsId
 						= formData.getString("credentialsId");
 			}
@@ -634,10 +640,16 @@ public class StashNotifier extends Notifier {
 
 		// If we have a credential defined then we need to determine if it
 		// is a basic auth
-		if (StringUtils.isNotBlank(getCredentialsId())) {
+
+		credentialsId = getCredentialsId();
+		if (StringUtils.isBlank(credentialsId)) {
+			credentialsId = descriptor.getCredentialsId();
+		}
+
+		if (StringUtils.isNotBlank(credentialsId)) {
 
 			Credentials credentials = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials.class,
-					Jenkins.getInstance(), ACL.SYSTEM), CredentialsMatchers.withId(getCredentialsId()));
+					Jenkins.getInstance(), ACL.SYSTEM), CredentialsMatchers.withId(credentialsId));
 			if (credentials instanceof com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) {
 				req.addHeader(BasicScheme.authenticate(
 						new UsernamePasswordCredentials(
