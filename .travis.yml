@@ -1,1 +1,9 @@
 language: java
+
+deploy:
+  provider: releases
+  api_key: $API_KEY
+  file: target/stashNotifier.hpi
+  skip_cleanup: true
+  on:
+    tags: true
