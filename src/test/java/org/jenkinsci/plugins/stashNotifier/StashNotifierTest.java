@@ -39,7 +39,6 @@ public class StashNotifierTest
 		return new StashNotifier(
 			"http://localhost",
 			"scot",
-			"tiger",
 			true,
 			null,
 			true,
