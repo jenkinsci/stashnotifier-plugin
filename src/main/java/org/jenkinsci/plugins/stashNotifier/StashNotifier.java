@@ -190,7 +190,7 @@ public class StashNotifier extends Notifier {
 
     @Override
 	public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener) {
-		    return inprogressNotification && processJenkinsEvent(build, listener, StashBuildState.INPROGRESS);
+		    return !inprogressNotification || processJenkinsEvent(build, listener, StashBuildState.INPROGRESS);
 	}
 
 	@Override
