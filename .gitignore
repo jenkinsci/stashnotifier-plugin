@@ -1,14 +1,26 @@
 syntax: glob
-*.class
+
+# Idea trash
+stashNotifier.i*
+.idea/*
+*.iml
+
+# System trash
 .DS_Store
+**/Thumbs.db
+
+# Temp dirs
+target/*
+work/*
+bin/*
+
+*.class
 .classpath
 .project
 .checkstyle
 .settings
+
 build.properties
-target/*
-work/*
-bin/*
-**/Thumbs.db
-stashNotifier.i*
-.idea/*
+
+
+

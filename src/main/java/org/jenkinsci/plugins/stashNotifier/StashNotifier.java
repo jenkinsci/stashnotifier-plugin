@@ -121,7 +121,10 @@ public class StashNotifier extends Notifier {
 	/** append parent project key to key formation */
 	private final boolean prependParentProjectKey;
 
-	// public members ----------------------------------------------------------
+	/** whether to send INPROGRESS notification at the build start */
+	private final boolean inprogressNotification;
+
+// public members ----------------------------------------------------------
 
 	public BuildStepMonitor getRequiredMonitorService() {
 		return BuildStepMonitor.NONE;
@@ -135,18 +138,26 @@ public class StashNotifier extends Notifier {
 			String commitSha1,
 			boolean includeBuildNumberInKey,
 			String projectKey,
-			boolean prependParentProjectKey) {
+			boolean prependParentProjectKey,
+			boolean inprogressNotification
+	) {
+
 
 		this.stashServerBaseUrl = stashServerBaseUrl.endsWith("/")
-                ? stashServerBaseUrl.substring(0, stashServerBaseUrl.length()-1)
-                : stashServerBaseUrl;
+				? stashServerBaseUrl.substring(0, stashServerBaseUrl.length() - 1)
+				: stashServerBaseUrl;
 		this.credentialsId = credentialsId;
 		this.ignoreUnverifiedSSLPeer
-			= ignoreUnverifiedSSLPeer;
+				= ignoreUnverifiedSSLPeer;
 		this.commitSha1 = commitSha1;
 		this.includeBuildNumberInKey = includeBuildNumberInKey;
 		this.projectKey = projectKey;
 		this.prependParentProjectKey = prependParentProjectKey;
+		this.inprogressNotification = inprogressNotification;
+	}
+
+	public boolean isInprogressNotification() {
+		return inprogressNotification;
 	}
 
 	public String getCredentialsId() {
@@ -179,7 +190,7 @@ public class StashNotifier extends Notifier {
 
     @Override
 	public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener) {
-		return processJenkinsEvent(build, listener, StashBuildState.INPROGRESS);
+		    return inprogressNotification && processJenkinsEvent(build, listener, StashBuildState.INPROGRESS);
 	}
 
 	@Override
@@ -459,6 +470,7 @@ public class StashNotifier extends Notifier {
         private boolean includeBuildNumberInKey;
 		private String projectKey;
 		private boolean prependParentProjectKey;
+		private boolean inprogressNotification;
 
 		public DescriptorImpl() {
             load();
@@ -479,6 +491,10 @@ public class StashNotifier extends Notifier {
 	            return stashRootUrl;
         	}
         }
+
+		public boolean isInprogressNotification() {
+			return inprogressNotification;
+		}
 
 		public String getCredentialsId() {
 			return credentialsId;
@@ -556,23 +572,19 @@ public class StashNotifier extends Notifier {
 
             // to persist global configuration information,
             // set that to properties and call save().
-            stashRootUrl
-            	= formData.getString("stashRootUrl");
-            ignoreUnverifiedSsl
-            	= formData.getBoolean("ignoreUnverifiedSsl");
-            includeBuildNumberInKey
-            	= formData.getBoolean("includeBuildNumberInKey");
+            stashRootUrl = formData.getString("stashRootUrl");
+            ignoreUnverifiedSsl = formData.getBoolean("ignoreUnverifiedSsl");
+            includeBuildNumberInKey = formData.getBoolean("includeBuildNumberInKey");
 
-			if (formData.has("credentialsId") && StringUtils.isNotBlank(formData.getString("credentialsId"))) {
-				credentialsId
-						= formData.getString("credentialsId");
-			}
-            if (formData.has("projectKey")) {
-                projectKey
-                        = formData.getString("projectKey");
+            if (formData.has("credentialsId") && StringUtils.isNotBlank(formData.getString("credentialsId"))) {
+                credentialsId = formData.getString("credentialsId");
             }
-            prependParentProjectKey
-                = formData.getBoolean("prependParentProjectKey");
+            if (formData.has("projectKey")) {
+                projectKey = formData.getString("projectKey");
+            }
+            prependParentProjectKey = formData.getBoolean("prependParentProjectKey");
+
+			inprogressNotification = formData.getBoolean("inprogressNotification");
 
 			save();
 			return super.configure(req,formData);

@@ -35,6 +35,10 @@
 			<id>gruetter</id>
 			<name>Georg Gruetter</name>
 		</developer>
+		<developer>
+			<id>scaytrase</id>
+			<name>Pavel Batanov</name>
+		</developer>
 	</developers>
 
 	<properties>

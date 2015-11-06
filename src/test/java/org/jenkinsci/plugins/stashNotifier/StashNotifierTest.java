@@ -24,7 +24,7 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
+
 import static org.mockito.Mockito.*;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -43,8 +43,8 @@ public class StashNotifierTest
 			null,
 			true,
 			null,
-			false
-		);
+			false,
+			true);
 	}
 
 	StashNotifier sn;
