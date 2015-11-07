@@ -25,6 +25,7 @@ import hudson.Extension;
 import hudson.Launcher;
 import hudson.ProxyConfiguration;
 import hudson.model.*;
+import hudson.plugins.git.GitBranchTokenMacro;
 import hudson.plugins.git.Revision;
 import hudson.plugins.git.util.BuildData;
 import hudson.security.ACL;
@@ -61,6 +62,8 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
+import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
+import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -274,13 +277,16 @@ public class StashNotifier extends Notifier {
 		if (commitSha1 != null && commitSha1.trim().length() > 0) {
 			PrintStream logger = listener.getLogger();
 			try {
-				EnvVars environment = build.getEnvironment(listener);
-				return Arrays.asList(environment.expand(commitSha1));
+				return Arrays.asList(TokenMacro.expandAll(build, listener, commitSha1));
 			} catch (IOException e) {
 				logger.println("Unable to expand commit SHA value");
 				e.printStackTrace(logger);
 				return Arrays.asList();
 			} catch (InterruptedException e) {
+				logger.println("Unable to expand commit SHA value");
+				e.printStackTrace(logger);
+				return Arrays.asList();
+			} catch (MacroEvaluationException e) {
 				logger.println("Unable to expand commit SHA value");
 				e.printStackTrace(logger);
 				return Arrays.asList();
@@ -766,13 +772,16 @@ public class StashNotifier extends Notifier {
 		if (overriddenKey != null && overriddenKey.trim().length() > 0) {
 			PrintStream logger = listener.getLogger();
 			try {
-				EnvVars environment = build.getEnvironment(listener);
-				key.append(environment.expand(projectKey));
+				key.append(TokenMacro.expandAll(build, listener, projectKey));
 			} catch (IOException e) {
 				logger.println("Cannot expand build key from parameter. Processing with default build key");
 				e.printStackTrace(logger);
 				key.append(getDefaultBuildKey(build));
 			} catch (InterruptedException e) {
+				logger.println("Cannot expand build key from parameter. Processing with default build key");
+				e.printStackTrace(logger);
+				key.append(getDefaultBuildKey(build));
+			} catch (MacroEvaluationException e) {
 				logger.println("Cannot expand build key from parameter. Processing with default build key");
 				e.printStackTrace(logger);
 				key.append(getDefaultBuildKey(build));
