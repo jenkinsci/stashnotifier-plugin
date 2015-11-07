@@ -44,7 +44,7 @@ public class StashNotifierTest
 			true,
 			null,
 			false,
-			true);
+			false);
 	}
 
 	StashNotifier sn;

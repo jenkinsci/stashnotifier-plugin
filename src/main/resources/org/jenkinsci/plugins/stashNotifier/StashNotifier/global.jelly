@@ -23,9 +23,9 @@
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-prependParentProjectKey.html">
           <f:checkbox />
       </f:entry>
-      <f:entry title="Enable INPROGRESS notification"
-               field="inprogressNotification"
-               help="${rootURL}/plugin/stashNotifier/help-inprogressNotification.html">
+      <f:entry title="Disable INPROGRESS notification"
+               field="disableInprogressNotification"
+               help="${rootURL}/plugin/stashNotifier/help-globalConfig-disableInprogressNotification.html">
           <f:checkbox default="true"/>
       </f:entry>
   </f:section>

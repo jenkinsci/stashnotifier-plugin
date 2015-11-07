@@ -122,7 +122,7 @@ public class StashNotifier extends Notifier {
 	private final boolean prependParentProjectKey;
 
 	/** whether to send INPROGRESS notification at the build start */
-	private final boolean inprogressNotification;
+	private final boolean disableInprogressNotification;
 
 // public members ----------------------------------------------------------
 
@@ -139,7 +139,7 @@ public class StashNotifier extends Notifier {
 			boolean includeBuildNumberInKey,
 			String projectKey,
 			boolean prependParentProjectKey,
-			boolean inprogressNotification
+			boolean disableInprogressNotification
 	) {
 
 
@@ -153,11 +153,11 @@ public class StashNotifier extends Notifier {
 		this.includeBuildNumberInKey = includeBuildNumberInKey;
 		this.projectKey = projectKey;
 		this.prependParentProjectKey = prependParentProjectKey;
-		this.inprogressNotification = inprogressNotification;
+		this.disableInprogressNotification = disableInprogressNotification;
 	}
 
-	public boolean isInprogressNotification() {
-		return inprogressNotification;
+	public boolean isDisableInprogressNotification() {
+		return disableInprogressNotification;
 	}
 
 	public String getCredentialsId() {
@@ -190,7 +190,7 @@ public class StashNotifier extends Notifier {
 
     @Override
 	public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener) {
-		    return !inprogressNotification || processJenkinsEvent(build, listener, StashBuildState.INPROGRESS);
+		    return disableInprogressNotification || processJenkinsEvent(build, listener, StashBuildState.INPROGRESS);
 	}
 
 	@Override
@@ -470,7 +470,7 @@ public class StashNotifier extends Notifier {
         private boolean includeBuildNumberInKey;
 		private String projectKey;
 		private boolean prependParentProjectKey;
-		private boolean inprogressNotification;
+		private boolean disableInprogressNotification;
 
 		public DescriptorImpl() {
             load();
@@ -492,8 +492,8 @@ public class StashNotifier extends Notifier {
         	}
         }
 
-		public boolean isInprogressNotification() {
-			return inprogressNotification;
+		public boolean isDisableInprogressNotification() {
+			return disableInprogressNotification;
 		}
 
 		public String getCredentialsId() {
@@ -584,7 +584,7 @@ public class StashNotifier extends Notifier {
             }
             prependParentProjectKey = formData.getBoolean("prependParentProjectKey");
 
-			inprogressNotification = formData.getBoolean("inprogressNotification");
+			disableInprogressNotification = formData.getBoolean("disableInprogressNotification");
 
 			save();
 			return super.configure(req,formData);
