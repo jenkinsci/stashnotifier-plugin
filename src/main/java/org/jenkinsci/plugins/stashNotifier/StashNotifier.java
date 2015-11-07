@@ -25,6 +25,7 @@ import hudson.Extension;
 import hudson.Launcher;
 import hudson.ProxyConfiguration;
 import hudson.model.*;
+import hudson.plugins.git.GitBranchTokenMacro;
 import hudson.plugins.git.Revision;
 import hudson.plugins.git.util.BuildData;
 import hudson.security.ACL;
@@ -61,6 +62,8 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
+import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
+import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -121,7 +124,10 @@ public class StashNotifier extends Notifier {
 	/** append parent project key to key formation */
 	private final boolean prependParentProjectKey;
 
-	// public members ----------------------------------------------------------
+	/** whether to send INPROGRESS notification at the build start */
+	private final boolean disableInprogressNotification;
+
+// public members ----------------------------------------------------------
 
 	public BuildStepMonitor getRequiredMonitorService() {
 		return BuildStepMonitor.NONE;
@@ -135,18 +141,26 @@ public class StashNotifier extends Notifier {
 			String commitSha1,
 			boolean includeBuildNumberInKey,
 			String projectKey,
-			boolean prependParentProjectKey) {
+			boolean prependParentProjectKey,
+			boolean disableInprogressNotification
+	) {
+
 
 		this.stashServerBaseUrl = stashServerBaseUrl.endsWith("/")
-                ? stashServerBaseUrl.substring(0, stashServerBaseUrl.length()-1)
-                : stashServerBaseUrl;
+				? stashServerBaseUrl.substring(0, stashServerBaseUrl.length() - 1)
+				: stashServerBaseUrl;
 		this.credentialsId = credentialsId;
 		this.ignoreUnverifiedSSLPeer
-			= ignoreUnverifiedSSLPeer;
+				= ignoreUnverifiedSSLPeer;
 		this.commitSha1 = commitSha1;
 		this.includeBuildNumberInKey = includeBuildNumberInKey;
 		this.projectKey = projectKey;
 		this.prependParentProjectKey = prependParentProjectKey;
+		this.disableInprogressNotification = disableInprogressNotification;
+	}
+
+	public boolean isDisableInprogressNotification() {
+		return disableInprogressNotification;
 	}
 
 	public String getCredentialsId() {
@@ -179,7 +193,7 @@ public class StashNotifier extends Notifier {
 
     @Override
 	public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener) {
-		return processJenkinsEvent(build, listener, StashBuildState.INPROGRESS);
+		    return disableInprogressNotification || processJenkinsEvent(build, listener, StashBuildState.INPROGRESS);
 	}
 
 	@Override
@@ -263,13 +277,16 @@ public class StashNotifier extends Notifier {
 		if (commitSha1 != null && commitSha1.trim().length() > 0) {
 			PrintStream logger = listener.getLogger();
 			try {
-				EnvVars environment = build.getEnvironment(listener);
-				return Arrays.asList(environment.expand(commitSha1));
+				return Arrays.asList(TokenMacro.expandAll(build, listener, commitSha1));
 			} catch (IOException e) {
 				logger.println("Unable to expand commit SHA value");
 				e.printStackTrace(logger);
 				return Arrays.asList();
 			} catch (InterruptedException e) {
+				logger.println("Unable to expand commit SHA value");
+				e.printStackTrace(logger);
+				return Arrays.asList();
+			} catch (MacroEvaluationException e) {
 				logger.println("Unable to expand commit SHA value");
 				e.printStackTrace(logger);
 				return Arrays.asList();
@@ -459,6 +476,7 @@ public class StashNotifier extends Notifier {
         private boolean includeBuildNumberInKey;
 		private String projectKey;
 		private boolean prependParentProjectKey;
+		private boolean disableInprogressNotification;
 
 		public DescriptorImpl() {
             load();
@@ -479,6 +497,10 @@ public class StashNotifier extends Notifier {
 	            return stashRootUrl;
         	}
         }
+
+		public boolean isDisableInprogressNotification() {
+			return disableInprogressNotification;
+		}
 
 		public String getCredentialsId() {
 			return credentialsId;
@@ -556,23 +578,19 @@ public class StashNotifier extends Notifier {
 
             // to persist global configuration information,
             // set that to properties and call save().
-            stashRootUrl
-            	= formData.getString("stashRootUrl");
-            ignoreUnverifiedSsl
-            	= formData.getBoolean("ignoreUnverifiedSsl");
-            includeBuildNumberInKey
-            	= formData.getBoolean("includeBuildNumberInKey");
+            stashRootUrl = formData.getString("stashRootUrl");
+            ignoreUnverifiedSsl = formData.getBoolean("ignoreUnverifiedSsl");
+            includeBuildNumberInKey = formData.getBoolean("includeBuildNumberInKey");
 
-			if (formData.has("credentialsId") && StringUtils.isNotBlank(formData.getString("credentialsId"))) {
-				credentialsId
-						= formData.getString("credentialsId");
-			}
-            if (formData.has("projectKey")) {
-                projectKey
-                        = formData.getString("projectKey");
+            if (formData.has("credentialsId") && StringUtils.isNotBlank(formData.getString("credentialsId"))) {
+                credentialsId = formData.getString("credentialsId");
             }
-            prependParentProjectKey
-                = formData.getBoolean("prependParentProjectKey");
+            if (formData.has("projectKey")) {
+                projectKey = formData.getString("projectKey");
+            }
+            prependParentProjectKey = formData.getBoolean("prependParentProjectKey");
+
+			disableInprogressNotification = formData.getBoolean("disableInprogressNotification");
 
 			save();
 			return super.configure(req,formData);
@@ -754,13 +772,16 @@ public class StashNotifier extends Notifier {
 		if (overriddenKey != null && overriddenKey.trim().length() > 0) {
 			PrintStream logger = listener.getLogger();
 			try {
-				EnvVars environment = build.getEnvironment(listener);
-				key.append(environment.expand(projectKey));
+				key.append(TokenMacro.expandAll(build, listener, projectKey));
 			} catch (IOException e) {
 				logger.println("Cannot expand build key from parameter. Processing with default build key");
 				e.printStackTrace(logger);
 				key.append(getDefaultBuildKey(build));
 			} catch (InterruptedException e) {
+				logger.println("Cannot expand build key from parameter. Processing with default build key");
+				e.printStackTrace(logger);
+				key.append(getDefaultBuildKey(build));
+			} catch (MacroEvaluationException e) {
 				logger.println("Cannot expand build key from parameter. Processing with default build key");
 				e.printStackTrace(logger);
 				key.append(getDefaultBuildKey(build));

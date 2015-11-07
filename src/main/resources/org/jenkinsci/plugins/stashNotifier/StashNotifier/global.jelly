@@ -23,5 +23,10 @@
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-prependParentProjectKey.html">
           <f:checkbox />
       </f:entry>
+      <f:entry title="Disable INPROGRESS notification"
+               field="disableInprogressNotification"
+               help="${rootURL}/plugin/stashNotifier/help-globalConfig-disableInprogressNotification.html">
+          <f:checkbox default="true"/>
+      </f:entry>
   </f:section>
 </j:jelly>

@@ -7,3 +7,7 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
+
+# Requires user input
+#after_deploy:
+#  - mvn release:prepare release:perform -Dusername=$JENKINS_USERNAME -Dpassword=$JENKINS_KEY
