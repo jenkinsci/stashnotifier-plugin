@@ -21,6 +21,5 @@ bin/*
 .settings
 
 build.properties
-
-
-
+release.properties
+pom.xml.releaseBackup
