@@ -6,13 +6,12 @@
 		<version>1.498</version>
 	</parent>
 
-	<groupId>org.jenkins-ci.plugins</groupId>
 	<artifactId>stashNotifier</artifactId>
-	<version>1.9-SNAPSHOT</version>
+	<version>1.9.0</version>
 	<name>Stash Notifier</name>
 	<description>
-		Jenkins plugin to notify Atlassian Stash git repository servers of
-		build results through the Stash build API. 
+		Jenkins plugin to notify Atlassian Stash (Bitbucket) git repository servers of
+		build results through the Stash build API.
 	</description>
 	<url>http://wiki.jenkins-ci.org/display/JENKINS/StashNotifier+Plugin</url>
 	<packaging>hpi</packaging>
@@ -21,7 +20,7 @@
 		<connection>scm:git:git://github.com/jenkinsci/stashnotifier-plugin.git</connection>
 		<developerConnection>scm:git:git@github.com:jenkinsci/stashnotifier-plugin.git</developerConnection>
 		<url>https://github.com/jenkinsci/stashnotifier-plugin</url>
-	</scm>	
+	</scm>
 
 	<distributionManagement>
 		<repository>
@@ -29,7 +28,7 @@
 			<url>http://maven.jenkins-ci.org:8081/content/repositories/releases/</url>
 		</repository>
 	</distributionManagement>
-	
+
 	<developers>
 		<developer>
 			<id>gruetter</id>
