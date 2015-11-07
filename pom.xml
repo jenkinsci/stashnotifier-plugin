@@ -6,22 +6,21 @@
 		<version>1.498</version>
 	</parent>
 
-	<groupId>org.jenkins-ci.plugins</groupId>
 	<artifactId>stashNotifier</artifactId>
-	<version>1.8</version>
+	<version>1.9.0</version>
 	<name>Stash Notifier</name>
 	<description>
-		Jenkins plugin to notify Atlassian Stash git repository servers of
-		build results through the Stash build API. 
+		Jenkins plugin to notify Atlassian Stash (Bitbucket) git repository servers of
+		build results through the Stash build API.
 	</description>
 	<url>http://wiki.jenkins-ci.org/display/JENKINS/StashNotifier+Plugin</url>
 	<packaging>hpi</packaging>
 
 	<scm>
-		<connection>scm:git:git://github.com/jenkinsci/stashnotifier-plugin.git</connection>
-		<developerConnection>scm:git:git@github.com:jenkinsci/stashnotifier-plugin.git</developerConnection>
+		<connection>scm:git:https://github.com/jenkinsci/stashnotifier-plugin.git</connection>
+		<developerConnection>scm:git:https://github.com/jenkinsci/stashnotifier-plugin.git</developerConnection>
 		<url>https://github.com/jenkinsci/stashnotifier-plugin</url>
-	</scm>	
+	</scm>
 
 	<distributionManagement>
 		<repository>
@@ -34,6 +33,10 @@
 		<developer>
 			<id>gruetter</id>
 			<name>Georg Gruetter</name>
+		</developer>
+		<developer>
+			<id>scaytrase</id>
+			<name>Pavel Batanov</name>
 		</developer>
 	</developers>
 
@@ -60,6 +63,42 @@
 			<version>2.0</version>
 			<type>jar</type>
 		</dependency>
+		<dependency>
+			<groupId>org.jenkins-ci.plugins</groupId>
+			<artifactId>credentials</artifactId>
+			<version>1.22</version>
+			<type>jar</type>
+		</dependency>
+		<dependency>
+			<groupId>org.jenkins-ci.plugins</groupId>
+			<artifactId>plain-credentials</artifactId>
+			<version>1.1</version>
+			<type>jar</type>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-module-junit4</artifactId>
+			<version>1.6.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-api-mockito</artifactId>
+			<version>1.6.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jenkins-ci.plugins</groupId>
+			<artifactId>token-macro</artifactId>
+			<version>1.11</version>
+			<type>jar</type>
+		</dependency>
 	</dependencies>
 
 	<pluginRepositories>
@@ -68,4 +107,17 @@
 			<url>http://repo.jenkins-ci.org/public/</url>
 		</pluginRepository>
 	</pluginRepositories>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>InjectedTest.java</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 </project>

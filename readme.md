@@ -26,9 +26,7 @@ click on *Add post-build action* and select *Notify Stash Instance*
 server and check the URL in the browser. The URL 
 <tt>http://georg@localhost:7991/projects</tt> e. g. reveals the
 server base URL, which is <tt>http://localhost:7991</tt> in this case. 
-2. Enter the Stash user name which is used to authenticate the plugin with
-the Stash build API.
-3. Enter the Stash users password.
+2. Use the [Credentials Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin) to select credentials for stash
 
 That's it. If you have configured everything correctly, Jenkins will notify
 your Stash instance of subsequent builds. The result is illustrated on
@@ -38,6 +36,7 @@ Maintainers
 ===========
 
 * Georg Gruetter ([Twitter](https://twitter.com/bumbleGee), [GitHub](https://github.com/gruetter))
+* Pavel Batanov ([GitHub](https://github.com/scaytrase))
 
 License
 =======
