@@ -51,6 +51,7 @@ import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLContextBuilder;
 import org.apache.http.conn.ssl.SSLContexts;
@@ -365,6 +366,7 @@ public class StashNotifier extends Notifier {
 				Registry<ConnectionSocketFactory> registry
 						= RegistryBuilder.<ConnectionSocketFactory>create()
 							.register("https", sslConnSocketFactory)
+							.register("http", PlainConnectionSocketFactory.INSTANCE)
 							.build();
 
 				HttpClientConnectionManager ccm
