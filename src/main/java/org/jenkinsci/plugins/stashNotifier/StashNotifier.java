@@ -221,7 +221,7 @@ public class StashNotifier extends Notifier {
 	 * @return Root URL contained in the global config
 	 */
 	private String getRootUrl() {
-		return Jenkins.getInstance().getRootUrl() != null ? Jenkins.getInstance().getRootUrl() : globalConfig.getUrl();
+		return (Jenkins.getInstance().getRootUrl() != null) ? Jenkins.getInstance().getRootUrl() : globalConfig.getUrl();
 	}
 
 	/**
