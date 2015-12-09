@@ -37,6 +37,7 @@ import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
+import jenkins.model.JenkinsLocationConfiguration;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
@@ -127,6 +128,8 @@ public class StashNotifier extends Notifier {
 	/** whether to send INPROGRESS notification at the build start */
 	private final boolean disableInprogressNotification;
 
+	private JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
+
 // public members ----------------------------------------------------------
 
 	public BuildStepMonitor getRequiredMonitorService() {
@@ -213,6 +216,15 @@ public class StashNotifier extends Notifier {
 	}
 
 	/**
+	 * Provide a fallback for getting the instance's root URL
+	 *
+	 * @return Root URL contained in the global config
+	 */
+	private String getRootUrl() {
+		return Jenkins.getInstance().getRootUrl() != null ? Jenkins.getInstance().getRootUrl() : globalConfig.getUrl();
+	}
+
+	/**
 	 * Processes the Jenkins events triggered before and after the build and
 	 * initiates the Stash notification.
 	 *
@@ -231,7 +243,7 @@ public class StashNotifier extends Notifier {
 
 		// exit if Jenkins root URL is not configured. Stash build API
 		// requires valid link to build in CI system.
-		if (Jenkins.getInstance().getRootUrl() == null) {
+		if (getRootUrl() == null) {
 			logger.println(
 					"Cannot notify Stash! (Jenkins Root URL not configured)");
 			return true;
@@ -711,8 +723,7 @@ public class StashNotifier extends Notifier {
         json.put("name", abbreviate(fullName, MAX_FIELD_LENGTH));
 
 		json.put("description", abbreviate(getBuildDescription(build, state), MAX_FIELD_LENGTH));
-		json.put("url", abbreviate(Jenkins.getInstance()
-                .getRootUrl().concat(build.getUrl()), MAX_URL_FIELD_LENGTH));
+		json.put("url", abbreviate(getRootUrl().concat(build.getUrl()), MAX_URL_FIELD_LENGTH));
 
         return new StringEntity(json.toString(), "UTF-8");
 	}
@@ -744,7 +755,7 @@ public class StashNotifier extends Notifier {
 				|| getDescriptor().isIncludeBuildNumberInKey()) {
 			key.append('-').append(build.getNumber());
 		}
-		key.append('-').append(Jenkins.getInstance().getRootUrl());
+		key.append('-').append(getRootUrl());
 
 		return key.toString();
 	}
@@ -813,10 +824,10 @@ public class StashNotifier extends Notifier {
 			switch (state) {
 			case INPROGRESS:
 	            return "building on Jenkins @ "
-					+ Jenkins.getInstance().getRootUrl();
+					+ getRootUrl();
 			default:
 	            return "built by Jenkins @ "
-	            	+ Jenkins.getInstance().getRootUrl();
+	            	+ getRootUrl();
 			}
 		}
 	}
