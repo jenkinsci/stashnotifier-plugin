@@ -1,4 +1,4 @@
-package me.batanov.jenkins.plugins.stash.notifier.exception;
+package me.batanov.jenkins.plugins.atlassian.bitbucket.notifier.exception;
 
 /**
  * @author Pavel Batanov <pavel@batanov.me>

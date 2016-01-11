@@ -1,10 +1,11 @@
-package me.batanov.jenkins.plugins.stash.notifier;
+package me.batanov.jenkins.plugins.atlassian.bitbucket.notifier;
 
 import hudson.model.AbstractBuild;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
-import me.batanov.jenkins.plugins.stash.ApiServer;
+import me.batanov.jenkins.plugins.atlassian.bitbucket.ApiServer;
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.http.auth.AuthenticationException;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -58,7 +59,11 @@ final public class NotifiableStashServerWrapper implements Notifiable {
 
         for (String commit : commits) {
             String method = REST_V10_BUILD_STATUS_METHOD + commit;
-            server.performApiCall(method, request);
+            try {
+                server.performApiCall(method, request);
+            } catch (AuthenticationException exception) {
+                //Todo: Logging
+            }
         }
     }
 

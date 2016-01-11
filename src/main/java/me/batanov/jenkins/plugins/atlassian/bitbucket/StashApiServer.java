@@ -1,6 +1,6 @@
-package me.batanov.jenkins.plugins.stash;
+package me.batanov.jenkins.plugins.atlassian.bitbucket;
 
-import me.batanov.jenkins.plugins.stash.notifier.exception.NotificationFailedException;
+import me.batanov.jenkins.plugins.atlassian.bitbucket.notifier.exception.NotificationFailedException;
 import net.sf.json.JSONObject;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthenticationException;

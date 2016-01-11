@@ -1,8 +1,8 @@
-package me.batanov.jenkins.plugins.stash.notifier;
+package me.batanov.jenkins.plugins.atlassian.bitbucket.notifier;
 
 import com.sun.istack.internal.NotNull;
 import hudson.model.AbstractBuild;
-import me.batanov.jenkins.plugins.stash.notifier.exception.NotificationFailedException;
+import me.batanov.jenkins.plugins.atlassian.bitbucket.notifier.exception.NotificationFailedException;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package me.batanov.jenkins.plugins.stash;
+package me.batanov.jenkins.plugins.atlassian.bitbucket;
 
 import org.apache.http.auth.AuthenticationException;
 
