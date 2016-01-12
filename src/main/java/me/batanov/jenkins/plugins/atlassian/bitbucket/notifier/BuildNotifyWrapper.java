@@ -7,41 +7,40 @@ import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
-import org.apache.commons.logging.Log;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.logging.Logger;
+import java.util.List;
 
 /**
  * @author Pavel Batanov <pavel@batanov.me>
- *         2016-01-10 16:28
+ *         11.01.2016 16:48
  */
-public final class PreBuildNotifier extends BuildWrapper {
+public final class BuildNotifyWrapper extends BuildWrapper {
+
+    //https://github.com/jenkinsci/coverity-plugin/tree/master/src/main/java/jenkins/plugins/coverity
+    //https://github.com/jenkinsci/coverity-plugin/blob/master/src/main/resources/jenkins/plugins/coverity/CoverityPublisher/global.jelly
 
     @DataBoundConstructor
-    public PreBuildNotifier() {
-        super();
-        Logger.getLogger("test").warning("test");
+    public BuildNotifyWrapper(boolean preNotify, List<NotifiedServer> servers) {
     }
 
     @Override
-    public BuildWrapper.Environment setUp(final AbstractBuild build,final  Launcher launcher,final  BuildListener listener) throws IOException, InterruptedException {
+    public BuildWrapper.Environment setUp(final AbstractBuild build, final Launcher launcher, final BuildListener listener) throws IOException, InterruptedException {
         final PrintStream logger = listener.getLogger();
 
         logger.println("Pre build (setUp) notifier triggered");
 
         return new BuildWrapper.Environment() {
-            /* empty implementation */
+            @Override
+            public boolean tearDown(AbstractBuild build, BuildListener listener) throws IOException, InterruptedException {
+
+                logger.println("Post build (setUp) notifier triggered");
+
+                return true;
+            }
         };
-    }
-
-    @Override
-    public void preCheckout(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
-        listener.getLogger().println("Pre build (preCheckout) notifier triggered");
-
-        super.preCheckout(build, launcher, listener);
     }
 
     @Override
@@ -59,7 +58,7 @@ public final class PreBuildNotifier extends BuildWrapper {
 
         @Override
         public String getDisplayName() {
-            return "Pre build notifier wrapper";
+            return "Notify stash instance";
         }
     }
 }

@@ -1,0 +1,12 @@
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+    <f:entry field="preNotify" description="">
+        <f:checkbox checked="true" title="Prenotify server after checkout"/>
+    </f:entry>
+    <f:entry field="servers">
+        <f:repeatable var="server" name="servers" items="servers" add="Add server" header="Server">
+            <f:entry field="${server.id}">
+                <f:textbox/>
+            </f:entry>
+        </f:repeatable>
+    </f:entry>
+</j:jelly>
