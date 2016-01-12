@@ -9,6 +9,7 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
+import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
 
@@ -16,10 +17,16 @@ import java.io.IOException;
  * @author Pavel Batanov <pavel@batanov.me>
  *         11.01.2016 16:48
  */
-public class PostBuildNotifier extends Notifier {
+public final class PostBuildNotifier extends Notifier {
+    @DataBoundConstructor
+    public PostBuildNotifier() {
+
+    }
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+        listener.getLogger().println("Post build notifier triggered");
+
         return true;
     }
 
@@ -42,7 +49,7 @@ public class PostBuildNotifier extends Notifier {
 
         @Override
         public String getDisplayName() {
-            return "Notify Stash after build";
+            return "Notify Stash after build finishes";
         }
     }
 }
