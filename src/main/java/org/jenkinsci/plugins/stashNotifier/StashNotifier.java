@@ -495,7 +495,7 @@ public class StashNotifier extends Notifier {
         }
 
 		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath ItemGroup context) {
-            if (!(context instanceof AccessControlled ? (AccessControlled) context : Jenkins.getInstance()).hasPermission(Computer.CONFIGURE)) {
+            if (!(context instanceof AccessControlled ? (AccessControlled) context : Jenkins.getInstance()).hasPermission(Item.CONFIGURE)) {
 				return new ListBoxModel();
 			}
 
