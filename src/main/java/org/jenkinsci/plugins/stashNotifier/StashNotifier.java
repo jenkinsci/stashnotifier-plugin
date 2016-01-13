@@ -19,17 +19,15 @@ import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.*;
+import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.ProxyConfiguration;
 import hudson.model.*;
-import hudson.plugins.git.GitBranchTokenMacro;
 import hudson.plugins.git.Revision;
 import hudson.plugins.git.util.BuildData;
 import hudson.security.ACL;
-import hudson.security.AccessControlled;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
@@ -44,8 +42,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.auth.*;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.config.Registry;
@@ -346,14 +343,7 @@ public class StashNotifier extends Notifier {
         String stashServer = stashServerBaseUrl;
         DescriptorImpl descriptor = getDescriptor();
 
-		// Determine if we are using the local or global settings
-		String credentialsId = getCredentialsId();
-		if (StringUtils.isBlank(credentialsId)) {
-			credentialsId = descriptor.getCredentialsId();
-		}
-
-		Credentials credentials = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(CertificateCredentials.class,
-				Jenkins.getInstance(), ACL.SYSTEM), CredentialsMatchers.withId(credentialsId));
+        CertificateCredentials certificateCredentials = getCredentials(CertificateCredentials.class, build.getProject());
 
         if ("".equals(stashServer) || stashServer == null) {
             stashServer = descriptor.getStashRootUrl();
@@ -365,12 +355,12 @@ public class StashNotifier extends Notifier {
         URL url = new URL(stashServer);
         HttpClientBuilder builder = HttpClientBuilder.create();
         if (url.getProtocol().equals("https")
-                && (ignoreUnverifiedSSL || credentials instanceof CertificateCredentials)) {
+                && (ignoreUnverifiedSSL || certificateCredentials instanceof CertificateCredentials)) {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
 			try {
 				SSLConnectionSocketFactory sslConnSocketFactory
-						= new SSLConnectionSocketFactory(buildSslContext(ignoreUnverifiedSSL,credentials),
+						= new SSLConnectionSocketFactory(buildSslContext(ignoreUnverifiedSSL,certificateCredentials),
                         ignoreUnverifiedSSL ? SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER : null);
 				builder.setSSLSocketFactory(sslConnSocketFactory);
 
@@ -412,7 +402,7 @@ public class StashNotifier extends Notifier {
                         String proxyPass = proxyConfig.getPassword();
                         BasicCredentialsProvider cred = new BasicCredentialsProvider();
                         cred.setCredentials(new AuthScope(proxyHost),
-                                new UsernamePasswordCredentials(proxyUser, proxyPass));
+                                new org.apache.http.auth.UsernamePasswordCredentials(proxyUser, proxyPass));
                         builder = builder
                                 .setDefaultCredentialsProvider(cred)
                                 .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
@@ -494,12 +484,21 @@ public class StashNotifier extends Notifier {
             load();
         }
 
-		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath ItemGroup context) {
-            if (!(context instanceof AccessControlled ? (AccessControlled) context : Jenkins.getInstance()).hasPermission(Item.CONFIGURE)) {
-				return new ListBoxModel();
-			}
+		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item project) {
 
-			return new StandardListBoxModel().withEmptySelection().withMatching(new StashCredentialMatcher(),CredentialsProvider.lookupCredentials(StandardCredentials.class, context, null, new ArrayList<DomainRequirement>()));
+            if (project == null || !project.hasPermission(Item.CONFIGURE)) {
+                return new StandardListBoxModel();
+            }
+
+            return new StandardListBoxModel()
+                    .withEmptySelection()
+                    .withMatching(
+                            new StashCredentialMatcher(),
+                            CredentialsProvider.lookupCredentials(
+                                    StandardCredentials.class,
+                                    project,
+                                    ACL.SYSTEM,
+                                    new ArrayList<DomainRequirement>()));
 		}
 
         public String getStashRootUrl() {
@@ -629,7 +628,7 @@ public class StashNotifier extends Notifier {
 			final StashBuildState state) throws Exception {
 		HttpEntity stashBuildNotificationEntity
 			= newStashBuildNotificationEntity(build, state, listener);
-		HttpPost req = createRequest(stashBuildNotificationEntity, commitSha1);
+		HttpPost req = createRequest(stashBuildNotificationEntity, build.getProject(), commitSha1);
 		HttpClient client = getHttpClient(logger,build);
 		try {
 			HttpResponse res = client.execute(req);
@@ -644,6 +643,31 @@ public class StashNotifier extends Notifier {
 		}
 	}
 
+    /**
+     * A helper method to obtain the configured credentials.
+     *
+     * @param clazz The type of {@link com.cloudbees.plugins.credentials.Credentials} to return.
+     * @param project The hierarchical project context within which the credentials are searched for.
+     * @return The first credentials of the given type that are found withing the project hierarchy, or null otherwise.
+     */
+    private <T extends Credentials> T getCredentials(final Class<T> clazz, final Item project) {
+
+        DescriptorImpl descriptor = getDescriptor();
+
+        String credentialsId = getCredentialsId();
+        if (StringUtils.isBlank(credentialsId) && descriptor != null) {
+            credentialsId = descriptor.getCredentialsId();
+        }
+
+        if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
+            return CredentialsMatchers.firstOrNull(
+                    CredentialsProvider.lookupCredentials(clazz, project, ACL.SYSTEM, new ArrayList<DomainRequirement>()),
+                    CredentialsMatchers.withId(credentialsId));
+        }
+
+        return null;
+    }
+
 	/**
 	 * Returns the HTTP POST request ready to be sent to the Stash build API for
 	 * the given build and change set.
@@ -655,6 +679,7 @@ public class StashNotifier extends Notifier {
 	 */
 	private HttpPost createRequest(
 			final HttpEntity stashBuildNotificationEntity,
+            final Item project,
 			final String commitSha1) {
 
 		String url = stashServerBaseUrl;
@@ -671,24 +696,17 @@ public class StashNotifier extends Notifier {
 		// If we have a credential defined then we need to determine if it
 		// is a basic auth
 
-		credentialsId = getCredentialsId();
-		if (StringUtils.isBlank(credentialsId)) {
-			credentialsId = descriptor.getCredentialsId();
-		}
+        UsernamePasswordCredentials usernamePasswordCredentials =
+                getCredentials(UsernamePasswordCredentials.class, project);
 
-		if (StringUtils.isNotBlank(credentialsId)) {
-
-			Credentials credentials = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials.class,
-					Jenkins.getInstance(), ACL.SYSTEM), CredentialsMatchers.withId(credentialsId));
-			if (credentials instanceof com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) {
-				req.addHeader(BasicScheme.authenticate(
-						new UsernamePasswordCredentials(
-								((com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) credentials).getUsername(),
-								((com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials) credentials).getPassword().getPlainText()),
-						"UTF-8",
-						false));
-			}
-		}
+        if (usernamePasswordCredentials != null) {
+            req.addHeader(BasicScheme.authenticate(
+                    new org.apache.http.auth.UsernamePasswordCredentials(
+                            usernamePasswordCredentials.getUsername(),
+                            usernamePasswordCredentials.getPassword().getPlainText()),
+                    "UTF-8",
+                    false));
+        }
 
 		req.addHeader("Content-type", "application/json");
 		req.setEntity(stashBuildNotificationEntity);
