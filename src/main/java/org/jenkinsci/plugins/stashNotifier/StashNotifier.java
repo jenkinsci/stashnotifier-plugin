@@ -338,7 +338,7 @@ public class StashNotifier extends Notifier {
 	 * @param build
 	 * @return			the HttpClient
 	 */
-	private HttpClient getHttpClient(PrintStream logger, AbstractBuild<?, ?> build) throws Exception {
+	protected HttpClient getHttpClient(PrintStream logger, AbstractBuild<?, ?> build) throws Exception {
         boolean ignoreUnverifiedSSL = ignoreUnverifiedSSLPeer;
         String stashServer = stashServerBaseUrl;
         DescriptorImpl descriptor = getDescriptor();
