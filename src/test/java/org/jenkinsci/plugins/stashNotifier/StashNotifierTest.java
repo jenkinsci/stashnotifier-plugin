@@ -177,7 +177,8 @@ public class StashNotifierTest
 
         //when
         sn.getHttpClient(logger, build);
-        //then
+
+		//then
         verify(httpClientBuilder).setSSLSocketFactory(any(SSLConnectionSocketFactory.class));
         verify(httpClientBuilder).setConnectionManager(any(HttpClientConnectionManager.class));
     }
