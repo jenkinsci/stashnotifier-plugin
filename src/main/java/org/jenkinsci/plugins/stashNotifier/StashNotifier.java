@@ -37,6 +37,7 @@ import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
 import net.sf.json.JSONObject;
+import org.acegisecurity.Authentication;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
@@ -83,10 +84,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.*;
 
 /**
  * Notifies a configured Atlassian Stash server instance of build results
@@ -661,12 +659,27 @@ public class StashNotifier extends Notifier {
 
         if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
             return CredentialsMatchers.firstOrNull(
-                    CredentialsProvider.lookupCredentials(clazz, project, ACL.SYSTEM, new ArrayList<DomainRequirement>()),
+                    lookupCredentials(clazz, project, ACL.SYSTEM, new ArrayList<DomainRequirement>()),
                     CredentialsMatchers.withId(credentialsId));
         }
 
         return null;
     }
+
+	/**
+	 * Returns all credentials which are available to the specified {@link Authentication}
+	 * for use by the specified {@link Item}.
+	 *
+	 * @param type               the type of credentials to get.
+	 * @param authentication     the authentication.
+	 * @param item               the item.
+	 * @param domainRequirements the credential domains to match.
+	 * @param <C>                the credentials type.
+	 * @return the list of credentials.
+	 */
+	protected  <C extends Credentials> List<C> lookupCredentials(Class<C> type, Item item, Authentication authentication, ArrayList<DomainRequirement> domainRequirements) {
+		return CredentialsProvider.lookupCredentials(type, item, authentication, domainRequirements);
+	}
 
 	/**
 	 * Returns the HTTP POST request ready to be sent to the Stash build API for

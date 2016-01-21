@@ -1,15 +1,19 @@
 package org.jenkinsci.plugins.stashNotifier;
 
+import com.cloudbees.plugins.credentials.Credentials;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import hudson.EnvVars;
 import hudson.ProxyConfiguration;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
+import hudson.model.Item;
 import hudson.plugins.git.Revision;
 import hudson.plugins.git.util.Build;
 import hudson.plugins.git.util.BuildData;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
+import org.acegisecurity.Authentication;
 import org.apache.http.HttpHost;
 import org.apache.http.StatusLine;
 import org.apache.http.auth.AuthScope;
@@ -27,6 +31,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -34,6 +39,8 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -131,7 +138,14 @@ public class StashNotifierTest
     @Test
     public void test_build_http_client_with_proxy() throws Exception {
         //given
-        String address = "109.196.210.110";
+        StashNotifier sn = spy(this.sn);
+        doReturn(new ArrayList<Credentials>()).when(sn).lookupCredentials(
+                Mockito.<Class>anyObject(),
+                Mockito.<Item>anyObject(),
+                Mockito.<Authentication>anyObject(),
+                Mockito.<ArrayList<DomainRequirement>>anyObject());
+
+        String address = "192.168.1.1";
         int port = 8080;
         String login = "admin";
         String password = "123";
@@ -173,12 +187,17 @@ public class StashNotifierTest
     public void test_build_http_client_https() throws Exception {
         //given
         sn = PowerMockito.spy(buildStashNotifier("https://localhost"));
+        doReturn(new ArrayList<Credentials>()).when(sn).lookupCredentials(
+                Mockito.<Class>anyObject(),
+                Mockito.<Item>anyObject(),
+                Mockito.<Authentication>anyObject(),
+                Mockito.<ArrayList<DomainRequirement>>anyObject());
         PrintStream logger = mock(PrintStream.class);
 
         //when
         sn.getHttpClient(logger, build);
 
-		//then
+        //then
         verify(httpClientBuilder).setSSLSocketFactory(any(SSLConnectionSocketFactory.class));
         verify(httpClientBuilder).setConnectionManager(any(HttpClientConnectionManager.class));
     }
