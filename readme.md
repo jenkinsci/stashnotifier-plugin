@@ -11,7 +11,7 @@ Requirements
 
 * **[Stash][] 2.1** or newer. This plugin uses the Atlassian 
 [Stash Build REST API][] which was introduced with Stash 2.1. 
-* **Jenkins 1.466** or newer
+* **Jenkins 1.498** or newer
 
 Usage
 =====
@@ -31,6 +31,11 @@ server base URL, which is <tt>http://localhost:7991</tt> in this case.
 That's it. If you have configured everything correctly, Jenkins will notify
 your Stash instance of subsequent builds. The result is illustrated on
 Atlassians [Stash Build Integration][] wiki page.
+
+### Note on credentials
+
+Currently Stash Build Notifier Plugin accepts only raw plaintext credentials as it work over HTTP REST API of stash
+
 
 Maintainers
 ===========
