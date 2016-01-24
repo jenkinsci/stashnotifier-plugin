@@ -442,16 +442,6 @@ public class StashNotifier extends Notifier {
 		return customContext.useTLS().build();
 }
 
-	/**
-     * Hudson defines a method {@link Builder#getDescriptor()}, which
-     * returns the corresponding {@link Descriptor} object.
-     *
-     * Since we know that it's actually {@link DescriptorImpl}, override
-     * the method and give a better return type, so that we can access
-     * {@link DescriptorImpl} methods more easily.
-     *
-     * This is not necessary, but just a coding style preference.
-     */
     @Override
     public DescriptorImpl getDescriptor() {
         // see Descriptor javadoc for more about what a descriptor is.
