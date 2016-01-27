@@ -68,15 +68,15 @@ public class StashNotifierTest {
     private HttpClientBuilder httpClientBuilder;
     private Jenkins jenkins;
 
-    public StashNotifier buildStashNotifier(String stashBaseUrl, String commitSha1, boolean prependParentProjectKey) {
+    public StashNotifier buildStashNotifier() {
         return new StashNotifier(
-                stashBaseUrl,
+                "http://localhost",
                 "scot",
                 true,
-                commitSha1,
+                null,
                 true,
                 null,
-                prependParentProjectKey,
+                false,
                 false);
     }
 
@@ -131,7 +131,7 @@ public class StashNotifierTest {
         action.lastBuild = lastBuild;
         when(lastBuild.getMarked()).thenReturn(revision);
 
-        sn = buildStashNotifier("http://localhost", null, false);
+        sn = buildStashNotifier();
     }
 
     @Test
@@ -196,7 +196,16 @@ public class StashNotifierTest {
     @Test
     public void test_build_http_client_https() throws Exception {
         //given
-        sn = PowerMockito.spy(buildStashNotifier("https://localhost", null, false));
+        sn = spy(new StashNotifier(
+                "https://localhost",
+                "scot",
+                true,
+                null,
+                true,
+                null,
+                false,
+                false));
+
         doReturn(new ArrayList<Credentials>()).when(sn).lookupCredentials(
                 Mockito.<Class>anyObject(),
                 Mockito.<Item>anyObject(),
@@ -296,8 +305,18 @@ public class StashNotifierTest {
     public void lookupCommitSha1s() throws InterruptedException, MacroEvaluationException, IOException {
         PowerMockito.mockStatic(TokenMacro.class);
         PowerMockito.when(TokenMacro.expandAll(build, buildListener, sha1)).thenReturn(sha1);
+        sn = new StashNotifier(
+                "https://localhost",
+                "scot",
+                true,
+                sha1,
+                true,
+                null,
+                false,
+                false);
 
-        Collection<String> hashes = buildStashNotifier("http://localhost", sha1, false).lookupCommitSha1s(build, buildListener);
+        Collection<String> hashes = sn.lookupCommitSha1s(build, buildListener);
+
         assertThat(hashes.size(), is(1));
         assertThat(hashes.iterator().next(), is(sha1));
     }
@@ -309,9 +328,18 @@ public class StashNotifierTest {
         when(buildListener.getLogger()).thenReturn(logger);
         PowerMockito.mockStatic(TokenMacro.class);
         PowerMockito.when(TokenMacro.expandAll(build, buildListener, sha1)).thenThrow(e);
+        sn = new StashNotifier(
+                "http://localhost",
+                "scot",
+                true,
+                sha1,
+                true,
+                null,
+                false,
+                false);
 
         //when
-        Collection<String> hashes = buildStashNotifier("http://localhost", sha1, false).lookupCommitSha1s(build, buildListener);
+        Collection<String> hashes = sn.lookupCommitSha1s(build, buildListener);
 
         //then
         assertThat(hashes.isEmpty(), is(true));
