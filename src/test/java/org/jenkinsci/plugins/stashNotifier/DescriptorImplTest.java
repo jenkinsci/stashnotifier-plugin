@@ -26,9 +26,7 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * Created by Vlad Medvedev on 27.01.2016.
@@ -55,8 +53,8 @@ public class DescriptorImplTest {
     @Test
     public void testConfigure() throws Descriptor.FormException {
         //given
-        StashNotifier.DescriptorImpl desc = PowerMockito.spy(new StashNotifier.DescriptorImpl(false));
-        PowerMockito.doNothing().when(desc).save();
+        StashNotifier.DescriptorImpl desc = spy(new StashNotifier.DescriptorImpl(false));
+        doNothing().when(desc).save();
 
         //when
         desc.configure(mock(StaplerRequest.class), json);
@@ -75,7 +73,7 @@ public class DescriptorImplTest {
 
     @Test
     public void test_doFillCredentialsIdItems_project_null() {
-        StashNotifier.DescriptorImpl desc = PowerMockito.spy(new StashNotifier.DescriptorImpl(false));
+        StashNotifier.DescriptorImpl desc = spy(new StashNotifier.DescriptorImpl(false));
         ListBoxModel options = desc.doFillCredentialsIdItems(null);
 
         assertThat(options, is(not(nullValue())));
@@ -83,7 +81,7 @@ public class DescriptorImplTest {
 
     @Test
     public void test_doFillCredentialsIdItems_no_permission() {
-        StashNotifier.DescriptorImpl desc = PowerMockito.spy(new StashNotifier.DescriptorImpl(false));
+        StashNotifier.DescriptorImpl desc = spy(new StashNotifier.DescriptorImpl(false));
         Item project = mock(Item.class);
         when(project.hasPermission(eq(Item.CONFIGURE))).thenReturn(false);
 
@@ -95,7 +93,7 @@ public class DescriptorImplTest {
     public void test_doFillCredentialsIdItems_has_permission() {
         //given
         Item project = mock(Item.class);
-        StashNotifier.DescriptorImpl desc = PowerMockito.spy(new StashNotifier.DescriptorImpl(false));
+        StashNotifier.DescriptorImpl desc = spy(new StashNotifier.DescriptorImpl(false));
         when(project.hasPermission(eq(Item.CONFIGURE))).thenReturn(true);
         doReturn(new ArrayList()).when(desc).lookupCredentials(eq(StandardCredentials.class), eq(project), eq(ACL.SYSTEM), any(List.class));
 
@@ -109,7 +107,7 @@ public class DescriptorImplTest {
     private FormValidation doCheckStashServerBaseUrl(String url) throws IOException, ServletException {
         //given
         Item project = mock(Item.class);
-        StashNotifier.DescriptorImpl desc = PowerMockito.spy(new StashNotifier.DescriptorImpl(false));
+        StashNotifier.DescriptorImpl desc = spy(new StashNotifier.DescriptorImpl(false));
         when(project.hasPermission(eq(Item.CONFIGURE))).thenReturn(true);
         doReturn(new ArrayList()).when(desc).lookupCredentials(eq(StandardCredentials.class), eq(project), eq(ACL.SYSTEM), any(List.class));
 
