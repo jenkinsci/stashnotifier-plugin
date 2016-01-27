@@ -277,7 +277,7 @@ public class StashNotifier extends Notifier {
 		return true;
 	}
 
-	private Collection<String> lookupCommitSha1s(
+    protected Collection<String> lookupCommitSha1s(
 			@SuppressWarnings("rawtypes") AbstractBuild build,
 			BuildListener listener) {
 
@@ -459,7 +459,7 @@ public class StashNotifier extends Notifier {
     }
 
     @Extension
-	public static final class DescriptorImpl
+	public static class DescriptorImpl
 		extends BuildStepDescriptor<Publisher> {
 
         /**
@@ -478,8 +478,17 @@ public class StashNotifier extends Notifier {
 		private boolean prependParentProjectKey;
 		private boolean disableInprogressNotification;
 
-		public DescriptorImpl() {
-            load();
+        public DescriptorImpl() {
+            this(true);
+        }
+
+        protected DescriptorImpl(boolean load) {
+            if (load) load();
+        }
+
+        @Override
+        public final synchronized void load() {
+            super.load();
         }
 
 		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item project) {
@@ -492,11 +501,18 @@ public class StashNotifier extends Notifier {
                     .withEmptySelection()
                     .withMatching(
                             new StashCredentialMatcher(),
-                            CredentialsProvider.lookupCredentials(
+                            lookupCredentials(
                                     StandardCredentials.class,
                                     project,
                                     ACL.SYSTEM,
                                     new ArrayList<DomainRequirement>()));
+		}
+
+		protected <C extends Credentials> List<C> lookupCredentials(Class<C> type,
+																		Item item,
+																		Authentication authentication,
+																		List<DomainRequirement> domainRequirements) {
+			return CredentialsProvider.lookupCredentials(type, item, authentication, domainRequirements);
 		}
 
         public String getStashRootUrl() {
@@ -618,7 +634,7 @@ public class StashNotifier extends Notifier {
 	 * @param listener		the build listener for logging
 	 * @param state			the state of the build as defined by the Stash API.
 	 */
-	private NotificationResult notifyStash(
+	protected NotificationResult notifyStash(
 			final PrintStream logger,
 			final AbstractBuild<?, ?> build,
 			final String commitSha1,
@@ -690,7 +706,7 @@ public class StashNotifier extends Notifier {
 	 * @param commitSha1	the SHA1 of the commit that was built
 	 * @return				the HTTP POST request to the Stash build API
 	 */
-	private HttpPost createRequest(
+    protected HttpPost createRequest(
 			final HttpEntity stashBuildNotificationEntity,
             final Item project,
 			final String commitSha1) {
@@ -798,7 +814,7 @@ public class StashNotifier extends Notifier {
 	 * @param 	build	the build to notify Stash of
 	 * @return	the build key for the Stash notification
 	 */
-	private String getBuildKey(final AbstractBuild<?, ?> build,
+	protected String getBuildKey(final AbstractBuild<?, ?> build,
 							   BuildListener listener) {
 
 		StringBuilder key = new StringBuilder();
@@ -843,7 +859,7 @@ public class StashNotifier extends Notifier {
 	 * @param state		the state of the build
 	 * @return			the description of the build
 	 */
-	private String getBuildDescription(
+	protected String getBuildDescription(
 			final AbstractBuild<?, ?> build,
 			final StashBuildState state) {
 
