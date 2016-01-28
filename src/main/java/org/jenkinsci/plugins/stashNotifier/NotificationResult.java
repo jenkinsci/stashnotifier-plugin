@@ -58,7 +58,7 @@ public final class NotificationResult {
 	 * @param initSuccess	success flag
 	 * @param initMessage 	message in case notification was not successful
 	 */
-	private NotificationResult(
+	protected NotificationResult(
 			final boolean initSuccess, 
 			final String initMessage) {
 		
