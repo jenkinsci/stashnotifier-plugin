@@ -80,9 +80,9 @@ public class DescriptorImplTest {
     @Test
     public void test_doFillCredentialsIdItems_project_null() {
         StashNotifier.DescriptorImpl desc = spy(new StashNotifier.DescriptorImpl(false));
-        ListBoxModel options = desc.doFillCredentialsIdItems(null);
+        ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(null);
 
-        assertThat(options, is(not(nullValue())));
+        assertThat(listBoxModel, is(not(nullValue())));
     }
 
     @Test
@@ -91,8 +91,8 @@ public class DescriptorImplTest {
         Item project = mock(Item.class);
         when(project.hasPermission(eq(Item.CONFIGURE))).thenReturn(false);
 
-        ListBoxModel options = desc.doFillCredentialsIdItems(project);
-        assertThat(options, is(not(nullValue())));
+        ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(project);
+        assertThat(listBoxModel, is(not(nullValue())));
     }
 
     @Test
@@ -109,10 +109,10 @@ public class DescriptorImplTest {
                 Mockito.<ArrayList<DomainRequirement>>anyObject())).thenReturn(new ArrayList());
 
         //when
-        ListBoxModel options = desc.doFillCredentialsIdItems(project);
+        ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(project);
 
         //then
-        assertThat(options, is(not(nullValue())));
+        assertThat(listBoxModel, is(not(nullValue())));
     }
 
     private FormValidation doCheckStashServerBaseUrl(String url) throws IOException, ServletException {
@@ -132,13 +132,13 @@ public class DescriptorImplTest {
 
     @Test
     public void test_doCheckStashServerBaseUrl_empty() throws IOException, ServletException {
-        FormValidation options = doCheckStashServerBaseUrl("");
-        assertThat(options.kind, is(FormValidation.Kind.ERROR));
+        FormValidation listBoxModel = doCheckStashServerBaseUrl("");
+        assertThat(listBoxModel.kind, is(FormValidation.Kind.ERROR));
     }
 
     @Test
     public void test_doCheckStashServerBaseUrl() throws IOException, ServletException {
-        FormValidation options = doCheckStashServerBaseUrl("http://some-stash-url");
-        assertThat(options.kind, is(FormValidation.Kind.OK));
+        FormValidation listBoxModel = doCheckStashServerBaseUrl("http://some-stash-url");
+        assertThat(listBoxModel.kind, is(FormValidation.Kind.OK));
     }
 }
