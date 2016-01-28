@@ -501,18 +501,11 @@ public class StashNotifier extends Notifier {
                     .withEmptySelection()
                     .withMatching(
                             new StashCredentialMatcher(),
-                            lookupCredentials(
+                            CredentialsProvider.lookupCredentials(
                                     StandardCredentials.class,
                                     project,
                                     ACL.SYSTEM,
                                     new ArrayList<DomainRequirement>()));
-		}
-
-		protected <C extends Credentials> List<C> lookupCredentials(Class<C> type,
-																		Item item,
-																		Authentication authentication,
-																		List<DomainRequirement> domainRequirements) {
-			return CredentialsProvider.lookupCredentials(type, item, authentication, domainRequirements);
 		}
 
         public String getStashRootUrl() {

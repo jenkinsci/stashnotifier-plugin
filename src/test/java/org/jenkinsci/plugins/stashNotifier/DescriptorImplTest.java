@@ -1,6 +1,8 @@
 package org.jenkinsci.plugins.stashNotifier;
 
+import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardCredentials;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
 import hudson.model.Item;
@@ -8,12 +10,16 @@ import hudson.security.ACL;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import net.sf.json.JSONObject;
+import org.acegisecurity.Authentication;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.kohsuke.stapler.StaplerRequest;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import javax.servlet.ServletException;
 import java.io.IOException;
@@ -33,8 +39,8 @@ import static org.mockito.Mockito.*;
  * vladislav.medvedev@devfactory.com
  */
 
-@PrepareForTest({StashNotifier.DescriptorImpl.class})
-@PowerMockIgnore("javax.net.ssl.*")
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({StashNotifier.DescriptorImpl.class, com.cloudbees.plugins.credentials.CredentialsProvider.class})
 public class DescriptorImplTest {
     private JSONObject json;
 
@@ -95,7 +101,12 @@ public class DescriptorImplTest {
         Item project = mock(Item.class);
         StashNotifier.DescriptorImpl desc = spy(new StashNotifier.DescriptorImpl(false));
         when(project.hasPermission(eq(Item.CONFIGURE))).thenReturn(true);
-        doReturn(new ArrayList()).when(desc).lookupCredentials(eq(StandardCredentials.class), eq(project), eq(ACL.SYSTEM), any(List.class));
+        PowerMockito.mockStatic(com.cloudbees.plugins.credentials.CredentialsProvider.class);
+        PowerMockito.when(com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+                Mockito.<Class>anyObject(),
+                Mockito.<Item>anyObject(),
+                Mockito.<Authentication>anyObject(),
+                Mockito.<ArrayList<DomainRequirement>>anyObject())).thenReturn(new ArrayList());
 
         //when
         ListBoxModel options = desc.doFillCredentialsIdItems(project);
@@ -109,7 +120,12 @@ public class DescriptorImplTest {
         Item project = mock(Item.class);
         StashNotifier.DescriptorImpl desc = spy(new StashNotifier.DescriptorImpl(false));
         when(project.hasPermission(eq(Item.CONFIGURE))).thenReturn(true);
-        doReturn(new ArrayList()).when(desc).lookupCredentials(eq(StandardCredentials.class), eq(project), eq(ACL.SYSTEM), any(List.class));
+        PowerMockito.mockStatic(com.cloudbees.plugins.credentials.CredentialsProvider.class);
+        PowerMockito.when(com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+                Mockito.<Class>anyObject(),
+                Mockito.<Item>anyObject(),
+                Mockito.<Authentication>anyObject(),
+                Mockito.<ArrayList<DomainRequirement>>anyObject())).thenReturn(new ArrayList());
 
         return desc.doCheckStashServerBaseUrl(url);
     }
