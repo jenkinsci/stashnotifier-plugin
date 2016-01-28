@@ -34,6 +34,7 @@ import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.hamcrest.CoreMatchers;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.junit.Before;
@@ -53,6 +54,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
@@ -382,12 +385,7 @@ public class StashNotifierTest {
     public void test_getBuildDescription_state() throws InterruptedException, MacroEvaluationException, IOException {
         assertThat(getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState.SUCCESSFUL), is("built by Jenkins @ http://localhost/"));
         assertThat(getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState.FAILED), is("built by Jenkins @ http://localhost/"));
-    }
-
-    @Test
-    public void test_getBuildDescription_state_INPROGRESS() throws InterruptedException, MacroEvaluationException, IOException {
-        String description = getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState.INPROGRESS);
-        assertThat(description, is("building on Jenkins @ http://localhost/"));
+        assertThat(getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState.INPROGRESS), is("building on Jenkins @ http://localhost/"));
     }
 
     @Test
@@ -409,8 +407,8 @@ public class StashNotifierTest {
         HttpPost request = sn.createRequest(mock(HttpEntity.class), mock(Item.class), sha1);
 
         //then
-        assertThat(request, is(request));
-
+        assertThat(request, is(not(nullValue())));
+        assertThat(request.getHeaders("Authorization"), is(not(nullValue())));
     }
 
     @Test
