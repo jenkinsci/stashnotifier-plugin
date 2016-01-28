@@ -301,7 +301,7 @@ public class StashNotifierTest {
                 eq(buildListener),
                 any(StashBuildState.class)
         );
-        verify(logger).println(eq("found no commit info"));
+        verify(logger).println("found no commit info");
     }
 
     @Test
@@ -346,7 +346,7 @@ public class StashNotifierTest {
 
         //then
         assertThat(hashes.isEmpty(), is(true));
-        verify(logger).println(eq("Unable to expand commit SHA value"));
+        verify(logger).println("Unable to expand commit SHA value");
     }
 
     @Test
@@ -458,7 +458,7 @@ public class StashNotifierTest {
 
         //then
         assertThat(buildKey, is("null-0-http:\\/\\/localhost\\/"));
-        verify(logger).println(eq("Cannot expand build key from parameter. Processing with default build key"));
+        verify(logger).println("Cannot expand build key from parameter. Processing with default build key");
     }
 
     @Test
