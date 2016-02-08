@@ -476,22 +476,33 @@ public class StashNotifier extends Notifier {
             if (load) load();
         }
 
-		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item project) {
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item project) {
 
-            if (project == null || !project.hasPermission(Item.CONFIGURE)) {
-                return new StandardListBoxModel();
+            if (project != null && project.hasPermission(Item.CONFIGURE)) {
+                return new StandardListBoxModel()
+                        .withEmptySelection()
+                        .withMatching(
+                                new StashCredentialMatcher(),
+                                CredentialsProvider.lookupCredentials(
+                                        StandardCredentials.class,
+                                        project,
+                                        ACL.SYSTEM,
+                                        new ArrayList<DomainRequirement>()));
+                
+            } else if (Jenkins.getInstance().hasPermission(Item.CONFIGURE)) {
+                return new StandardListBoxModel()
+                        .withEmptySelection()
+                        .withMatching(
+                                new StashCredentialMatcher(),
+                                CredentialsProvider.lookupCredentials(
+                                        StandardCredentials.class,
+                                        Jenkins.getInstance(),
+                                        ACL.SYSTEM,
+                                        new ArrayList<DomainRequirement>()));
             }
 
-            return new StandardListBoxModel()
-                    .withEmptySelection()
-                    .withMatching(
-                            new StashCredentialMatcher(),
-                            CredentialsProvider.lookupCredentials(
-                                    StandardCredentials.class,
-                                    project,
-                                    ACL.SYSTEM,
-                                    new ArrayList<DomainRequirement>()));
-		}
+            return new StandardListBoxModel();
+        }
 
         public String getStashRootUrl() {
         	if ((stashRootUrl == null) || (stashRootUrl.trim().equals(""))) {
@@ -525,12 +536,11 @@ public class StashNotifier extends Notifier {
 			return prependParentProjectKey;
 		}
 
-		public FormValidation doCheckCredentialsId(@QueryParameter String value)
+		public FormValidation doCheckCredentialsId(@QueryParameter String value, @AncestorInPath Item project)
 				throws IOException, ServletException {
 
-			if (value.trim().equals("")) {
-				return FormValidation.error(
-						"Please specify the credentials to use");
+			if (project != null && StringUtils.isBlank(value) && StringUtils.isBlank(credentialsId)) {
+				return FormValidation.error("Please specify the credentials to use");
 			} else {
 				return FormValidation.ok();
 			}
@@ -644,20 +654,28 @@ public class StashNotifier extends Notifier {
      */
     private <T extends Credentials> T getCredentials(final Class<T> clazz, final Item project) {
 
-        DescriptorImpl descriptor = getDescriptor();
+        T credentials = null;
 
         String credentialsId = getCredentialsId();
-        if (StringUtils.isBlank(credentialsId) && descriptor != null) {
-            credentialsId = descriptor.getCredentialsId();
-        }
-
         if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
-            return CredentialsMatchers.firstOrNull(
+            credentials = CredentialsMatchers.firstOrNull(
                     lookupCredentials(clazz, project, ACL.SYSTEM, new ArrayList<DomainRequirement>()),
                     CredentialsMatchers.withId(credentialsId));
         }
+        
+        if (credentials == null) {
+            DescriptorImpl descriptor = getDescriptor();
+            if (StringUtils.isBlank(credentialsId) && descriptor != null) {
+                credentialsId = descriptor.getCredentialsId();
+            }
+            if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
+                credentials =  CredentialsMatchers.firstOrNull(
+                        lookupCredentials(clazz, Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<DomainRequirement>()),
+                        CredentialsMatchers.withId(credentialsId));
+            }
+        }
 
-        return null;
+        return credentials;
     }
 
 	/**
@@ -675,6 +693,21 @@ public class StashNotifier extends Notifier {
 		return CredentialsProvider.lookupCredentials(type, item, authentication, domainRequirements);
 	}
 
+        /**
+	 * Returns all credentials which are available to the specified {@link Authentication}
+	 * for use by the specified {@link Item}.
+	 *
+	 * @param type               the type of credentials to get.
+	 * @param authentication     the authentication.
+	 * @param itemGroup          the item group.
+	 * @param domainRequirements the credential domains to match.
+	 * @param <C>                the credentials type.
+	 * @return the list of credentials.
+	 */
+	protected  <C extends Credentials> List<C> lookupCredentials(Class<C> type, ItemGroup<?> itemGroup, Authentication authentication, ArrayList<DomainRequirement> domainRequirements) {
+		return CredentialsProvider.lookupCredentials(type, itemGroup, authentication, domainRequirements);
+	}
+        
 	/**
 	 * Returns the HTTP POST request ready to be sent to the Stash build API for
 	 * the given build and change set.
