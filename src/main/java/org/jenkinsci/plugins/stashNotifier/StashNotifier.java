@@ -656,7 +656,11 @@ public class StashNotifier extends Notifier {
 
         T credentials = null;
 
-        String credentialsId = getCredentialsId();
+		if (clazz == CertificateCredentials.class) {
+			return null;
+		}
+
+		String credentialsId = getCredentialsId();
         if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
             credentials = CredentialsMatchers.firstOrNull(
                     lookupCredentials(clazz, project, ACL.SYSTEM, new ArrayList<DomainRequirement>()),
