@@ -5,16 +5,20 @@ import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
+import hudson.model.Hudson;
 import hudson.model.Item;
 import hudson.security.ACL;
+import hudson.security.Permission;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.acegisecurity.Authentication;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.kohsuke.stapler.StaplerRequest;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -40,12 +44,18 @@ import static org.mockito.Mockito.*;
  */
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({StashNotifier.DescriptorImpl.class, com.cloudbees.plugins.credentials.CredentialsProvider.class})
+@PrepareForTest({StashNotifier.DescriptorImpl.class, com.cloudbees.plugins.credentials.CredentialsProvider.class, Hudson.class, Jenkins.class})
 public class DescriptorImplTest {
     private JSONObject json;
+    private Hudson jenkins;
 
     @Before
     public void setUp() {
+        jenkins = mock(Hudson.class);
+        PowerMockito.mockStatic(Jenkins.class);
+        PowerMockito.mockStatic(Hudson.class);
+        when(Jenkins.getInstance()).thenReturn(jenkins);
+
         json = new JSONObject();
         json.put("stashRootUrl", "http://stash-root-url");
         json.put("credentialsId", "someCredentialsId");
@@ -80,6 +90,8 @@ public class DescriptorImplTest {
     @Test
     public void test_doFillCredentialsIdItems_project_null() {
         StashNotifier.DescriptorImpl desc = spy(new StashNotifier.DescriptorImpl(false));
+        when(jenkins.hasPermission(Item.CONFIGURE)).thenReturn(false);
+
         ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(null);
 
         assertThat(listBoxModel, is(not(nullValue())));
@@ -90,6 +102,7 @@ public class DescriptorImplTest {
         StashNotifier.DescriptorImpl desc = spy(new StashNotifier.DescriptorImpl(false));
         Item project = mock(Item.class);
         when(project.hasPermission(eq(Item.CONFIGURE))).thenReturn(false);
+        when(jenkins.hasPermission(Item.CONFIGURE)).thenReturn(false);
 
         ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(project);
         assertThat(listBoxModel, is(not(nullValue())));
