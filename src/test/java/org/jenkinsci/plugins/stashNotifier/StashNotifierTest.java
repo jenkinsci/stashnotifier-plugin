@@ -34,7 +34,6 @@ import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.hamcrest.CoreMatchers;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.junit.Before;
@@ -56,7 +55,6 @@ import java.util.List;
 
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -64,78 +62,92 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({Secret.class, Jenkins.class, HttpClientBuilder.class, TokenMacro.class, CredentialsMatchers.class})
+@PrepareForTest({Secret.class, Jenkins.class, HttpClientBuilder.class, TokenMacro.class, CredentialsMatchers.class, com.cloudbees.plugins.credentials.CredentialsProvider.class})
 @PowerMockIgnore("javax.net.ssl.*")
-public class StashNotifierTest {
-    final static String sha1 = "1234567890123456789012345678901234567890";
-    private HttpClientBuilder httpClientBuilder;
-    private Jenkins jenkins;
+public class StashNotifierTest
+{
+	final static String sha1 = "1234567890123456789012345678901234567890";
+	private HttpClientBuilder httpClientBuilder;
+	private Hudson jenkins;
 
-    public StashNotifier buildStashNotifier() {
-        return new StashNotifier(
-                "http://localhost",
-                "scot",
-                true,
-                null,
-                true,
-                null,
-                false,
-                false);
-    }
+	public StashNotifier buildStashNotifier(String stashBaseUrl) {
+		return new StashNotifier(
+				stashBaseUrl,
+				"scot",
+				true,
+				null,
+				true,
+				"test-project",
+				true,
+				false);
+	}
 
     StashNotifier sn;
     BuildListener buildListener;
     AbstractBuild<?, ?> build;
 
-    @Before
-    public void setUp() throws IOException, InterruptedException {
-        PowerMockito.mockStatic(Secret.class);
-        PowerMockito.mockStatic(Jenkins.class);
-        PowerMockito.mockStatic(HttpClientBuilder.class);
+	@Before
+	public void setUp() throws IOException, InterruptedException, MacroEvaluationException {
+		PowerMockito.mockStatic(Secret.class);
+		PowerMockito.mockStatic(Jenkins.class);
+		PowerMockito.mockStatic(HttpClientBuilder.class);
+		PowerMockito.mockStatic(TokenMacro.class);
+        PowerMockito.mockStatic(Hudson.class);
+        PowerMockito.mockStatic(com.cloudbees.plugins.credentials.CredentialsProvider.class);
 
-        buildListener = mock(BuildListener.class);
-        jenkins = mock(Jenkins.class);
-        build = mock(AbstractBuild.class);
-        AbstractProject project = mock(AbstractProject.class);
-        EnvVars environment = mock(EnvVars.class);
-        PrintStream logger = System.out;
-        Secret secret = mock(Secret.class);
-        httpClientBuilder = PowerMockito.mock(HttpClientBuilder.class);
-        CloseableHttpClient client = mock(CloseableHttpClient.class);
-        ClientConnectionManager connectionManager = mock(ClientConnectionManager.class);
-        CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
-        HttpUriRequest req = mock(HttpUriRequest.class);
-        StatusLine statusLine = mock(StatusLine.class);
-        BuildData action = mock(BuildData.class);
-        Revision revision = mock(Revision.class);
-        Build lastBuild = mock(Build.class);
-        List<BuildData> actions = Collections.singletonList(action);
+		buildListener = mock(BuildListener.class);
+		jenkins = mock(Hudson.class);
+		build = mock(AbstractBuild.class);
+		AbstractProject project = mock(AbstractProject.class);
+		EnvVars environment = mock(EnvVars.class);
+		PrintStream logger = System.out;
+		Secret secret = mock(Secret.class);
+		httpClientBuilder = PowerMockito.mock(HttpClientBuilder.class);
+		CloseableHttpClient client = mock(CloseableHttpClient.class);
+		ClientConnectionManager connectionManager = mock(ClientConnectionManager.class);
+		CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
+		HttpUriRequest req = mock(HttpUriRequest.class);
+		StatusLine statusLine = mock(StatusLine.class);
+		BuildData action = mock(BuildData.class);
+		Revision revision = mock(Revision.class);
+		Build lastBuild = mock(Build.class);
+		List<BuildData> actions = Collections.singletonList(action);
 
-        when(Jenkins.getInstance()).thenReturn(jenkins);
-        when(jenkins.getRootUrl()).thenReturn("http://localhost/");
-        when(build.getEnvironment(buildListener)).thenReturn(environment);
-        when(action.getLastBuiltRevision()).thenReturn(revision);
-        when(revision.getSha1String()).thenReturn(sha1);
-        when(build.getProject()).thenReturn(project);
-        when(build.getFullDisplayName()).thenReturn("foo");
-        when(build.getUrl()).thenReturn("foo");
-        when(build.getActions(BuildData.class)).thenReturn(actions);
-        when(environment.expand(anyString())).thenReturn(sha1);
-        when(buildListener.getLogger()).thenReturn(logger);
-        when(Secret.fromString("tiger")).thenReturn(secret);
-        when(Secret.toString(secret)).thenReturn("tiger");
-        when(secret.getPlainText()).thenReturn("tiger");
-        when(HttpClientBuilder.create()).thenReturn(httpClientBuilder);
-        when(httpClientBuilder.build()).thenReturn(client);
-        when(client.getConnectionManager()).thenReturn(connectionManager);
-        when(client.execute((HttpUriRequest) anyObject())).thenReturn(resp);
-        when(resp.getStatusLine()).thenReturn(statusLine);
-        when(statusLine.getStatusCode()).thenReturn(204);
-        action.lastBuild = lastBuild;
-        when(lastBuild.getMarked()).thenReturn(revision);
+        when(Hudson.getInstance()).thenReturn(jenkins);
+		when(Jenkins.getInstance()).thenReturn(jenkins);
+		when(jenkins.getRootUrl()).thenReturn("http://localhost/");
+		when(build.getEnvironment(buildListener)).thenReturn(environment);
+		when(action.getLastBuiltRevision()).thenReturn(revision);
+		when(revision.getSha1String()).thenReturn(sha1);
+		when(build.getProject()).thenReturn(project);
+                when(build.getFullDisplayName()).thenReturn("foo");
+		when(build.getUrl()).thenReturn("foo");
+		when(build.getActions(BuildData.class)).thenReturn(actions);
+		when(environment.expand(anyString())).thenReturn(sha1);
+		when(buildListener.getLogger()).thenReturn(logger);
+		when(Secret.fromString("tiger")).thenReturn(secret);
+		when(Secret.toString(secret)).thenReturn("tiger");
+		when(secret.getPlainText()).thenReturn("tiger");
+		when(HttpClientBuilder.create()).thenReturn(httpClientBuilder);
+		when(httpClientBuilder.build()).thenReturn(client);
+		when(client.getConnectionManager()).thenReturn(connectionManager);
+		when(client.execute((HttpUriRequest)anyObject())).thenReturn(resp);
+		when(resp.getStatusLine()).thenReturn(statusLine);
+		when(statusLine.getStatusCode()).thenReturn(204);
+		action.lastBuild = lastBuild;
+		when(lastBuild.getMarked()).thenReturn(revision);
 
-        sn = buildStashNotifier();
-    }
+
+		when(TokenMacro.expandAll(build, buildListener, "test-project")).thenReturn("prepend-key");
+        when(com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+                (Class)anyObject(),
+                (ItemGroup)anyObject(),
+                (Authentication)anyObject(),
+                (List<DomainRequirement>)anyList()
+        )).thenReturn(new ArrayList<Credentials>());
+
+        sn = buildStashNotifier("http://localhost");
+	}
 
     @Test
     public void test_prebuild_normal() {
