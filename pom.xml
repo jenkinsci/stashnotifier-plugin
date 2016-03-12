@@ -7,7 +7,7 @@
 	</parent>
 
 	<artifactId>stashNotifier</artifactId>
-	<version>1.10.2</version>
+	<version>1.10.4</version>
 	<name>Stash Notifier</name>
 	<description>
 		Jenkins plugin to notify Atlassian Stash (Bitbucket) git repository servers of
