@@ -8,6 +8,7 @@ import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import hudson.EnvVars;
 import hudson.Launcher;
+import hudson.FilePath;
 import hudson.ProxyConfiguration;
 import hudson.model.*;
 import hudson.plugins.git.Revision;
@@ -79,12 +80,13 @@ public class StashNotifierTest
 				true,
 				"test-project",
 				true,
-				false);
+				false,
+				"");
 	}
 
     StashNotifier sn;
     BuildListener buildListener;
-    AbstractBuild<?, ?> build;
+    Run<?, ?> build;
 
 	@Before
 	public void setUp() throws IOException, InterruptedException, MacroEvaluationException {
@@ -97,8 +99,8 @@ public class StashNotifierTest
 
 		buildListener = mock(BuildListener.class);
 		jenkins = mock(Hudson.class);
-		build = mock(AbstractBuild.class);
-		AbstractProject project = mock(AbstractProject.class);
+		build = mock(Run.class);
+		Job project = mock(Job.class);
 		EnvVars environment = mock(EnvVars.class);
 		PrintStream logger = System.out;
 		Secret secret = mock(Secret.class);
@@ -119,7 +121,7 @@ public class StashNotifierTest
 		when(build.getEnvironment(buildListener)).thenReturn(environment);
 		when(action.getLastBuiltRevision()).thenReturn(revision);
 		when(revision.getSha1String()).thenReturn(sha1);
-		when(build.getProject()).thenReturn(project);
+		when(build.getParent()).thenReturn(project);
                 when(build.getFullDisplayName()).thenReturn("foo");
 		when(build.getUrl()).thenReturn("foo");
 		when(build.getActions(BuildData.class)).thenReturn(actions);
@@ -138,7 +140,8 @@ public class StashNotifierTest
 		when(lastBuild.getMarked()).thenReturn(revision);
 
 
-		when(TokenMacro.expandAll(build, buildListener, "test-project")).thenReturn("prepend-key");
+		// FIXME: TokenMacro is not applicable for Run
+		// when(TokenMacro.expandAll(build, buildListener, "test-project")).thenReturn("prepend-key");
         when(com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
                 (Class)anyObject(),
                 (ItemGroup)anyObject(),
@@ -149,16 +152,18 @@ public class StashNotifierTest
         sn = buildStashNotifier("http://localhost");
 	}
 
-    @Test
-    public void test_prebuild_normal() {
-        assertTrue(sn.prebuild(build, buildListener));
-    }
-
-    @Test
-    public void test_prebuild_null_revision() {
-        when(build.getActions(BuildData.class)).thenReturn(Collections.singletonList(mock(BuildData.class)));
-        assertTrue(sn.prebuild(build, buildListener));
-    }
+    // FIXME: prebuild is not supported in SimpleBuildStep
+//    @Test
+//    public void test_prebuild_normal() {
+//
+//        assertTrue(sn.prebuild(build, buildListener));
+//    }
+//
+//    @Test
+//    public void test_prebuild_null_revision() {
+//        when(build.getActions(BuildData.class)).thenReturn(Collections.singletonList(mock(BuildData.class)));
+//        assertTrue(sn.prebuild(build, buildListener));
+//    }
 
     @Test
     public void test_build_http_client_with_proxy() throws Exception {
@@ -219,7 +224,8 @@ public class StashNotifierTest
                 true,
                 null,
                 false,
-                false));
+                false,
+                ""));
 
         doReturn(new ArrayList<Credentials>()).when(sn).lookupCredentials(
                 Mockito.<Class>anyObject(),
@@ -246,17 +252,18 @@ public class StashNotifierTest
         doReturn(hashes).when(sn).lookupCommitSha1s(eq(build), eq(buildListener));
         doReturn(notificationResult).when(sn).notifyStash(
                 any(PrintStream.class),
-                any(AbstractBuild.class),
+                any(Run.class),
                 eq(sha1),
                 eq(buildListener),
                 any(StashBuildState.class)
         );
 
         //when
-        boolean perform = sn.perform(build, launcher, buildListener);
+        sn.perform(build,new FilePath(build.getRootDir()),launcher,buildListener);
+        ResultTrend trend = ResultTrend.getResultTrend(build);
 
         //then
-        assertThat(perform, is(true));
+        assertThat(trend, is(ResultTrend.SUCCESS));
     }
 
     @Test
@@ -302,13 +309,15 @@ public class StashNotifierTest
         doReturn(new ArrayList<String>()).when(sn).lookupCommitSha1s(eq(build), eq(buildListener));
 
         //when
-        boolean perform = sn.perform(build, mock(Launcher.class), buildListener);
+        sn.perform(build,new FilePath(build.getRootDir()),mock(Launcher.class),buildListener);
 
         //then
-        assertThat(perform, is(true));
+        ResultTrend trend = ResultTrend.getResultTrend(build);
+        assertThat(trend, is(ResultTrend.SUCCESS));
+
         verify(sn, never()).notifyStash(
                 any(PrintStream.class),
-                any(AbstractBuild.class),
+                any(Run.class),
                 anyString(),
                 eq(buildListener),
                 any(StashBuildState.class)
@@ -318,8 +327,8 @@ public class StashNotifierTest
 
     @Test
     public void lookupCommitSha1s() throws InterruptedException, MacroEvaluationException, IOException {
-        PowerMockito.mockStatic(TokenMacro.class);
-        PowerMockito.when(TokenMacro.expandAll(build, buildListener, sha1)).thenReturn(sha1);
+        //PowerMockito.mockStatic(TokenMacro.class);
+        //PowerMockito.when(TokenMacro.expandAll(build, buildListener, sha1)).thenReturn(sha1);
         sn = new StashNotifier(
                 "https://localhost",
                 "scot",
@@ -328,7 +337,8 @@ public class StashNotifierTest
                 true,
                 null,
                 false,
-                false);
+                false,
+                "");
 
         Collection<String> hashes = sn.lookupCommitSha1s(build, buildListener);
 
@@ -341,8 +351,8 @@ public class StashNotifierTest
         //given
         PrintStream logger = mock(PrintStream.class);
         when(buildListener.getLogger()).thenReturn(logger);
-        PowerMockito.mockStatic(TokenMacro.class);
-        PowerMockito.when(TokenMacro.expandAll(build, buildListener, sha1)).thenThrow(e);
+//        PowerMockito.mockStatic(TokenMacro.class);
+//        PowerMockito.when(TokenMacro.expandAll(build, buildListener, sha1)).thenThrow(e);
         sn = new StashNotifier(
                 "http://localhost",
                 "scot",
@@ -351,7 +361,8 @@ public class StashNotifierTest
                 true,
                 null,
                 false,
-                false);
+                false,
+                "");
 
         //when
         Collection<String> hashes = sn.lookupCommitSha1s(build, buildListener);
@@ -379,7 +390,7 @@ public class StashNotifierTest
     @Test
     public void test_getBuildDescription() throws InterruptedException, MacroEvaluationException, IOException {
         //given
-        AbstractBuild build = mock(AbstractBuild.class);
+        Run build = mock(Run.class);
         when(build.getDescription()).thenReturn("some description");
 
         //when
@@ -390,7 +401,7 @@ public class StashNotifierTest
     }
 
     private String getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState buildState) throws InterruptedException, MacroEvaluationException, IOException {
-        return sn.getBuildDescription(mock(AbstractBuild.class), buildState);
+        return sn.getBuildDescription(mock(Run.class), buildState);
     }
 
     @Test
@@ -429,8 +440,8 @@ public class StashNotifierTest
         String key = "someKey";
         PrintStream logger = mock(PrintStream.class);
         when(buildListener.getLogger()).thenReturn(logger);
-        PowerMockito.mockStatic(TokenMacro.class);
-        PowerMockito.when(TokenMacro.expandAll(build, buildListener, key)).thenReturn(key);
+//        PowerMockito.mockStatic(TokenMacro.class);
+//        PowerMockito.when(TokenMacro.expandAll(build, buildListener, key)).thenReturn(key);
 
         sn = new StashNotifier(
                 "",
@@ -440,7 +451,8 @@ public class StashNotifierTest
                 true,
                 key,
                 true,
-                false);
+                false,
+                "");
 
         String buildKey = sn.getBuildKey(build, buildListener);
         assertThat(buildKey, is(key));
@@ -452,8 +464,8 @@ public class StashNotifierTest
         String key = "someKey";
         PrintStream logger = mock(PrintStream.class);
         when(buildListener.getLogger()).thenReturn(logger);
-        PowerMockito.mockStatic(TokenMacro.class);
-        PowerMockito.when(TokenMacro.expandAll(build, buildListener, key)).thenThrow(e);
+//        PowerMockito.mockStatic(TokenMacro.class);
+//        PowerMockito.when(TokenMacro.expandAll(build, buildListener, key)).thenThrow(e);
 
         sn = new StashNotifier(
                 "",
@@ -463,7 +475,8 @@ public class StashNotifierTest
                 true,
                 key,
                 true,
-                false);
+                false,
+                "");
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -502,7 +515,7 @@ public class StashNotifierTest
         when(resp.getStatusLine()).thenReturn(sl);
         when(resp.getEntity()).thenReturn(new StringEntity(""));
         when(httpClient.execute(eq(httpPost))).thenReturn(resp);
-        doReturn(httpClient).when(sn).getHttpClient(any(PrintStream.class), any(AbstractBuild.class));
+        doReturn(httpClient).when(sn).getHttpClient(any(PrintStream.class), any(Run.class));
 
         ClientConnectionManager manager = mock(ClientConnectionManager.class);
         doReturn(manager).when(httpClient).getConnectionManager();

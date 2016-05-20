@@ -62,6 +62,7 @@ public class DescriptorImplTest {
         json.put("includeBuildNumberInKey", "true");
         json.put("prependParentProjectKey", "true");
         json.put("disableInprogressNotification", "true");
+        json.put("buildState", "");
 
         desc = spy(new StashNotifier.DescriptorImpl(false));
     }
