@@ -13,6 +13,7 @@ import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
 import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.AuthenticationException;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.AuthenticationStrategy;
 import org.apache.http.client.CredentialsProvider;
@@ -500,7 +501,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_createRequest() {
+    public void test_createRequest() throws AuthenticationException {
         //given
         StashNotifier sn = spy(this.sn);
         ArrayList<Credentials> credentialList = new ArrayList<Credentials>();
@@ -594,19 +595,14 @@ public class StashNotifierTest {
         doReturn("someKey1").when(sn).getBuildKey(eq(build), eq(buildListener));
         HttpPost httpPost = mock(HttpPost.class);
         doReturn(httpPost).when(sn).createRequest(any(HttpEntity.class), any(Item.class), anyString());
-        HttpClient httpClient = mock(HttpClient.class);
-        HttpResponse resp = mock(HttpResponse.class);
+        CloseableHttpClient httpClient = mock(CloseableHttpClient.class);
+        CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
         StatusLine sl = mock(StatusLine.class);
         when(sl.getStatusCode()).thenReturn(statusCode);
         when(resp.getStatusLine()).thenReturn(sl);
         when(resp.getEntity()).thenReturn(new StringEntity(""));
         when(httpClient.execute(eq(httpPost))).thenReturn(resp);
         doReturn(httpClient).when(sn).getHttpClient(any(PrintStream.class), any(AbstractBuild.class));
-
-        ClientConnectionManager manager = mock(ClientConnectionManager.class);
-        doReturn(manager).when(httpClient).getConnectionManager();
-
-
         return sn.notifyStash(logger, build, sha1, buildListener, StashBuildState.FAILED);
     }
 
