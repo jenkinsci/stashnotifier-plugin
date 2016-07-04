@@ -233,7 +233,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             AbstractBuild<?, ?> build,
             Launcher launcher,
             BuildListener listener) {
-        return perform(build, listener);
+        return perform(build, listener, disableInprogressNotification);
     }
 
     @Override
@@ -241,21 +241,24 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                         @Nonnull FilePath workspace,
                         @Nonnull Launcher launcher,
                         @Nonnull TaskListener listener) throws InterruptedException, IOException {
-        listener.getLogger().println("Run result: " + run.getResult());
-
-        if (!perform(run, listener)) {
+        if (!perform(run, listener, false)) {
             run.setResult(Result.FAILURE);
         }
     }
 
     private boolean perform(Run<?, ?> run,
-                            TaskListener listener) {
-        if ((run.getResult() == null)
-                || (!run.getResult().equals(Result.SUCCESS))) {
-            return processJenkinsEvent(run, listener, StashBuildState.FAILED);
+                            TaskListener listener,
+                            boolean disableInProgress) {
+        StashBuildState state;
+        if (run.getResult() == null && !disableInProgress) {
+            state = StashBuildState.INPROGRESS;
+        } else if (run.getResult().equals(Result.SUCCESS)) {
+            state = StashBuildState.SUCCESSFUL;
         } else {
-            return processJenkinsEvent(run, listener, StashBuildState.SUCCESSFUL);
+            state = StashBuildState.FAILED;
         }
+
+        return processJenkinsEvent(run, listener, state);
     }
 
     /**
