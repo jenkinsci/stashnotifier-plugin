@@ -32,8 +32,11 @@ That's it. If you have configured everything correctly, Jenkins will notify
 your Stash instance of subsequent builds. The result is illustrated on
 Atlassians [Stash Build Integration][] wiki page.
 
-See the following code for an example of how to use this plugin inside of a 
-[Pipeline Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Plugin).
+#### Note on Pipeline Plugin usage
+
+See the following code for an example of how to use this plugin inside of a [Pipeline Plugin]
+(https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Plugin). You must set the result of the 
+current build manually in the Pipeline script.
 
 ```groovy
 node {
@@ -51,9 +54,7 @@ node {
 }
 ```
 
-Note: You must set the result of the current build manually in the Pipeline script.
-
-### Note on credentials
+#### Note on credentials
 
 Currently Stash Build Notifier Plugin accepts only raw plaintext credentials as it work over HTTP REST API of stash
 
