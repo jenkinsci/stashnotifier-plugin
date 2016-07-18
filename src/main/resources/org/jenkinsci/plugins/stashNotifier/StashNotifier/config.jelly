@@ -5,7 +5,7 @@
   	- Stash credentials
   	- Ignore unverified SSL certificate flag
   -->
- <f:advanced>
+ <!-- f:advanced -->
   <f:entry title="Stash base URL" field="stashServerBaseUrl">
     <f:textbox />
   </f:entry>
@@ -31,5 +31,8 @@
   <f:entry title="Disable INPROGRESS notification" field="disableInprogressNotification">
     <f:checkbox/>
   </f:entry>
- </f:advanced>
+  <f:entry title="Build State" field="buildState">
+     <f:select/>
+  </f:entry>
+ <!-- /f:advanced -->
 </j:jelly>
