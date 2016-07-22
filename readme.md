@@ -8,8 +8,8 @@ This includes
 - A failure message including the last 20 lines of the build log
 
 In order for this to work the job need to be parameterized with two String parameter
-- PULL_REQUEST_URL -> <stash host>/projects/<project key>/repos/<repository>/pull-requests/<pull request id>
-- PULL_REQUEST_ID -> <pull request id>
+- PULL_REQUEST_URL -> (stash host)/projects/(project key)/repos/(repository)/pull-requests/(pull request id)
+- PULL_REQUEST_ID -> (pull request id)
 
 We automated the build to trigger on a new pull request or commit for an existing pull request.
 More information on that can found here: https://github.com/tomasbjerre/pull-request-notifier-for-bitbucket
