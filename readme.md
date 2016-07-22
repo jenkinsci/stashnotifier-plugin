@@ -1,3 +1,19 @@
+
+IMPORTANT info about this fork
+==============================
+We added a small feauture which adds support for posting automated build comments in your Stash pull requests.
+This includes
+- A link to the console of a specific build using the tekst "Build #<number>"
+- A success message on a successful build
+- A failure message including the last 20 lines of the build log
+
+In order for this to work the job need to be parameterized with two String parameter
+- PULL_REQUEST_URL -> (stash host)/projects/(project key)/repos/(repository)/pull-requests/(pull request id)
+- PULL_REQUEST_ID -> (pull request id)
+
+We automated the build to trigger on a new pull request or commit for an existing pull request.
+More information on that can found here: https://github.com/tomasbjerre/pull-request-notifier-for-bitbucket
+
 Stash Build Notifier Plugin for Jenkins
 =======================================
 
