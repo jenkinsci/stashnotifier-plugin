@@ -159,6 +159,9 @@ public class StashNotifier extends Notifier {
    */
   private final boolean disableInprogressNotification;
 
+  /**
+   * Store the comment request to prevent duplication
+   */
   private NotificationResult commentResult;
 
   private JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
@@ -601,6 +604,17 @@ public class StashNotifier extends Notifier {
 
   // non-public members ------------------------------------------------------
 
+  /**
+   * Add a comment about the build status to the linked pull request
+   *
+   * @param logger     the logger used in the build
+   * @param build      the build itself
+   * @param commitSha1 the commit hash of the pull request
+   * @param listener   the build event listener
+   * @param state      the current state of the build
+   * @return result of the process
+   * @throws Exception reason of failure during processing
+   */
   protected NotificationResult commentToStash(final PrintStream logger, final AbstractBuild<?, ?> build, final String commitSha1, final BuildListener listener, final StashBuildState state)
       throws Exception {
     HttpEntity stashBuildCommentEntity = newStashBuildCommentEntity(build, state, listener);
@@ -710,6 +724,15 @@ public class StashNotifier extends Notifier {
     return CredentialsProvider.lookupCredentials(type, itemGroup, authentication, domainRequirements);
   }
 
+  /**
+   * @param stashBuildNotificationEntity an instance of the stash comment request
+   * @param build                        the build itself
+   * @param listener                     the build event listener
+   * @param commitSha1                   the commit of the pull request
+   * @return An instance of a HTTP post request
+   * @throws IOException          reason of failure due to IO exception
+   * @throws InterruptedException reason of failure due to interrupt exception
+   */
   protected HttpPost createCommentRequest(final HttpEntity stashBuildNotificationEntity, final AbstractBuild<?, ?> build, final BuildListener listener, final String commitSha1)
       throws IOException, InterruptedException {
     String url = stashServerBaseUrl;
@@ -722,11 +745,7 @@ public class StashNotifier extends Notifier {
     envVars = build.getEnvironment(listener);
     String pullRequestUrl = envVars.get("PULL_REQUEST_URL");
 
-    String projectKey = this.getProjectKey(pullRequestUrl);
-    String repositoryName = this.getRepositoryName(pullRequestUrl);
-
-    //TODO implement build params for project and repo
-    HttpPost req = new HttpPost(url + "/rest/api/1.0/projects/" + projectKey + "/repos/" + repositoryName + "/pull-requests/" + "82" + "/comments");
+    HttpPost req = new HttpPost(url + "/rest/api/1.0/projects/" + this.getProjectKey(pullRequestUrl) + "/repos/" + this.getRepositoryName(pullRequestUrl) + "/pull-requests/" + "82" + "/comments");
 
     UsernamePasswordCredentials usernamePasswordCredentials = getCredentials(UsernamePasswordCredentials.class, build.getProject());
 
@@ -741,17 +760,29 @@ public class StashNotifier extends Notifier {
     return req;
   }
 
-  private String getProjectKey(String pullRequestUrl){
+  /**
+   * Fetches the project key from the PULL_REQUEST_URL parameter
+   *
+   * @param pullRequestUrl url pointing to the pull request
+   * @return the real project key or a dummy one
+   */
+  private String getProjectKey(String pullRequestUrl) {
     Matcher matcher = Pattern.compile("projects/(.*?)/repos").matcher(pullRequestUrl);
-    if(matcher.find()){
+    if (matcher.find()) {
       return matcher.group(1);
     }
     return "{PULL_REQUEST_URL}";
   }
 
-  private String getRepositoryName(String pullRequestUrl){
-    Matcher matcher = Pattern.compile("projects/(.*?)/repos").matcher(pullRequestUrl);
-    if(matcher.find()){
+  /**
+   * Fetches the repository name for the PULL_REQUEST_URL parameter
+   *
+   * @param pullRequestUrl url pointing to the pull request
+   * @return the real repository name or a dummy one
+   */
+  private String getRepositoryName(String pullRequestUrl) {
+    Matcher matcher = Pattern.compile("repos/(.*?)/pull-requests").matcher(pullRequestUrl);
+    if (matcher.find()) {
       return matcher.group(1);
     }
     return "{PULL_REQUEST_URL}";
@@ -790,6 +821,15 @@ public class StashNotifier extends Notifier {
     return req;
   }
 
+  /**
+   * Creates a comment which is put into and HTTP entity for easy use
+   *
+   * @param build    the build itself
+   * @param state    the state of the build
+   * @param listener the build event listener
+   * @return an instance of HTTP entity
+   * @throws UnsupportedEncodingException
+   */
   private HttpEntity newStashBuildCommentEntity(final AbstractBuild<?, ?> build, final StashBuildState state, BuildListener listener) throws UnsupportedEncodingException {
     JSONObject json = new JSONObject();
 
