@@ -8,6 +8,11 @@
       <f:entry title="${%Credentials}" field="credentialsId">
             <c:select/>
           </f:entry>
+      <f:entry title="Post comments into pull request"
+               field="postPullRequestComments"
+               help="${rootURL}/plugin/stashNotifier/help-globalConfig-postPullRequestComments.html">
+          <f:checkbox />
+      </f:entry>
       <f:entry title="Ignore unverified SSL certificates" 
                field="ignoreUnverifiedSsl"
       		   help="${rootURL}/plugin/stashNotifier/help-globalConfig-ignoreUnverifiedSSL.html">
