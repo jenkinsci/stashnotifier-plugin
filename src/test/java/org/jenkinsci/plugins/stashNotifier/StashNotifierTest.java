@@ -46,6 +46,7 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -68,6 +69,7 @@ public class StashNotifierTest
 {
 	final static String sha1 = "1234567890123456789012345678901234567890";
 	private HttpClientBuilder httpClientBuilder;
+    private CloseableHttpClient client;
 	private Hudson jenkins;
 
 	public StashNotifier buildStashNotifier(String stashBaseUrl) {
@@ -105,7 +107,7 @@ public class StashNotifierTest
 		PrintStream logger = System.out;
 		Secret secret = mock(Secret.class);
 		httpClientBuilder = PowerMockito.mock(HttpClientBuilder.class);
-		CloseableHttpClient client = mock(CloseableHttpClient.class);
+		client = mock(CloseableHttpClient.class);
 		ClientConnectionManager connectionManager = mock(ClientConnectionManager.class);
 		CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
 		HttpUriRequest req = mock(HttpUriRequest.class);
@@ -574,14 +576,13 @@ public class StashNotifierTest
         doReturn("someKey1").when(sn).getBuildKey(eq(build), eq(buildListener));
         HttpPost httpPost = mock(HttpPost.class);
         doReturn(httpPost).when(sn).createRequest(any(HttpEntity.class), any(Item.class), anyString());
-        CloseableHttpClient httpClient = mock(CloseableHttpClient.class);
         CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
         StatusLine sl = mock(StatusLine.class);
         when(sl.getStatusCode()).thenReturn(statusCode);
         when(resp.getStatusLine()).thenReturn(sl);
         when(resp.getEntity()).thenReturn(new StringEntity(""));
-        when(httpClient.execute(eq(httpPost))).thenReturn(resp);
-        doReturn(httpClient).when(sn).getHttpClient(any(PrintStream.class), any(AbstractBuild.class));
+        when(client.execute(eq(httpPost))).thenReturn(resp);
+        doReturn(client).when(sn).getHttpClient(any(PrintStream.class), any(AbstractBuild.class));
         return sn.notifyStash(logger, build, sha1, buildListener, StashBuildState.FAILED);
     }
 
