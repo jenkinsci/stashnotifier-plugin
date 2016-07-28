@@ -205,10 +205,8 @@ public class StashNotifier extends Notifier {
 				|| (!build.getResult().equals(Result.SUCCESS))) {
 			return processJenkinsEvent(
 					build, listener, StashBuildState.FAILED);
-		} else {
-			return processJenkinsEvent(
-					build, listener, StashBuildState.SUCCESSFUL);
-		}
+		} else
+			return build.getResult().equals(Result.NOT_BUILT) || processJenkinsEvent(build, listener, StashBuildState.SUCCESSFUL);
 	}
 
 	/**
