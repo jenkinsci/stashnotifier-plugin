@@ -1,6 +1,6 @@
 /*
  * Copyright 2013 Georg Gruetter
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -52,6 +52,7 @@ import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLContextBuilder;
 import org.apache.http.conn.ssl.SSLContexts;
@@ -396,6 +397,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 				Registry<ConnectionSocketFactory> registry
 						= RegistryBuilder.<ConnectionSocketFactory>create()
 							.register("https", sslConnSocketFactory)
+							.register("http", PlainConnectionSocketFactory.INSTANCE)
 							.build();
 
 				HttpClientConnectionManager ccm
@@ -756,7 +758,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	protected  <C extends Credentials> List<C> lookupCredentials(Class<C> type, ItemGroup<?> itemGroup, Authentication authentication, ArrayList<DomainRequirement> domainRequirements) {
 		return CredentialsProvider.lookupCredentials(type, itemGroup, authentication, domainRequirements);
 	}
-        
+
 	/**
 	 * Returns the HTTP POST request ready to be sent to the Stash build API for
 	 * the given run and change set.
@@ -820,8 +822,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         json.put("key", abbreviate(getBuildKey(run, listener), MAX_FIELD_LENGTH));
 
-        // This is to replace the odd character Jenkins injects to separate 
-        // nested jobs, especially when using the Cloudbees Folders plugin. 
+        // This is to replace the odd character Jenkins injects to separate
+        // nested jobs, especially when using the Cloudbees Folders plugin.
         // These characters cause Stash to throw up.
         String fullName = StringEscapeUtils.
                 escapeJavaScript(run.getFullDisplayName()).
