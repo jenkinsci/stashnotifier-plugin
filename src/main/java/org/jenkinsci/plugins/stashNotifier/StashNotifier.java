@@ -223,6 +223,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 							boolean disableInProgress) {
 		StashBuildState state;
 
+		PrintStream logger = listener.getLogger();
+
 		Result result = run.getResult();
 		if (result == null && disableInProgress) {
 			return true;
@@ -230,6 +232,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			state = StashBuildState.INPROGRESS;
 		} else if (result.equals(Result.SUCCESS)) {
 			state = StashBuildState.SUCCESSFUL;
+		} else if (result.equals(Result.NOT_BUILT)) {
+			logger.println("NOT BUILT");
+			return true;
 		} else {
 			state = StashBuildState.FAILED;
 		}

@@ -318,6 +318,22 @@ public class StashNotifierTest
     }
 
     @Test
+    public void test_perform_build_step_not_built() throws Exception {
+        //given
+        ArrayList<String> hashes = new ArrayList<String>();
+        hashes.add(sha1);
+        PrintStream logger = mock(PrintStream.class);
+
+        //when
+        test_perform_buildstep(Result.NOT_BUILT, logger, new NotificationResult(false, ""), hashes);
+
+        //then
+        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger).println(messageCaptor.capture());
+        assertThat(messageCaptor.getValue(), is(containsString("NOT BUILT")));
+    }
+
+    @Test
     public void test_perform_build_step_empty_hash() throws Exception {
         //given
         PrintStream logger = mock(PrintStream.class);
@@ -372,6 +388,22 @@ public class StashNotifierTest
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
         verify(logger).println(messageCaptor.capture());
         assertThat(messageCaptor.getValue(), is(containsString("Failed to notify Stash for commit")));
+    }
+
+    @Test
+    public void test_perform_simple_build_step_not_built() throws Exception {
+        //given
+        ArrayList<String> hashes = new ArrayList<String>();
+        hashes.add(sha1);
+        PrintStream logger = mock(PrintStream.class);
+
+        //when
+        test_perform_simplebuildstep(Result.NOT_BUILT, logger, new NotificationResult(false, ""), hashes);
+
+        //then
+        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger).println(messageCaptor.capture());
+        assertThat(messageCaptor.getValue(), is(containsString("NOT BUILT")));
     }
 
     @Test
