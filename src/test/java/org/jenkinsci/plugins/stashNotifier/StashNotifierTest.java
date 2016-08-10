@@ -81,7 +81,8 @@ public class StashNotifierTest
 				true,
 				"test-project",
 				true,
-				false);
+				false,
+                false);
 	}
 
     StashNotifier sn;
@@ -222,6 +223,7 @@ public class StashNotifierTest
                 null,
                 true,
                 null,
+                false,
                 false,
                 false));
 
@@ -441,6 +443,7 @@ public class StashNotifierTest
                 true,
                 null,
                 false,
+                false,
                 false);
 
         Collection<String> hashes = sn.lookupCommitSha1s(build, buildListener);
@@ -463,6 +466,7 @@ public class StashNotifierTest
                 sha1,
                 true,
                 null,
+                false,
                 false,
                 false);
 
@@ -553,6 +557,7 @@ public class StashNotifierTest
                 true,
                 key,
                 true,
+                false,
                 false);
 
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -576,6 +581,7 @@ public class StashNotifierTest
                 true,
                 key,
                 true,
+                false,
                 false);
 
         //when

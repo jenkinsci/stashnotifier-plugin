@@ -19,6 +19,10 @@
    		field="ignoreUnverifiedSSLPeer">
     <f:checkbox />
   </f:entry>
+     <f:entry title="Lax Redirect Strategy"
+     		field="laxRedirectStrategy">
+      <f:checkbox />
+    </f:entry>
   <f:entry title="Keep repeated builds in Stash" field="includeBuildNumberInKey">
     <f:checkbox />
   </f:entry>
