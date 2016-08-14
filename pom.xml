@@ -7,7 +7,7 @@
 	</parent>
 
 	<artifactId>stashNotifier</artifactId>
-	<version>1.11-SNAPSHOT</version>
+	<version>1.11</version>
 	<name>Stash Notifier</name>
 	<description>
 		Jenkins plugin to notify Atlassian Stash (Bitbucket) git repository servers of
@@ -20,7 +20,8 @@
 		<connection>scm:git:https://github.com/jenkinsci/stashnotifier-plugin.git</connection>
 		<developerConnection>scm:git:https://github.com/jenkinsci/stashnotifier-plugin.git</developerConnection>
 		<url>https://github.com/jenkinsci/stashnotifier-plugin</url>
-	</scm>
+	  <tag>1.11</tag>
+  </scm>
 
 	<distributionManagement>
 		<repository>
