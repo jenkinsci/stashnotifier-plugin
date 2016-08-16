@@ -40,6 +40,23 @@ current build manually in the Pipeline script.
 
 ```groovy
 node {
+    step([$class: 'StashNotifier'])         // Notifies the Stash Instance of an INPROGRESS build
+
+    try {
+        // Do stuff
+
+        currentBuild.result = 'SUCCESS'     // Set result of currentBuild !Important!
+    } catch(err) {
+        currentBuild.result = 'FAILED'      // Set result of currentBuild !Important!
+    }
+
+    step([$class: 'StashNotifier'])         // Notifies the Stash Instance of the build result
+}
+```
+
+In situations where an advanced setup is required the following can be used:
+```groovy
+node {
     this.notifyStash('INPROGRESS')         // Notifies the Stash Instance of an INPROGRESS build
     
     try {
