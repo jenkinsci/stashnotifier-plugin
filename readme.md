@@ -40,17 +40,33 @@ current build manually in the Pipeline script.
 
 ```groovy
 node {
-    step([$class: 'StashNotifier'])         // Notifies the Stash Instance of an INPROGRESS build
+    this.notifyStash('INPROGRESS')         // Notifies the Stash Instance of an INPROGRESS build
     
     try {
         // Do stuff
     
-        currentBuild.result = 'SUCCESS'     // Set result of currentBuild !Important!
+        this.notifyStash('SUCCESS')
     } catch(err) {
-        currentBuild.result = 'FAILED'      // Set result of currentBuild !Important!
+        this.notifyStash('FAILED')
     }
-    
-    step([$class: 'StashNotifier'])         // Notifies the Stash Instance of the build result
+}
+
+def notifyStash(String state) {
+
+    if('SUCCESS' == state || 'FAILED' == state) {
+        currentBuild.result = state         // Set result of currentBuild !Important!
+    }
+
+    step([$class: 'StashNotifier',
+          commitSha1: "$commit",            // jenkins parameter that resolves to commit's hash
+          credentialsId: '00000000-1111-2222-3333-123456789abc',
+          disableInprogressNotification: false,
+          ignoreUnverifiedSSLPeer: true,
+          includeBuildNumberInKey: false,
+          prependParentProjectKey: false,
+          projectKey: '',
+          stashServerBaseUrl: 'https://stash.company.com'])
+
 }
 ```
 
