@@ -127,8 +127,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	/** whether to send INPROGRESS notification at the build start */
 	private final boolean disableInprogressNotification;
 
-	private final Jenkins jenkins = Jenkins.getInstance();
-
 	private JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
 
 // public members ----------------------------------------------------------
@@ -459,6 +457,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 }
 
 	private void configureProxy(HttpClientBuilder builder, URL url) {
+        Jenkins jenkins = Jenkins.getInstance();
 		if (jenkins == null) {
 			return;
 		}
