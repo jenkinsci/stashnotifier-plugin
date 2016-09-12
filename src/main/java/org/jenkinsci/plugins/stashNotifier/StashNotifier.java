@@ -127,6 +127,15 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	/** whether to send INPROGRESS notification at the build start */
 	private final boolean disableInprogressNotification;
 
+	/** The message to post to Stash for unsucessful builds */
+	private final String failedMessage;
+
+	/** The message to post to Stash for sucessful builds */
+	private final String successfulMessage;
+
+	/** The message to post to Stash during builds */
+	private final String inProgressMessage;
+
 	private JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
 
 // public members ----------------------------------------------------------
@@ -144,7 +153,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			boolean includeBuildNumberInKey,
 			String projectKey,
 			boolean prependParentProjectKey,
-			boolean disableInprogressNotification
+			boolean disableInprogressNotification,
+            String failedMessage,
+            String successfulMessage,
+            String inProgressMessage
 	) {
 
 
@@ -159,6 +171,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		this.projectKey = projectKey;
 		this.prependParentProjectKey = prependParentProjectKey;
 		this.disableInprogressNotification = disableInprogressNotification;
+		this.failedMessage = failedMessage;
+		this.successfulMessage = successfulMessage;
+		this.inProgressMessage = inProgressMessage;
 	}
 
 	public boolean isDisableInprogressNotification() {
@@ -179,6 +194,18 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 	public String getCommitSha1() {
 		return commitSha1;
+	}
+
+	public String getFailedMessage() {
+		return failedMessage;
+	}
+
+	public String getInProgressMessage() {
+		return inProgressMessage;
+	}
+
+	public String getSuccessfulMessage() {
+		return successfulMessage;
 	}
 
 	public boolean getIncludeBuildNumberInKey() {
@@ -834,7 +861,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 replaceAll("\\\\u00BB", "\\/");
         json.put("name", abbreviate(fullName, MAX_FIELD_LENGTH));
 
-		json.put("description", abbreviate(getBuildDescription(run, state), MAX_FIELD_LENGTH));
+		json.put("description", abbreviate(expandMessage(run, listener, state), MAX_FIELD_LENGTH));
 		json.put("url", abbreviate(getRootUrl().concat(run.getUrl()), MAX_URL_FIELD_LENGTH));
 
         return new StringEntity(json.toString(), "UTF-8");
@@ -918,6 +945,56 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		}
 
 		return StringEscapeUtils.escapeJavaScript(key.toString());
+	}
+
+	/**
+	 * Returns the description of the run used for the Stash notification.
+	 * Uses the run description provided by the Jenkins job, if available.
+	 *
+	 * @param run		the run to be described
+	 * @param listener	the Jenkins build listener
+	 * @param state		the state of the run
+	 * @return			the message to post in Stash
+	 */
+	protected String expandMessage(
+			final Run<?, ?> run,
+			TaskListener listener,
+			final StashBuildState state) {
+
+        String message = null;
+        String messageType = null;
+        switch (state) {
+            case INPROGRESS:
+                message = inProgressMessage;
+                messageType = "in-progress";
+                break;
+            case SUCCESSFUL:
+                message = successfulMessage;
+                messageType = "successful";
+                break;
+            case FAILED:
+                message = failedMessage;
+                messageType = "failed";
+                break;
+        }
+            
+        if (message != null && message.trim().length() > 0) {
+            PrintStream logger = listener.getLogger();
+            try {
+                return TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, message);
+            } catch (IOException ioe) {
+                logger.println("Cannot expand " + messageType + " message from parameter. Processing with default message");
+                ioe.printStackTrace(logger);
+            } catch (InterruptedException ie) {
+                logger.println("Cannot expand " + messageType + " message from parameter. Processing with default message");
+                ie.printStackTrace(logger);
+            } catch (MacroEvaluationException mee) {
+                logger.println("Cannot expand " + messageType + " message from parameter. Processing with default message");
+                mee.printStackTrace(logger);
+            }
+        }
+        
+        return getBuildDescription(run, state);
 	}
 
 	/**

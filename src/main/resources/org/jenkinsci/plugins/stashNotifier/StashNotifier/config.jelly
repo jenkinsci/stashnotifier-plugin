@@ -31,5 +31,14 @@
   <f:entry title="Disable INPROGRESS notification" field="disableInprogressNotification">
     <f:checkbox/>
   </f:entry>
+  <f:entry title="Override successful message" field="successfulMessage">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="Override failed message" field="failedMessage">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="Override in-progress message" field="inProgressMessage">
+    <f:textbox />
+  </f:entry>
  </f:advanced>
 </j:jelly>
