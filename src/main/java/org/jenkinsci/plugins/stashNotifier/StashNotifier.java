@@ -135,8 +135,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	/** if true, use description set on the build job instead of the description set in plugin config */
 	private final boolean useJobDescription;
 
-	private final Jenkins jenkins = Jenkins.getInstance();
-
 	private JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
 
 // public members ----------------------------------------------------------
@@ -481,6 +479,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	}
 
 	private void configureProxy(HttpClientBuilder builder, URL url) {
+        Jenkins jenkins = Jenkins.getInstance();
 		if (jenkins == null) {
 			return;
 		}
