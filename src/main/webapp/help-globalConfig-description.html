@@ -1,0 +1,12 @@
+<div>
+  <p>
+    A <tt>TokenMacro</tt> compatible string to use as the notification sent to Stash. Activated when "use job description" parameter is unchecked.
+    As part of <tt>TokenMacro</tt> support, this plugin defines a new macro, <tt>${BUILD_RESULT}</tt>, that resolves to
+    the current build's result (i.e. <tt>SUCCESSFUL</tt>, <tt>FAILED</tt>, etc).<br>
+    If left blank, default description used is:
+    <ul>
+      <li><tt>Build ${BUILD_DISPLAY_NAME} on ${NODE_NAME}: ${BUILD_RESULT}</tt></li>
+    </ul>
+    which gets rendered as <tt>Build #123 on master: SUCCESSFUL</tt>
+  </p>
+</div>

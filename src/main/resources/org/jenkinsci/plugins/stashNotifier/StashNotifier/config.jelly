@@ -31,5 +31,11 @@
   <f:entry title="Disable INPROGRESS notification" field="disableInprogressNotification">
     <f:checkbox/>
   </f:entry>
+  <f:entry title="Build description" field="description">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="Use description from the Job as 'build description'" field="useJobDescription">
+    <f:checkbox default="true"/>
+  </f:entry>
  </f:advanced>
 </j:jelly>

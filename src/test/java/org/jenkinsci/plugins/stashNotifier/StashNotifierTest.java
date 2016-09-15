@@ -17,6 +17,7 @@ import hudson.plugins.git.util.BuildData;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import org.acegisecurity.Authentication;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.StatusLine;
@@ -46,7 +47,6 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -81,7 +81,9 @@ public class StashNotifierTest
 				true,
 				"test-project",
 				true,
-				false);
+				false,
+                null,
+                true);
 	}
 
     StashNotifier sn;
@@ -223,6 +225,8 @@ public class StashNotifierTest
                 true,
                 null,
                 false,
+                false,
+                null,
                 false));
 
         doReturn(new ArrayList<Credentials>()).when(sn).lookupCredentials(
@@ -441,6 +445,8 @@ public class StashNotifierTest
                 true,
                 null,
                 false,
+                false,
+                null,
                 false);
 
         Collection<String> hashes = sn.lookupCommitSha1s(build, buildListener);
@@ -464,6 +470,8 @@ public class StashNotifierTest
                 true,
                 null,
                 false,
+                false,
+                null,
                 false);
 
         //when
@@ -494,20 +502,24 @@ public class StashNotifierTest
         //given
         AbstractBuild build = mock(AbstractBuild.class);
         when(build.getDescription()).thenReturn("some description");
+        PrintStream logger = mock(PrintStream.class);
+        when(buildListener.getLogger()).thenReturn(logger);
+        when(TokenMacro.expandAll(build, buildListener, "some description")).thenReturn("some description");
 
         //when
-        String description = sn.getBuildDescription(build, StashBuildState.FAILED);
+        String description = sn.getBuildDescription(build, buildListener, StashBuildState.FAILED);
 
         //then
         assertThat(description, is("some description"));
     }
 
     private String getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState buildState) throws InterruptedException, MacroEvaluationException, IOException {
-        return sn.getBuildDescription(mock(AbstractBuild.class), buildState);
+        return sn.getBuildDescription(mock(AbstractBuild.class), buildListener, buildState);
     }
 
     @Test
     public void test_getBuildDescription_state() throws InterruptedException, MacroEvaluationException, IOException {
+        when(TokenMacro.expandAll(any(AbstractBuild.class), any(TaskListener.class), anyString())).thenThrow(Exception.class);
         assertThat(getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState.SUCCESSFUL), is("built by Jenkins @ http://localhost/"));
         assertThat(getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState.FAILED), is("built by Jenkins @ http://localhost/"));
         assertThat(getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState.INPROGRESS), is("building on Jenkins @ http://localhost/"));
@@ -553,6 +565,8 @@ public class StashNotifierTest
                 true,
                 key,
                 true,
+                false,
+                null,
                 false);
 
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -576,6 +590,8 @@ public class StashNotifierTest
                 true,
                 key,
                 true,
+                false,
+                null,
                 false);
 
         //when
