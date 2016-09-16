@@ -246,7 +246,13 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	 * @return Root URL contained in the global config
 	 */
 	private String getRootUrl() {
-		return (Jenkins.getInstance().getRootUrl() != null) ? Jenkins.getInstance().getRootUrl() : globalConfig.getUrl();
+		Jenkins instance = Jenkins.getInstance();
+
+		if (null == instance) {
+			return globalConfig.getUrl();
+		}
+
+		return (instance.getRootUrl() != null) ? instance.getRootUrl() : globalConfig.getUrl();
 	}
 
 	/**
@@ -387,8 +393,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         URL url = new URL(stashServer);
         HttpClientBuilder builder = HttpClientBuilder.create();
-        if (url.getProtocol().equals("https")
-                && (ignoreUnverifiedSSL || certificateCredentials instanceof CertificateCredentials)) {
+        if (url.getProtocol().equals("https") && ignoreUnverifiedSSL) {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
 			try {
