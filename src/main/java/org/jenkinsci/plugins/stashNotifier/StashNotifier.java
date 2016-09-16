@@ -64,6 +64,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
+import org.jenkinsci.plugins.tokenmacro.DataBoundTokenMacro;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.AncestorInPath;
@@ -684,6 +685,24 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 			save();
 			return super.configure(req,formData);
+		}
+	}
+
+	@Extension
+	public static class BuildResultTokenMacro extends DataBoundTokenMacro {
+
+		@Override
+		public String evaluate(AbstractBuild<?, ?> context, TaskListener listener, String macroName) throws MacroEvaluationException, IOException, InterruptedException {
+			Result result = context.getResult();
+			if (result == null) {
+				return StashBuildState.INPROGRESS.toString();
+			}
+			return result.toString();
+		}
+
+		@Override
+		public boolean acceptsMacroName(String macroName) {
+			return macroName.equals("BUILD_RESULT");
 		}
 	}
 
