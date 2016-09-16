@@ -387,13 +387,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         if ("".equals(stashServer) || stashServer == null) {
             stashServer = descriptor.getStashRootUrl();
         }
-        if (!ignoreUnverifiedSSL) {
-            ignoreUnverifiedSSL = descriptor.isIgnoreUnverifiedSsl();
-        }
 
         URL url = new URL(stashServer);
         HttpClientBuilder builder = HttpClientBuilder.create();
-        if (url.getProtocol().equals("https") && ignoreUnverifiedSSL) {
+        if (url.getProtocol().equals("https") && (ignoreUnverifiedSSL || descriptor.isIgnoreUnverifiedSsl())) {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
 			try {
