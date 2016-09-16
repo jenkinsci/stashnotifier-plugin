@@ -22,7 +22,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <artifactId>stashNotifier</artifactId>
-    <version>1.11.2-SNAPSHOT</version>
+    <version>1.11.4-SNAPSHOT</version>
     <name>Stash Notifier</name>
     <description>
         Jenkins plugin to notify Atlassian Stash (Bitbucket) git repository servers of
@@ -31,10 +31,10 @@
     <url>http://wiki.jenkins-ci.org/display/JENKINS/StashNotifier+Plugin</url>
 
     <scm>
-        <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
-        <url>http://github.com/jenkinsci/${project.artifactId}-plugin</url>
-  </scm>
+        <connection>scm:git:https://github.com/jenkinsci/stashnotifier-plugin.git</connection>
+        <developerConnection>scm:git:https://github.com/jenkinsci/stashnotifier-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/stashnotifier-plugin</url>
+    </scm>
 
     <developers>
         <developer>
