@@ -48,6 +48,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.auth.*;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.HttpClientConnectionManager;
@@ -390,6 +391,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         URL url = new URL(stashServer);
         HttpClientBuilder builder = HttpClientBuilder.create();
+        RequestConfig.Builder requestBuilder = RequestConfig.custom();
+        requestBuilder = requestBuilder.setSocketTimeout(60000);
+        builder.setDefaultRequestConfig(requestBuilder.build());
+
         if (url.getProtocol().equals("https") && (ignoreUnverifiedSSL || descriptor.isIgnoreUnverifiedSsl())) {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
