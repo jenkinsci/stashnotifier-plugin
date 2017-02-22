@@ -900,12 +900,12 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		String overriddenKey = (projectKey != null && projectKey.trim().length() > 0) ? projectKey : getDescriptor().getProjectKey();
 		if (overriddenKey != null && overriddenKey.trim().length() > 0) {
 			PrintStream logger = listener.getLogger();
-			if (!(run instanceof AbstractBuild<?, ?>)) {
-				logger.println("Unable to expand build key macro with run of type " + run.getClass().getName());
-				key.append(getDefaultBuildKey(run));
-			} else {
 				try {
-					key.append(TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, projectKey));
+					if (!(run instanceof AbstractBuild<?, ?>)) {
+						key.append(TokenMacro.expandAll(run, new FilePath(run.getRootDir()), listener, projectKey));
+					} else {
+						key.append(TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, projectKey));
+					}
 				} catch (IOException ioe) {
 					logger.println("Cannot expand build key from parameter. Processing with default build key");
 					ioe.printStackTrace(logger);
@@ -918,7 +918,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 					logger.println("Cannot expand build key from parameter. Processing with default build key");
 					mee.printStackTrace(logger);
 					key.append(getDefaultBuildKey(run));
-				}
 			}
 		} else {
 			key.append(getDefaultBuildKey(run));

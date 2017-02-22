@@ -15,6 +15,7 @@ import hudson.plugins.git.Revision;
 import hudson.plugins.git.util.Build;
 import hudson.plugins.git.util.BuildData;
 import hudson.util.Secret;
+import java.io.File;
 import jenkins.model.Jenkins;
 import org.acegisecurity.Authentication;
 import org.apache.http.HttpEntity;
@@ -37,7 +38,9 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -87,6 +90,7 @@ public class StashNotifierTest
     StashNotifier sn;
     BuildListener buildListener;
     AbstractBuild<?, ?> build;
+    Run<?, ?> run;
     FilePath workspace;
 
 	@Before
@@ -101,6 +105,7 @@ public class StashNotifierTest
 		buildListener = mock(BuildListener.class);
 		jenkins = mock(Hudson.class);
 		build = mock(AbstractBuild.class);
+		run = mock(Run.class);
 		AbstractProject project = mock(AbstractProject.class);
 		workspace = project.getSomeWorkspace();
 		EnvVars environment = mock(EnvVars.class);
@@ -124,6 +129,7 @@ public class StashNotifierTest
 		when(action.getLastBuiltRevision()).thenReturn(revision);
 		when(revision.getSha1String()).thenReturn(sha1);
 		when(build.getProject()).thenReturn(project);
+		when(run.getParent()).thenReturn(project);
                 when(build.getFullDisplayName()).thenReturn("foo");
 		when(build.getUrl()).thenReturn("foo");
 		when(build.getActions(BuildData.class)).thenReturn(actions);
@@ -560,6 +566,32 @@ public class StashNotifierTest
     }
 
 
+    @Test
+    public void test_getRunKey() throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+        String key = "someKey";
+        PrintStream logger = mock(PrintStream.class);
+        when(buildListener.getLogger()).thenReturn(logger);
+        final File tempDir = File.createTempFile("stashNotifier", null);
+        when(run.getRootDir()).thenReturn(tempDir);
+        PowerMockito.mockStatic(TokenMacro.class);
+        PowerMockito.when(TokenMacro.expandAll(run, new FilePath(tempDir), buildListener, key)).thenReturn(key);
+
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                true,
+                key,
+                true,
+                false);
+
+        String buildKey = sn.getBuildKey(run, buildListener);
+        assertThat(buildKey, is(key));
+    }
+
+
     public void getBuildKey_Exception(Exception e) throws InterruptedException, MacroEvaluationException, IOException {
         //given
         String key = "someKey";
@@ -586,6 +618,34 @@ public class StashNotifierTest
         verify(logger).println("Cannot expand build key from parameter. Processing with default build key");
     }
 
+    public void getRunKey_Exception(Exception e) throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+        String key = "someKey";
+        PrintStream logger = mock(PrintStream.class);
+        when(buildListener.getLogger()).thenReturn(logger);
+        final File tempDir = File.createTempFile("stashNotifier", null);
+        when(run.getRootDir()).thenReturn(tempDir);
+        PowerMockito.mockStatic(TokenMacro.class);
+        PowerMockito.when(TokenMacro.expandAll(run, new FilePath(tempDir), buildListener, key)).thenThrow(e);
+
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                true,
+                key,
+                true,
+                false);
+
+        //when
+        String buildKey = sn.getBuildKey(run, buildListener);
+
+        //then
+        assertThat(buildKey, is("null-0-http:\\/\\/localhost\\/"));
+        verify(logger).println("Cannot expand build key from parameter. Processing with default build key");
+    }
+
     @Test
     public void test_getBuildKey_IOException() throws InterruptedException, MacroEvaluationException, IOException {
         getBuildKey_Exception(new IOException("BOOM"));
@@ -599,6 +659,21 @@ public class StashNotifierTest
     @Test
     public void test_getBuildKey_MacroEvaluationException() throws InterruptedException, MacroEvaluationException, IOException {
         getBuildKey_Exception(new MacroEvaluationException("BOOM"));
+    }
+
+    @Test
+    public void test_getRunKey_IOException() throws InterruptedException, MacroEvaluationException, IOException {
+        getRunKey_Exception(new IOException("BOOM"));
+    }
+
+    @Test
+    public void test_getRunKey_InterruptedException() throws InterruptedException, MacroEvaluationException, IOException {
+        getRunKey_Exception(new InterruptedException("BOOM"));
+    }
+
+    @Test
+    public void test_getRunKey_MacroEvaluationException() throws InterruptedException, MacroEvaluationException, IOException {
+        getRunKey_Exception(new MacroEvaluationException("BOOM"));
     }
 
     private NotificationResult notifyStash(int statusCode) throws Exception {
