@@ -78,6 +78,7 @@ public class StashNotifierTest
 				"scot",
 				true,
 				null,
+				null,
 				true,
 				"test-project",
 				true,
@@ -219,6 +220,7 @@ public class StashNotifierTest
                 "https://localhost",
                 "scot",
                 true,
+                null,
                 null,
                 true,
                 null,
@@ -438,6 +440,7 @@ public class StashNotifierTest
                 "scot",
                 true,
                 sha1,
+                null,
                 true,
                 null,
                 false,
@@ -461,6 +464,7 @@ public class StashNotifierTest
                 "scot",
                 true,
                 sha1,
+                null,
                 true,
                 null,
                 false,
@@ -500,6 +504,28 @@ public class StashNotifierTest
 
         //then
         assertThat(description, is("some description"));
+    }
+
+    @Test
+    public void test_getBuildSpecificDescription() throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+        AbstractBuild build = mock(AbstractBuild.class);
+        sn = new StashNotifier(
+            "https://localhost",
+            "scot",
+            true,
+            sha1,
+            "some specific description",
+            true,
+            null,
+            false,
+            false);
+
+        //when
+        String description = sn.getBuildDescription(build, StashBuildState.FAILED);
+
+        //then
+        assertThat(description, is("some specific description"));
     }
 
     private String getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState buildState) throws InterruptedException, MacroEvaluationException, IOException {
@@ -550,6 +576,7 @@ public class StashNotifierTest
                 "scot",
                 true,
                 null,
+                null,
                 true,
                 key,
                 true,
@@ -572,6 +599,7 @@ public class StashNotifierTest
                 "",
                 "scot",
                 true,
+                null,
                 null,
                 true,
                 key,
