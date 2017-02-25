@@ -13,6 +13,13 @@ Requirements
 [Stash Build REST API][] which was introduced with Stash 2.1. 
 * **Jenkins 1.498** or newer
 
+Setup
+=====
+
+Set up Stash Notifier by navigating to `Manage Jenkins --> Configure System` and scrolling down to the **Stash Notifier** section. Enter _at least_ your `Stash Root Url` and `Credentials`. Additional options are available as required. (Screenshot below is from Jenkins v2.44)
+
+![Stash Notifier Settings](images/StashNotifierSettings.png)
+
 Usage
 =====
 
