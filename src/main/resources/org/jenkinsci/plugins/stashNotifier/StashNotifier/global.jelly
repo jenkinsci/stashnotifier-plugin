@@ -28,5 +28,15 @@
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-disableInprogressNotification.html">
           <f:checkbox default="true"/>
       </f:entry>
+      <f:entry title="Build description"
+               field="description"
+               help="${rootURL}/plugin/stashNotifier/help-globalConfig-description.html">
+          <f:textbox />
+      </f:entry>
+      <f:entry title="Use description from the Job as 'build description'"
+               field="useJobDescription"
+               help="${rootURL}/plugin/stashNotifier/help-globalConfig-useJobDescription.html">
+          <f:checkbox default="true"/>
+      </f:entry>
   </f:section>
 </j:jelly>

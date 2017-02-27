@@ -65,6 +65,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
+import org.jenkinsci.plugins.tokenmacro.DataBoundTokenMacro;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.AncestorInPath;
@@ -101,6 +102,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 	public static final int MAX_FIELD_LENGTH = 255;
 	public static final int MAX_URL_FIELD_LENGTH = 450;
+	public static final String DEFAULT_DESCRIPTION = "Build ${BUILD_DISPLAY_NAME} on ${NODE_NAME}: ${BUILD_RESULT}";
 
 	// attributes --------------------------------------------------------------
 
@@ -128,6 +130,12 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	/** whether to send INPROGRESS notification at the build start */
 	private final boolean disableInprogressNotification;
 
+	/** specify the notification description field from config */
+	private String description;
+
+	/** if true, use description set on the build job instead of the description set in plugin config */
+	private final boolean useJobDescription;
+
 	private JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
 
 // public members ----------------------------------------------------------
@@ -145,7 +153,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			boolean includeBuildNumberInKey,
 			String projectKey,
 			boolean prependParentProjectKey,
-			boolean disableInprogressNotification
+			boolean disableInprogressNotification,
+			String description,
+			boolean useJobDescription
 	) {
 
 
@@ -160,6 +170,18 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		this.projectKey = projectKey;
 		this.prependParentProjectKey = prependParentProjectKey;
 		this.disableInprogressNotification = disableInprogressNotification;
+		if (StringUtils.isNotBlank(description)) {
+			this.description = description;
+		}
+		this.useJobDescription = useJobDescription;
+	}
+
+	public boolean isUseJobDescription() {
+		return useJobDescription;
+	}
+
+	public String getDescription() {
+		return description;
 	}
 
 	public boolean isDisableInprogressNotification() {
@@ -461,7 +483,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 					.loadTrustMaterial(null, easyStrategy);
 		}
 		return customContext.useTLS().build();
-}
+	}
 
 	private void configureProxy(HttpClientBuilder builder, URL url) {
         Jenkins jenkins = Jenkins.getInstance();
@@ -524,6 +546,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		private String projectKey;
 		private boolean prependParentProjectKey;
 		private boolean disableInprogressNotification;
+		private String description;
+		private boolean useJobDescription;
 
         public DescriptorImpl() {
             this(true);
@@ -568,6 +592,14 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	            return stashRootUrl;
         	}
         }
+
+        public boolean isUseJobDescription() {
+        	return useJobDescription;
+		}
+
+        public String getDescription() {
+        	return description;
+		}
 
 		public boolean isDisableInprogressNotification() {
 			return disableInprogressNotification;
@@ -662,8 +694,34 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 			disableInprogressNotification = formData.getBoolean("disableInprogressNotification");
 
+			if (formData.has("description") && StringUtils.isNotBlank(formData.getString("description"))) {
+				description = formData.getString("description");
+			}
+
+			if (formData.has("useJobDescription")) {
+				useJobDescription = formData.getBoolean("useJobDescription");
+			}
+
 			save();
 			return super.configure(req,formData);
+		}
+	}
+
+	@Extension
+	public static class BuildResultTokenMacro extends DataBoundTokenMacro {
+
+		@Override
+		public String evaluate(AbstractBuild<?, ?> context, TaskListener listener, String macroName) throws MacroEvaluationException, IOException, InterruptedException {
+			Result result = context.getResult();
+			if (result == null) {
+				return StashBuildState.INPROGRESS.toString();
+			}
+			return result.toString();
+		}
+
+		@Override
+		public boolean acceptsMacroName(String macroName) {
+			return macroName.equals("BUILD_RESULT");
 		}
 	}
 
@@ -841,7 +899,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 replaceAll("\\\\u00BB", "\\/");
         json.put("name", abbreviate(fullName, MAX_FIELD_LENGTH));
 
-		json.put("description", abbreviate(getBuildDescription(run, state), MAX_FIELD_LENGTH));
+		json.put("description", abbreviate(getBuildDescription(run, listener, state), MAX_FIELD_LENGTH));
 		json.put("url", abbreviate(getRootUrl().concat(run.getUrl()), MAX_URL_FIELD_LENGTH));
 
         return new StringEntity(json.toString(), "UTF-8");
@@ -926,31 +984,65 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		return StringEscapeUtils.escapeJavaScript(key.toString());
 	}
 
+	private String getDefaultBuildDescription(final Run<?, ?> run, final StashBuildState state) {
+		if (StringUtils.isNotBlank(run.getDescription())) {
+			return run.getDescription();
+		} else {
+			switch (state) {
+				case INPROGRESS:
+					return "building on Jenkins @ "
+							+ getRootUrl();
+				default:
+					return DEFAULT_DESCRIPTION;
+			}
+		}
+	}
+
 	/**
 	 * Returns the description of the run used for the Stash notification.
 	 * Uses the run description provided by the Jenkins job, if available.
 	 *
-	 * @param run		the run to be described
-	 * @param state		the state of the run
-	 * @return			the description of the run
+	 * @param run        the run to be described
+	 * @param listener
+	 *@param state        the state of the run  @return			the description of the run
 	 */
 	protected String getBuildDescription(
 			final Run<?, ?> run,
+			final TaskListener listener,
 			final StashBuildState state) {
 
-		if (run.getDescription() != null
-				&& run.getDescription().trim().length() > 0) {
-
-			return run.getDescription();
+		String description = null;
+		if (useJobDescription) {
+			if (StringUtils.isNotBlank(run.getDescription())) {
+				description = run.getDescription();
+			}
 		} else {
-			switch (state) {
-			case INPROGRESS:
-	            return "building on Jenkins @ "
-					+ getRootUrl();
-			default:
-	            return "built by Jenkins @ "
-	            	+ getRootUrl();
+			if (StringUtils.isNotBlank(getDescription())) {
+				description = getDescription();
 			}
 		}
+
+		if (StringUtils.isBlank(description)) {
+			description = DEFAULT_DESCRIPTION;
+		}
+
+		if (run instanceof AbstractBuild<?, ?>) {
+			PrintStream logger = listener.getLogger();
+			try {
+				description = TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, description);
+			} catch (Exception e) {
+				logger.println("Cannot expand build description from parameter. Processing with default build description");
+				e.printStackTrace(logger);
+				switch (state) {
+					case INPROGRESS:
+						description = "building on Jenkins @ " + getRootUrl();
+						break;
+					default:
+						description = "built by Jenkins @ " + getRootUrl();
+				}
+			}
+		}
+
+		return description;
 	}
 }
