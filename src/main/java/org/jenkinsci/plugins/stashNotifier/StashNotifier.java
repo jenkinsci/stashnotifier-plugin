@@ -132,6 +132,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 // public members ----------------------------------------------------------
 
+	@Override
 	public BuildStepMonitor getRequiredMonitorService() {
 		return BuildStepMonitor.NONE;
 	}
@@ -452,6 +453,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		}
 		if (ignoreUnverifiedSSL) {
 			TrustStrategy easyStrategy = new TrustStrategy() {
+				@Override
 				public boolean isTrusted(X509Certificate[] chain, String authType)
 						throws CertificateException {
 					return true;
@@ -562,7 +564,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
 
         public String getStashRootUrl() {
-        	if ((stashRootUrl == null) || (stashRootUrl.trim().equals(""))) {
+        	if ((stashRootUrl == null) || (stashRootUrl.trim().isEmpty())) {
         		return null;
         	} else {
 	            return stashRootUrl;
@@ -610,13 +612,13 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 			// calculate effective url from global and local config
 			String url = value;
-			if ((url != null) && (!url.trim().equals(""))) {
+			if ((url != null) && (!url.trim().isEmpty())) {
 				url = url.trim();
 			} else {
 				url = stashRootUrl != null ? stashRootUrl.trim() : null;
 			}
 
-			if ((url == null) || url.equals("")) {
+			if ((url == null) || url.isEmpty()) {
 				return FormValidation.error(
 						"Please specify a valid URL here or in the global "
 						+ "configuration");
@@ -633,10 +635,12 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		}
 
 		@SuppressWarnings("rawtypes")
+		@Override
 		public boolean isApplicable(Class<? extends AbstractProject> aClass) {
 			return true;
 		}
 
+		@Override
 		public String getDisplayName() {
 			return "Notify Stash Instance";
 		}
