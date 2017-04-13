@@ -198,7 +198,7 @@ public class StashNotifierTest
         PrintStream logger = mock(PrintStream.class);
 
         //when
-        sn.getHttpClient(logger, build);
+        sn.getHttpClient(logger, build, "http://localhost");
 
         //then
         ArgumentCaptor<HttpHost> proxyCaptor = ArgumentCaptor.forClass(HttpHost.class);
@@ -239,7 +239,7 @@ public class StashNotifierTest
         PrintStream logger = mock(PrintStream.class);
 
         //when
-        sn.getHttpClient(logger, build);
+        sn.getHttpClient(logger, build,"https://localhost");
 
         //then
         verify(httpClientBuilder).setSSLSocketFactory(any(SSLConnectionSocketFactory.class));
@@ -535,7 +535,7 @@ public class StashNotifierTest
         when(CredentialsMatchers.firstOrNull(anyCollection(), any(CredentialsMatcher.class))).thenReturn(credential);
 
         //when
-        HttpPost request = sn.createRequest(mock(HttpEntity.class), mock(Item.class), sha1);
+        HttpPost request = sn.createRequest(mock(HttpEntity.class), mock(Item.class), sha1, "http://localhost");
 
         //then
         assertThat(request, is(not(nullValue())));
@@ -682,14 +682,14 @@ public class StashNotifierTest
         when(buildListener.getLogger()).thenReturn(logger);
         doReturn("someKey1").when(sn).getBuildKey(eq(build), eq(buildListener));
         HttpPost httpPost = mock(HttpPost.class);
-        doReturn(httpPost).when(sn).createRequest(any(HttpEntity.class), any(Item.class), anyString());
+        doReturn(httpPost).when(sn).createRequest(any(HttpEntity.class), any(Item.class), anyString(), anyString());
         CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
         StatusLine sl = mock(StatusLine.class);
         when(sl.getStatusCode()).thenReturn(statusCode);
         when(resp.getStatusLine()).thenReturn(sl);
         when(resp.getEntity()).thenReturn(new StringEntity(""));
         when(client.execute(eq(httpPost))).thenReturn(resp);
-        doReturn(client).when(sn).getHttpClient(any(PrintStream.class), any(AbstractBuild.class));
+        doReturn(client).when(sn).getHttpClient(any(PrintStream.class), any(AbstractBuild.class), anyString());
         return sn.notifyStash(logger, build, sha1, buildListener, StashBuildState.FAILED);
     }
 
