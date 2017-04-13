@@ -377,18 +377,15 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	 *
 	 * @param logger    the logger to log messages to
 	 * @param run
+         * @param stashServer
 	 * @return			the HttpClient
 	 */
-	protected HttpClient getHttpClient(PrintStream logger, Run<?, ?> run) throws Exception {
+	protected HttpClient getHttpClient(PrintStream logger, Run<?, ?> run, String stashServer) throws Exception {
         boolean ignoreUnverifiedSSL = ignoreUnverifiedSSLPeer;
-        String stashServer = stashServerBaseUrl;
+        
         DescriptorImpl descriptor = getDescriptor();
 
         CertificateCredentials certificateCredentials = getCredentials(CertificateCredentials.class, run.getParent());
-
-        if ("".equals(stashServer) || stashServer == null) {
-            stashServer = descriptor.getStashRootUrl();
-        }
 
         URL url = new URL(stashServer);
         HttpClientBuilder builder = HttpClientBuilder.create();
@@ -691,9 +688,13 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			final StashBuildState state) throws Exception {
 		HttpEntity stashBuildNotificationEntity
 			= newStashBuildNotificationEntity(run, state, listener);
+                
+                String stashURL= expandStashURL(run, listener);
+                
+                logger.println("Notifying Stash at \""+stashURL+"\"");
 
-		HttpPost req = createRequest(stashBuildNotificationEntity, run.getParent(), commitSha1);
-		HttpClient client = getHttpClient(logger, run);
+		HttpPost req = createRequest(stashBuildNotificationEntity, run.getParent(), commitSha1, stashURL);
+		HttpClient client = getHttpClient(logger, run, stashURL);
 		try {
 			HttpResponse res = client.execute(req);
 			if (res.getStatusLine().getStatusCode() != 204) {
@@ -712,7 +713,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      *
      * @param clazz The type of {@link com.cloudbees.plugins.credentials.Credentials} to return.
      * @param project The hierarchical project context within which the credentials are searched for.
-     * @return The first credentials of the given type that are found withing the project hierarchy, or null otherwise.
+     * @return The first credentials of the given type that are found within the project hierarchy, or null otherwise.
      */
     private <T extends Credentials> T getCredentials(final Class<T> clazz, final Item project) {
 
@@ -781,19 +782,16 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	 * @param stashBuildNotificationEntity	a entity containing the parameters
 	 * 										for Stash
 	 * @param commitSha1	the SHA1 of the commit that was built
+     * @param url
 	 * @return				the HTTP POST request to the Stash build API
 	 */
     protected HttpPost createRequest(
 			final HttpEntity stashBuildNotificationEntity,
-            final Item project,
-			final String commitSha1) throws AuthenticationException {
-
-		String url = stashServerBaseUrl;
-        DescriptorImpl descriptor = getDescriptor();
-
-        if ("".equals(url) || url == null)
-            url = descriptor.getStashRootUrl();
-
+                        final Item project,
+			final String commitSha1,
+                        final String url) throws AuthenticationException {
+        
+        
 		HttpPost req = new HttpPost(
 				url
 				+ "/rest/build-status/1.0/commits/"
@@ -818,6 +816,28 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 		return req;
 	}
+
+    private String expandStashURL(Run<?, ?> run, final TaskListener listener) {
+        String url = stashServerBaseUrl;
+        DescriptorImpl descriptor = getDescriptor();
+        if ("".equals(url) || url == null) {
+            url = descriptor.getStashRootUrl();
+        }
+
+        try {
+            if (!(run instanceof AbstractBuild<?, ?>)) {
+                url = TokenMacro.expandAll(run, new FilePath(run.getRootDir()), listener, url);
+            } else {
+                url = TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, url);
+            }
+
+        } catch (IOException | InterruptedException | MacroEvaluationException ex) {
+                PrintStream logger = listener.getLogger();
+                logger.println("Unable to expand Stash Server URL");
+		ex.printStackTrace(logger);
+            }
+        return url;
+    }
 
 	/**
 	 * Returns the HTTP POST entity body with the JSON representation of the
