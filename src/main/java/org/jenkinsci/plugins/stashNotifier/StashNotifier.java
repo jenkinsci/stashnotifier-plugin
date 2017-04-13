@@ -787,21 +787,20 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	 * @return				the HTTP POST request to the Stash build API
 	 */
     protected HttpPost createRequest(
-			final HttpEntity stashBuildNotificationEntity,
-                        final Item project,
-			final String commitSha1,
-                        final String url) throws AuthenticationException {
-        
-        
-		HttpPost req = new HttpPost(
-				url
-				+ "/rest/build-status/1.0/commits/"
-				+ commitSha1);
+            final HttpEntity stashBuildNotificationEntity,
+            final Item project,
+            final String commitSha1,
+            final String url) throws AuthenticationException {
 
-		// If we have a credential defined then we need to determine if it
-		// is a basic auth
-        UsernamePasswordCredentials usernamePasswordCredentials =
-                getCredentials(UsernamePasswordCredentials.class, project);
+        HttpPost req = new HttpPost(
+                url
+                + "/rest/build-status/1.0/commits/"
+                + commitSha1);
+
+        // If we have a credential defined then we need to determine if it
+        // is a basic auth
+        UsernamePasswordCredentials usernamePasswordCredentials
+                = getCredentials(UsernamePasswordCredentials.class, project);
 
         if (usernamePasswordCredentials != null) {
             req.addHeader(new BasicScheme().authenticate(
@@ -812,16 +811,16 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                     null));
         }
 
-		req.addHeader("Content-type", "application/json");
-		req.setEntity(stashBuildNotificationEntity);
+        req.addHeader("Content-type", "application/json");
+        req.setEntity(stashBuildNotificationEntity);
 
-		return req;
-	}
+        return req;
+    }
 
     private String expandStashURL(Run<?, ?> run, final TaskListener listener) {
         String url = stashServerBaseUrl;
         DescriptorImpl descriptor = getDescriptor();
-        if ("".equals(url) || url == null) {
+        if (url == null || url.isEmpty()) {
             url = descriptor.getStashRootUrl();
         }
 
@@ -833,10 +832,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             }
 
         } catch (IOException | InterruptedException | MacroEvaluationException ex) {
-                PrintStream logger = listener.getLogger();
-                logger.println("Unable to expand Stash Server URL");
-		ex.printStackTrace(logger);
-            }
+            PrintStream logger = listener.getLogger();
+            logger.println("Unable to expand Stash Server URL");
+            ex.printStackTrace(logger);
+        }
         return url;
     }
 
