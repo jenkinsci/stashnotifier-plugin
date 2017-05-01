@@ -1,9 +1,9 @@
 package me.batanov.jenkins.plugins.atlassian.bitbucket.notifier;
 
-import com.sun.istack.internal.NotNull;
 import hudson.model.AbstractBuild;
 import me.batanov.jenkins.plugins.atlassian.bitbucket.notifier.exception.NotificationFailedException;
 
+import javax.annotation.Nonnull;
 import java.util.List;
 
 /**
@@ -11,5 +11,5 @@ import java.util.List;
  *         2016-01-10 15:47
  */
 public interface Notifiable {
-    void Notify(@NotNull AbstractBuild<?, ?> build, List<String> commits) throws NotificationFailedException;
+    void Notify(@Nonnull AbstractBuild<?, ?> build, List<String> commits) throws NotificationFailedException;
 }

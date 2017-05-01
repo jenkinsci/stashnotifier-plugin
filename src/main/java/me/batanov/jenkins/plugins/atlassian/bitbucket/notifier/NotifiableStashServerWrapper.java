@@ -45,7 +45,7 @@ final public class NotifiableStashServerWrapper implements Notifiable {
         return text.substring(0, FIELD_MAX_WIDTH - 3) + "...";
     }
 
-    public void Notify(AbstractBuild<?, ?> build, List<String> commits) {
+    public void Notify(@Nonnull AbstractBuild<?, ?> build, List<String> commits) {
 
         String fullDisplayName = build.getFullDisplayName();
         String fullName = sanitizeDisplayName(fullDisplayName);
