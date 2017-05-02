@@ -120,6 +120,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	/** if true, the build number is included in the Stash notification. */
 	private final boolean includeBuildNumberInKey;
 
+	/** specify state manually */
+	private final StashBuildState state;
+
 	/** specify project key manually */
 	private final String projectKey;
 
@@ -146,6 +149,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			String commitSha1,
 			boolean includeBuildNumberInKey,
 			String projectKey,
+			StashBuildState state,
 			boolean prependParentProjectKey,
 			boolean disableInprogressNotification
 	) {
@@ -160,6 +164,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		this.commitSha1 = commitSha1;
 		this.includeBuildNumberInKey = includeBuildNumberInKey;
 		this.projectKey = projectKey;
+		this.state = state;
 		this.prependParentProjectKey = prependParentProjectKey;
 		this.disableInprogressNotification = disableInprogressNotification;
 	}
@@ -190,6 +195,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     public String getProjectKey() {
         return projectKey;
+    }
+
+    public StashBuildState getState() {
+        return state;
     }
 
     public boolean getPrependParentProjectKey() {
@@ -226,18 +235,22 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 		PrintStream logger = listener.getLogger();
 
-		Result result = run.getResult();
-		if (result == null && disableInProgress) {
-			return true;
-		} else if (result == null) {
-			state = StashBuildState.INPROGRESS;
-		} else if (result.equals(Result.SUCCESS)) {
-			state = StashBuildState.SUCCESSFUL;
-		} else if (result.equals(Result.NOT_BUILT)) {
-			logger.println("NOT BUILT");
-			return true;
+		if(this.state != null){
+				state = this.state;
 		} else {
-			state = StashBuildState.FAILED;
+			Result result = run.getResult();
+			if (result == null && disableInProgress) {
+				return true;
+			} else if (result == null) {
+				state = StashBuildState.INPROGRESS;
+			} else if (result.equals(Result.SUCCESS)) {
+				state = StashBuildState.SUCCESSFUL;
+			} else if (result.equals(Result.NOT_BUILT)) {
+				logger.println("NOT BUILT");
+				return true;
+			} else {
+				state = StashBuildState.FAILED;
+			}
 		}
 
 		return processJenkinsEvent(run, listener, state);
@@ -522,6 +535,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         private boolean ignoreUnverifiedSsl;
         private boolean includeBuildNumberInKey;
 		private String projectKey;
+		private StashBuildState state;
 		private boolean prependParentProjectKey;
 		private boolean disableInprogressNotification;
 
@@ -587,6 +601,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 		public String getProjectKey() {
 			return projectKey;
+		}
+
+		public StashBuildState getState() {
+			return state;
 		}
 
 		public boolean isPrependParentProjectKey() {
@@ -659,6 +677,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             }
             if (formData.has("projectKey")) {
                 projectKey = formData.getString("projectKey");
+            }
+            if (formData.has("state")) {
+                state = (StashBuildState)formData.get("state");
             }
             prependParentProjectKey = formData.getBoolean("prependParentProjectKey");
 

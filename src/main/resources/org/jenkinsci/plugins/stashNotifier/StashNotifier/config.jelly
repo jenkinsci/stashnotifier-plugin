@@ -25,6 +25,9 @@
   <f:entry title="Override project key" field="projectKey">
     <f:textbox />
   </f:entry>
+  <f:entry title="Override state" field="state">
+    <f:enum field="state">${it.name()}</f:enum>
+  </f:entry>
   <f:entry title="Prepend parent project name to key" field="prependParentProjectKey">
     <f:checkbox />
   </f:entry>

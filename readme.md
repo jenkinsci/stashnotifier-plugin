@@ -89,6 +89,7 @@ def notifyStash(String state) {
           includeBuildNumberInKey: false,
           prependParentProjectKey: false,
           projectKey: '',
+          state: 'SUCCESSFUL',
           stashServerBaseUrl: 'https://stash.company.com'])
 
 }

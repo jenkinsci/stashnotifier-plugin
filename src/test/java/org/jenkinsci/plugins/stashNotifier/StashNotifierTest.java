@@ -83,6 +83,7 @@ public class StashNotifierTest
 				null,
 				true,
 				"test-project",
+				null,
 				true,
 				false);
 	}
@@ -227,6 +228,7 @@ public class StashNotifierTest
                 true,
                 null,
                 true,
+                null,
                 null,
                 false,
                 false));
@@ -446,6 +448,7 @@ public class StashNotifierTest
                 sha1,
                 true,
                 null,
+                null,
                 false,
                 false);
 
@@ -468,6 +471,7 @@ public class StashNotifierTest
                 true,
                 sha1,
                 true,
+                null,
                 null,
                 false,
                 false);
@@ -558,6 +562,7 @@ public class StashNotifierTest
                 null,
                 true,
                 key,
+                null,
                 true,
                 false);
 
@@ -607,6 +612,7 @@ public class StashNotifierTest
                 null,
                 true,
                 key,
+                null,
                 true,
                 false);
 
