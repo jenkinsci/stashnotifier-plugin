@@ -84,6 +84,7 @@ def notifyStash(String state) {
     step([$class: 'StashNotifier',
           commitSha1: "$commit",            // jenkins parameter that resolves to commit's hash
           credentialsId: '00000000-1111-2222-3333-123456789abc',
+          description: "description of the build",
           disableInprogressNotification: false,
           ignoreUnverifiedSSLPeer: true,
           includeBuildNumberInKey: false,

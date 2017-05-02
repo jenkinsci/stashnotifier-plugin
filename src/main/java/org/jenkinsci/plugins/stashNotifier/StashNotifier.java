@@ -117,6 +117,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	/** specify the commit from config */
 	private final String commitSha1;
 
+	/** specific description to include in the Stash notification */
+	private final String description;
+
 	/** if true, the build number is included in the Stash notification. */
 	private final boolean includeBuildNumberInKey;
 
@@ -144,6 +147,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			String credentialsId,
 			boolean ignoreUnverifiedSSLPeer,
 			String commitSha1,
+			String description,
 			boolean includeBuildNumberInKey,
 			String projectKey,
 			boolean prependParentProjectKey,
@@ -158,6 +162,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		this.ignoreUnverifiedSSLPeer
 				= ignoreUnverifiedSSLPeer;
 		this.commitSha1 = commitSha1;
+		this.description = description;
 		this.includeBuildNumberInKey = includeBuildNumberInKey;
 		this.projectKey = projectKey;
 		this.prependParentProjectKey = prependParentProjectKey;
@@ -962,7 +967,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			final Run<?, ?> run,
 			final StashBuildState state) {
 
-		if (run.getDescription() != null
+		if (description != null
+				&& description.trim().length() > 0) {
+			return description.trim();
+		} else if (run.getDescription() != null
 				&& run.getDescription().trim().length() > 0) {
 
 			return run.getDescription();
