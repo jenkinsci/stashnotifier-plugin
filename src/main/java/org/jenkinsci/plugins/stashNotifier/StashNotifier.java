@@ -62,6 +62,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
@@ -129,6 +130,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	/** whether to send INPROGRESS notification at the build start */
 	private final boolean disableInprogressNotification;
 
+	/** whether to use a lax redirect strategy in the HTTPClient */
+	private final boolean laxRedirectStrategy;
+
 	private JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
 
 // public members ----------------------------------------------------------
@@ -147,7 +151,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			boolean includeBuildNumberInKey,
 			String projectKey,
 			boolean prependParentProjectKey,
-			boolean disableInprogressNotification
+			boolean disableInprogressNotification,
+			boolean laxRedirectStrategy
 	) {
 
 
@@ -162,6 +167,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		this.projectKey = projectKey;
 		this.prependParentProjectKey = prependParentProjectKey;
 		this.disableInprogressNotification = disableInprogressNotification;
+		this.laxRedirectStrategy = laxRedirectStrategy;
 	}
 
 	public boolean isDisableInprogressNotification() {
@@ -496,6 +502,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 					new org.apache.http.auth.UsernamePasswordCredentials(proxyUser, proxyPass));
 			builder.setDefaultCredentialsProvider(cred)
 					.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
+
+			if (laxRedirectStrategy) {
+				builder.setRedirectStrategy(new LaxRedirectStrategy());
+			}
 		}
 	}
 
