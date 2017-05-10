@@ -123,6 +123,12 @@ public class StashNotifier extends Notifier {
 	/** whether to send INPROGRESS notification at the build start */
 	private final boolean disableInprogressNotification;
 
+	/** whether to notify ABORTED builds as failures */
+	private final boolean disableAbortAsFailures;
+
+	/** whether to consider UNSTABLE builds as failures or success */
+	private final boolean considerUnstableAsSuccess;
+
 	private JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
 
 // public members ----------------------------------------------------------
@@ -140,7 +146,9 @@ public class StashNotifier extends Notifier {
 			boolean includeBuildNumberInKey,
 			String projectKey,
 			boolean prependParentProjectKey,
-			boolean disableInprogressNotification
+			boolean disableInprogressNotification,
+			boolean disableAbortAsFailures,
+			boolean considerUnstableAsSuccess
 	) {
 
 
@@ -155,6 +163,8 @@ public class StashNotifier extends Notifier {
 		this.projectKey = projectKey;
 		this.prependParentProjectKey = prependParentProjectKey;
 		this.disableInprogressNotification = disableInprogressNotification;
+		this.disableAbortAsFailures = disableAbortAsFailures;
+		this.considerUnstableAsSuccess = considerUnstableAsSuccess;
 	}
 
 	public boolean isDisableInprogressNotification() {
@@ -199,15 +209,21 @@ public class StashNotifier extends Notifier {
 			AbstractBuild<?, ?> build,
 			Launcher launcher,
 			BuildListener listener) {
+		Result buildResult = build.getResult();
+		if (buildResult == null) {
+			return true;
+		}
 
-		if ((build.getResult() == null)
-				|| (!build.getResult().equals(Result.SUCCESS))) {
-			return processJenkinsEvent(
-					build, listener, StashBuildState.FAILED);
-		} else {
+		if (buildResult == Result.SUCCESS ||
+				(buildResult == Result.UNSTABLE && considerUnstableAsSuccess)) {
 			return processJenkinsEvent(
 					build, listener, StashBuildState.SUCCESSFUL);
+		} else if (buildResult == Result.ABORTED && disableAbortAsFailures) {
+			return true;
 		}
+
+		return processJenkinsEvent(
+				build, listener, StashBuildState.FAILED);
 	}
 
 	/**

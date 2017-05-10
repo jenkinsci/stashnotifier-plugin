@@ -67,6 +67,8 @@ public class StashNotifierTest
 				true,
 				null,
 				false,
+				false,
+				false,
 				false);
 	}
 
