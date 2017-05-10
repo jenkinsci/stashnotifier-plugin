@@ -60,6 +60,7 @@ import java.util.List;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -76,16 +77,26 @@ public class StashNotifierTest
 	private Hudson jenkins;
 
 	public StashNotifier buildStashNotifier(String stashBaseUrl) {
-		return new StashNotifier(
+		return buildStashNotifier(
 				stashBaseUrl,
-				"scot",
-				true,
-				null,
-				true,
-				"test-project",
-				true,
-				false);
+				false,
+                false);
 	}
+
+    public StashNotifier buildStashNotifier(String stashBaseUrl,
+                                            boolean disableInprogressNotification,
+                                            boolean considerUnstableAsSuccess) {
+        return new StashNotifier(
+                stashBaseUrl,
+                "scot",
+                true,
+                null,
+                true,
+                "test-project",
+                true,
+                disableInprogressNotification,
+                considerUnstableAsSuccess);
+    }
 
     StashNotifier sn;
     BuildListener buildListener;
@@ -229,6 +240,7 @@ public class StashNotifierTest
                 true,
                 null,
                 false,
+                false,
                 false));
 
         doReturn(new ArrayList<Credentials>()).when(sn).lookupCredentials(
@@ -306,6 +318,41 @@ public class StashNotifierTest
         assertThat(messageCaptor.getValue(), is(containsString("Notified Stash for commit with id")));
     }
 
+    @Test
+    public void test_perform_build_step_success_for_unstable_build() throws Exception {
+        //given
+        sn = buildStashNotifier("http://localhost", false, true);
+        ArrayList<String> hashes = new ArrayList<String>();
+        hashes.add(sha1);
+        PrintStream logger = mock(PrintStream.class);
+
+        //when
+        test_perform_buildstep(Result.UNSTABLE, logger, new NotificationResult(true, ""), hashes);
+
+        //then
+        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger, atLeastOnce()).println(messageCaptor.capture());
+        List<String> values = messageCaptor.getAllValues();
+        assertThat(values.get(0), is(containsString("UNSTABLE reported to stash as SUCCESSFUL")));
+        assertThat(values.get(1), is(containsString("Notified Stash for commit with id")));
+    }
+
+    @Test
+    public void test_perform_build_step_aborted_without_notifying_stash() throws Exception {
+        //given
+        sn = buildStashNotifier("http://localhost", true, true);
+        ArrayList<String> hashes = new ArrayList<String>();
+        hashes.add(sha1);
+        PrintStream logger = mock(PrintStream.class);
+
+        //when
+        test_perform_buildstep(Result.ABORTED, logger, new NotificationResult(true, ""), hashes);
+
+        //then
+        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+        verify(logger).println(messageCaptor.capture());
+        assertThat(messageCaptor.getValue(), containsString("ABORTED"));
+    }
 
     @Test
     public void test_perform_build_step_failure() throws Exception {
@@ -447,6 +494,7 @@ public class StashNotifierTest
                 true,
                 null,
                 false,
+                false,
                 false);
 
         Collection<String> hashes = sn.lookupCommitSha1s(build, buildListener);
@@ -469,6 +517,7 @@ public class StashNotifierTest
                 sha1,
                 true,
                 null,
+                false,
                 false,
                 false);
 
@@ -559,6 +608,7 @@ public class StashNotifierTest
                 true,
                 key,
                 true,
+                false,
                 false);
 
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -585,6 +635,7 @@ public class StashNotifierTest
                 true,
                 key,
                 true,
+                false,
                 false);
 
         String buildKey = sn.getBuildKey(run, buildListener);
@@ -608,6 +659,7 @@ public class StashNotifierTest
                 true,
                 key,
                 true,
+                false,
                 false);
 
         //when
@@ -636,6 +688,7 @@ public class StashNotifierTest
                 true,
                 key,
                 true,
+                false,
                 false);
 
         //when

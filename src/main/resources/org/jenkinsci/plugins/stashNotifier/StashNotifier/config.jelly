@@ -31,5 +31,8 @@
   <f:entry title="Disable INPROGRESS notification" field="disableInprogressNotification">
     <f:checkbox/>
   </f:entry>
+  <f:entry title="Consider UNSTABLE builds as SUCCESS notification" field="considerUnstableAsSuccess">
+    <f:checkbox/>
+  </f:entry>
  </f:advanced>
 </j:jelly>
