@@ -490,6 +490,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 		String proxyUser = proxyConfig.getUserName();
 		if (proxyUser != null) {
+			PrintStream logger = listener.getLogger();
+			logger.println("Proxy found: setting proxy now");
 			String proxyPass = proxyConfig.getPassword();
 			BasicCredentialsProvider cred = new BasicCredentialsProvider();
 			cred.setCredentials(new AuthScope(proxyHost),
