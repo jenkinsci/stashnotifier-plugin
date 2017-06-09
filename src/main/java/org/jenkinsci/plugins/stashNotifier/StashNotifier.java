@@ -409,9 +409,13 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
 			try {
-				SSLConnectionSocketFactory sslConnSocketFactory
-						= new SSLConnectionSocketFactory(buildSslContext(ignoreUnverifiedSSL,certificateCredentials),
-                        ignoreUnverifiedSSL ? SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER : null);
+                final SSLContext sslContext = buildSslContext(ignoreUnverifiedSSL, certificateCredentials);
+                SSLConnectionSocketFactory sslConnSocketFactory = new SSLConnectionSocketFactory(
+                        sslContext,
+                        new String[] { "TLSv1", "TLSv1.1", "TLSv1.2" },
+                        null,
+                        ignoreUnverifiedSSL ? SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER : null
+                );
 				builder.setSSLSocketFactory(sslConnSocketFactory);
 
 				Registry<ConnectionSocketFactory> registry
