@@ -1,1 +1,1 @@
-buildPipeline()
+buildPlugin()
