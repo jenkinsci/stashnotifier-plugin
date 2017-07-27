@@ -62,6 +62,7 @@ public class DescriptorImplTest {
         json.put("includeBuildNumberInKey", "true");
         json.put("prependParentProjectKey", "true");
         json.put("disableInprogressNotification", "true");
+        json.put("considerUnstableAsSuccess", "true");
 
         desc = spy(new StashNotifier.DescriptorImpl(false));
     }
@@ -80,6 +81,7 @@ public class DescriptorImplTest {
         assertThat(desc.getProjectKey(), is("someProjectKey"));
         assertThat(desc.getDisplayName(), is("Notify Stash Instance"));
         assertThat(desc.isDisableInprogressNotification(), is(true));
+        assertThat(desc.isConsiderUnstableAsSuccess(), is(true));
         assertThat(desc.isIgnoreUnverifiedSsl(), is(true));
         assertThat(desc.isIncludeBuildNumberInKey(), is(true));
         assertThat(desc.isPrependParentProjectKey(), is(true));
