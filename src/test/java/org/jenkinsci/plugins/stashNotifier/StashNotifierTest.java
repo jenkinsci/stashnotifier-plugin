@@ -67,7 +67,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({Secret.class, Jenkins.class, HttpClientBuilder.class, TokenMacro.class, CredentialsMatchers.class, com.cloudbees.plugins.credentials.CredentialsProvider.class})
+@PrepareForTest({Secret.class, Jenkins.class, HttpClientBuilder.class, TokenMacro.class, CredentialsMatchers.class, com.cloudbees.plugins.credentials.CredentialsProvider.class, AbstractProject.class})
 @PowerMockIgnore("javax.net.ssl.*")
 public class StashNotifierTest
 {
@@ -117,7 +117,11 @@ public class StashNotifierTest
 		jenkins = mock(Hudson.class);
 		build = mock(AbstractBuild.class);
 		run = mock(Run.class);
-		AbstractProject project = mock(AbstractProject.class);
+		AbstractProject project = PowerMockito.mock(AbstractProject.class);
+        File file = mock(File.class);
+        when(file.getPath()).thenReturn("/tmp/fake/path");
+        FilePath filePath = new FilePath(file);
+        PowerMockito.when(project.getSomeWorkspace()).thenReturn(filePath);
 		workspace = project.getSomeWorkspace();
 		EnvVars environment = mock(EnvVars.class);
 		PrintStream logger = System.out;
