@@ -173,6 +173,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		return disableInprogressNotification;
 	}
 
+	public boolean isConsiderUnstableAsSuccess() {
+		return considerUnstableAsSuccess;
+	}
+
 	public String getCredentialsId() {
 		return credentialsId;
 	}
@@ -539,6 +543,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		private String projectKey;
 		private boolean prependParentProjectKey;
 		private boolean disableInprogressNotification;
+		private boolean considerUnstableAsSuccess;
 
         public DescriptorImpl() {
             this(true);
@@ -586,6 +591,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 		public boolean isDisableInprogressNotification() {
 			return disableInprogressNotification;
+		}
+
+		public boolean isConsiderUnstableAsSuccess() {
+			return considerUnstableAsSuccess;
 		}
 
 		public String getCredentialsId() {
@@ -678,6 +687,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             prependParentProjectKey = formData.getBoolean("prependParentProjectKey");
 
 			disableInprogressNotification = formData.getBoolean("disableInprogressNotification");
+
+			considerUnstableAsSuccess = formData.getBoolean("considerUnstableAsSuccess");
 
 			save();
 			return super.configure(req,formData);
