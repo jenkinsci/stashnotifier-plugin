@@ -28,5 +28,10 @@
                help="${rootURL}/plugin/stashNotifier/help-globalConfig-disableInprogressNotification.html">
           <f:checkbox default="true"/>
       </f:entry>
+      <f:entry title="Consider UNSTABLE builds as SUCCESS notification"
+               field="considerUnstableAsSuccess"
+               help="${rootURL}/plugin/stashNotifier/help-globalConfig-considerUnstableAsSuccess.html">
+          <f:checkbox default="false"/>
+      </f:entry>
   </f:section>
 </j:jelly>

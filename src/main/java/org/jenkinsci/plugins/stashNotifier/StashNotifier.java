@@ -48,6 +48,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.auth.*;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.HttpClientConnectionManager;
@@ -64,6 +65,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
+import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
 import org.jenkinsci.plugins.tokenmacro.DataBoundTokenMacro;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
@@ -128,6 +130,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	/** whether to send INPROGRESS notification at the build start */
 	private final boolean disableInprogressNotification;
 
+	/** whether to consider UNSTABLE builds as failures or success */
+	private final boolean considerUnstableAsSuccess;
+
 	/** The message to post to Stash for unsucessful builds */
 	private final String failedMessage;
 
@@ -141,6 +146,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 // public members ----------------------------------------------------------
 
+	@Override
 	public BuildStepMonitor getRequiredMonitorService() {
 		return BuildStepMonitor.NONE;
 	}
@@ -155,9 +161,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			String projectKey,
 			boolean prependParentProjectKey,
 			boolean disableInprogressNotification,
-            String failedMessage,
-            String successfulMessage,
-            String inProgressMessage
+			boolean considerUnstableAsSuccess,
+      String failedMessage,
+      String successfulMessage,
+      String inProgressMessage
 	) {
 
 
@@ -172,6 +179,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		this.projectKey = projectKey;
 		this.prependParentProjectKey = prependParentProjectKey;
 		this.disableInprogressNotification = disableInprogressNotification;
+		this.considerUnstableAsSuccess = considerUnstableAsSuccess;
 		this.failedMessage = failedMessage;
 		this.successfulMessage = successfulMessage;
 		this.inProgressMessage = inProgressMessage;
@@ -251,14 +259,20 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 		PrintStream logger = listener.getLogger();
 
-		Result result = run.getResult();
-		if (result == null && disableInProgress) {
+		Result buildResult = run.getResult();
+		if (buildResult == null && disableInProgress) {
 			return true;
-		} else if (result == null) {
+		} else if (buildResult == null) {
 			state = StashBuildState.INPROGRESS;
-		} else if (result.equals(Result.SUCCESS)) {
+		} else if (buildResult == Result.SUCCESS) {
 			state = StashBuildState.SUCCESSFUL;
-		} else if (result.equals(Result.NOT_BUILT)) {
+		} else if (buildResult == Result.UNSTABLE && considerUnstableAsSuccess) {
+			logger.println("UNSTABLE reported to stash as SUCCESSFUL");
+			state = StashBuildState.SUCCESSFUL;
+		} else if (buildResult == Result.ABORTED && disableInProgress) {
+			logger.println("ABORTED");
+			return true;
+		} else if (buildResult.equals(Result.NOT_BUILT)) {
 			logger.println("NOT BUILT");
 			return true;
 		} else {
@@ -274,7 +288,13 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	 * @return Root URL contained in the global config
 	 */
 	private String getRootUrl() {
-		return (Jenkins.getInstance().getRootUrl() != null) ? Jenkins.getInstance().getRootUrl() : globalConfig.getUrl();
+		Jenkins instance = Jenkins.getInstance();
+
+		if (null == instance) {
+			return globalConfig.getUrl();
+		}
+
+		return (instance.getRootUrl() != null) ? instance.getRootUrl() : globalConfig.getUrl();
 	}
 
 	/**
@@ -397,26 +417,23 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	 *
 	 * @param logger    the logger to log messages to
 	 * @param run
+         * @param stashServer
 	 * @return			the HttpClient
 	 */
-	protected HttpClient getHttpClient(PrintStream logger, Run<?, ?> run) throws Exception {
+	protected HttpClient getHttpClient(PrintStream logger, Run<?, ?> run, String stashServer) throws Exception {
         boolean ignoreUnverifiedSSL = ignoreUnverifiedSSLPeer;
-        String stashServer = stashServerBaseUrl;
+        
         DescriptorImpl descriptor = getDescriptor();
 
         CertificateCredentials certificateCredentials = getCredentials(CertificateCredentials.class, run.getParent());
 
-        if ("".equals(stashServer) || stashServer == null) {
-            stashServer = descriptor.getStashRootUrl();
-        }
-        if (!ignoreUnverifiedSSL) {
-            ignoreUnverifiedSSL = descriptor.isIgnoreUnverifiedSsl();
-        }
-
         URL url = new URL(stashServer);
         HttpClientBuilder builder = HttpClientBuilder.create();
-        if (url.getProtocol().equals("https")
-                && (ignoreUnverifiedSSL || certificateCredentials instanceof CertificateCredentials)) {
+        RequestConfig.Builder requestBuilder = RequestConfig.custom();
+        requestBuilder = requestBuilder.setSocketTimeout(60000);
+        builder.setDefaultRequestConfig(requestBuilder.build());
+
+        if (url.getProtocol().equals("https") && (ignoreUnverifiedSSL || descriptor.isIgnoreUnverifiedSsl())) {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
 			try {
@@ -473,6 +490,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		}
 		if (ignoreUnverifiedSSL) {
 			TrustStrategy easyStrategy = new TrustStrategy() {
+				@Override
 				public boolean isTrusted(X509Certificate[] chain, String authType)
 						throws CertificateException {
 					return true;
@@ -583,7 +601,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
 
         public String getStashRootUrl() {
-        	if ((stashRootUrl == null) || (stashRootUrl.trim().equals(""))) {
+        	if ((stashRootUrl == null) || (stashRootUrl.trim().isEmpty())) {
         		return null;
         	} else {
 	            return stashRootUrl;
@@ -631,13 +649,13 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 			// calculate effective url from global and local config
 			String url = value;
-			if ((url != null) && (!url.trim().equals(""))) {
+			if ((url != null) && (!url.trim().isEmpty())) {
 				url = url.trim();
 			} else {
 				url = stashRootUrl != null ? stashRootUrl.trim() : null;
 			}
 
-			if ((url == null) || url.equals("")) {
+			if ((url == null) || url.isEmpty()) {
 				return FormValidation.error(
 						"Please specify a valid URL here or in the global "
 						+ "configuration");
@@ -654,10 +672,12 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		}
 
 		@SuppressWarnings("rawtypes")
+		@Override
 		public boolean isApplicable(Class<? extends AbstractProject> aClass) {
 			return true;
 		}
 
+		@Override
 		public String getDisplayName() {
 			return "Notify Stash Instance";
 		}
@@ -726,9 +746,13 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			final StashBuildState state) throws Exception {
 		HttpEntity stashBuildNotificationEntity
 			= newStashBuildNotificationEntity(run, state, listener);
+                
+                String stashURL= expandStashURL(run, listener);
+                
+                logger.println("Notifying Stash at \""+stashURL+"\"");
 
-		HttpPost req = createRequest(stashBuildNotificationEntity, run.getParent(), commitSha1);
-		HttpClient client = getHttpClient(logger, run);
+		HttpPost req = createRequest(stashBuildNotificationEntity, run.getParent(), commitSha1, stashURL);
+		HttpClient client = getHttpClient(logger, run, stashURL);
 		try {
 			HttpResponse res = client.execute(req);
 			if (res.getStatusLine().getStatusCode() != 204) {
@@ -747,7 +771,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      *
      * @param clazz The type of {@link com.cloudbees.plugins.credentials.Credentials} to return.
      * @param project The hierarchical project context within which the credentials are searched for.
-     * @return The first credentials of the given type that are found withing the project hierarchy, or null otherwise.
+     * @return The first credentials of the given type that are found within the project hierarchy, or null otherwise.
      */
     private <T extends Credentials> T getCredentials(final Class<T> clazz, final Item project) {
 
@@ -816,28 +840,24 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	 * @param stashBuildNotificationEntity	a entity containing the parameters
 	 * 										for Stash
 	 * @param commitSha1	the SHA1 of the commit that was built
+     * @param url
 	 * @return				the HTTP POST request to the Stash build API
 	 */
     protected HttpPost createRequest(
-			final HttpEntity stashBuildNotificationEntity,
+            final HttpEntity stashBuildNotificationEntity,
             final Item project,
-			final String commitSha1) throws AuthenticationException {
+            final String commitSha1,
+            final String url) throws AuthenticationException {
 
-		String url = stashServerBaseUrl;
-        DescriptorImpl descriptor = getDescriptor();
+        HttpPost req = new HttpPost(
+                url
+                + "/rest/build-status/1.0/commits/"
+                + commitSha1);
 
-        if ("".equals(url) || url == null)
-            url = descriptor.getStashRootUrl();
-
-		HttpPost req = new HttpPost(
-				url
-				+ "/rest/build-status/1.0/commits/"
-				+ commitSha1);
-
-		// If we have a credential defined then we need to determine if it
-		// is a basic auth
-        UsernamePasswordCredentials usernamePasswordCredentials =
-                getCredentials(UsernamePasswordCredentials.class, project);
+        // If we have a credential defined then we need to determine if it
+        // is a basic auth
+        UsernamePasswordCredentials usernamePasswordCredentials
+                = getCredentials(UsernamePasswordCredentials.class, project);
 
         if (usernamePasswordCredentials != null) {
             req.addHeader(new BasicScheme().authenticate(
@@ -848,11 +868,33 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                     null));
         }
 
-		req.addHeader("Content-type", "application/json");
-		req.setEntity(stashBuildNotificationEntity);
+        req.addHeader("Content-type", "application/json");
+        req.setEntity(stashBuildNotificationEntity);
 
-		return req;
-	}
+        return req;
+    }
+
+    private String expandStashURL(Run<?, ?> run, final TaskListener listener) {
+        String url = stashServerBaseUrl;
+        DescriptorImpl descriptor = getDescriptor();
+        if (url == null || url.isEmpty()) {
+            url = descriptor.getStashRootUrl();
+        }
+
+        try {
+            if (!(run instanceof AbstractBuild<?, ?>)) {
+                url = TokenMacro.expandAll(run, new FilePath(run.getRootDir()), listener, url);
+            } else {
+                url = TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, url);
+            }
+
+        } catch (IOException | InterruptedException | MacroEvaluationException ex) {
+            PrintStream logger = listener.getLogger();
+            logger.println("Unable to expand Stash Server URL");
+            ex.printStackTrace(logger);
+        }
+        return url;
+    }
 
 	/**
 	 * Returns the HTTP POST entity body with the JSON representation of the
@@ -880,8 +922,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 replaceAll("\\\\u00BB", "\\/");
         json.put("name", abbreviate(fullName, MAX_FIELD_LENGTH));
 
-		json.put("description", abbreviate(expandMessage(run, listener, state), MAX_FIELD_LENGTH));
-		json.put("url", abbreviate(getRootUrl().concat(run.getUrl()), MAX_URL_FIELD_LENGTH));
+		    json.put("description", abbreviate(expandMessage(run, listener, state), MAX_FIELD_LENGTH));
+		    json.put("url", abbreviate(DisplayURLProvider.get().getRunURL(run), MAX_URL_FIELD_LENGTH));
 
         return new StringEntity(json.toString(), "UTF-8");
 	}
@@ -939,12 +981,12 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		String overriddenKey = (projectKey != null && projectKey.trim().length() > 0) ? projectKey : getDescriptor().getProjectKey();
 		if (overriddenKey != null && overriddenKey.trim().length() > 0) {
 			PrintStream logger = listener.getLogger();
-			if (!(run instanceof AbstractBuild<?, ?>)) {
-				logger.println("Unable to expand build key macro with run of type " + run.getClass().getName());
-				key.append(getDefaultBuildKey(run));
-			} else {
 				try {
-					key.append(TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, projectKey));
+					if (!(run instanceof AbstractBuild<?, ?>)) {
+						key.append(TokenMacro.expandAll(run, new FilePath(run.getRootDir()), listener, projectKey));
+					} else {
+						key.append(TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, projectKey));
+					}
 				} catch (IOException ioe) {
 					logger.println("Cannot expand build key from parameter. Processing with default build key");
 					ioe.printStackTrace(logger);
@@ -957,7 +999,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 					logger.println("Cannot expand build key from parameter. Processing with default build key");
 					mee.printStackTrace(logger);
 					key.append(getDefaultBuildKey(run));
-				}
 			}
 		} else {
 			key.append(getDefaultBuildKey(run));
