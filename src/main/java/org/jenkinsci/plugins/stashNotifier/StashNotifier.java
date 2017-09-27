@@ -66,6 +66,7 @@ import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
 import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
+import org.jenkinsci.plugins.tokenmacro.DataBoundTokenMacro;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.AncestorInPath;
@@ -132,6 +133,15 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	/** whether to consider UNSTABLE builds as failures or success */
 	private final boolean considerUnstableAsSuccess;
 
+	/** The message to post to Stash for unsucessful builds */
+	private final String failedMessage;
+
+	/** The message to post to Stash for sucessful builds */
+	private final String successfulMessage;
+
+	/** The message to post to Stash during builds */
+	private final String inProgressMessage;
+
 	private JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
 
 // public members ----------------------------------------------------------
@@ -151,7 +161,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			String projectKey,
 			boolean prependParentProjectKey,
 			boolean disableInprogressNotification,
-			boolean considerUnstableAsSuccess
+			boolean considerUnstableAsSuccess,
+      String failedMessage,
+      String successfulMessage,
+      String inProgressMessage
 	) {
 
 
@@ -167,6 +180,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		this.prependParentProjectKey = prependParentProjectKey;
 		this.disableInprogressNotification = disableInprogressNotification;
 		this.considerUnstableAsSuccess = considerUnstableAsSuccess;
+		this.failedMessage = failedMessage;
+		this.successfulMessage = successfulMessage;
+		this.inProgressMessage = inProgressMessage;
 	}
 
 	public boolean isDisableInprogressNotification() {
@@ -191,6 +207,18 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
 	public String getCommitSha1() {
 		return commitSha1;
+	}
+
+	public String getFailedMessage() {
+		return failedMessage;
+	}
+
+	public String getInProgressMessage() {
+		return inProgressMessage;
+	}
+
+	public String getSuccessfulMessage() {
+		return successfulMessage;
 	}
 
 	public boolean getIncludeBuildNumberInKey() {
@@ -695,6 +723,24 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		}
 	}
 
+	@Extension
+	public static class BuildResultTokenMacro extends DataBoundTokenMacro {
+
+		@Override
+		public String evaluate(AbstractBuild<?, ?> context, TaskListener listener, String macroName) throws MacroEvaluationException, IOException, InterruptedException {
+			Result result = context.getResult();
+			if (result == null) {
+				return StashBuildState.INPROGRESS.toString();
+			}
+			return result.toString();
+		}
+
+		@Override
+		public boolean acceptsMacroName(String macroName) {
+			return macroName.equals("BUILD_RESULT");
+		}
+	}
+
 	// non-public members ------------------------------------------------------
 
 	/**
@@ -891,8 +937,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 replaceAll("\\\\u00BB", "\\/");
         json.put("name", abbreviate(fullName, MAX_FIELD_LENGTH));
 
-		json.put("description", abbreviate(getBuildDescription(run, state), MAX_FIELD_LENGTH));
-		json.put("url", abbreviate(DisplayURLProvider.get().getRunURL(run), MAX_URL_FIELD_LENGTH));
+		    json.put("description", abbreviate(expandMessage(run, listener, state), MAX_FIELD_LENGTH));
+		    json.put("url", abbreviate(DisplayURLProvider.get().getRunURL(run), MAX_URL_FIELD_LENGTH));
 
         return new StringEntity(json.toString(), "UTF-8");
 	}
@@ -974,6 +1020,56 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		}
 
 		return StringEscapeUtils.escapeJavaScript(key.toString());
+	}
+
+	/**
+	 * Returns the description of the run used for the Stash notification.
+	 * Uses the run description provided by the Jenkins job, if available.
+	 *
+	 * @param run		the run to be described
+	 * @param listener	the Jenkins build listener
+	 * @param state		the state of the run
+	 * @return			the message to post in Stash
+	 */
+	protected String expandMessage(
+			final Run<?, ?> run,
+			TaskListener listener,
+			final StashBuildState state) {
+
+        String message = null;
+        String messageType = null;
+        switch (state) {
+            case INPROGRESS:
+                message = inProgressMessage;
+                messageType = "in-progress";
+                break;
+            case SUCCESSFUL:
+                message = successfulMessage;
+                messageType = "successful";
+                break;
+            case FAILED:
+                message = failedMessage;
+                messageType = "failed";
+                break;
+        }
+            
+        if (message != null && message.trim().length() > 0) {
+            PrintStream logger = listener.getLogger();
+            try {
+                return TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, message);
+            } catch (IOException ioe) {
+                logger.println("Cannot expand " + messageType + " message from parameter. Processing with default message");
+                ioe.printStackTrace(logger);
+            } catch (InterruptedException ie) {
+                logger.println("Cannot expand " + messageType + " message from parameter. Processing with default message");
+                ie.printStackTrace(logger);
+            } catch (MacroEvaluationException mee) {
+                logger.println("Cannot expand " + messageType + " message from parameter. Processing with default message");
+                mee.printStackTrace(logger);
+            }
+        }
+        
+        return getBuildDescription(run, state);
 	}
 
 	/**

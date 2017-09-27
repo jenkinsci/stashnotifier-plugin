@@ -80,12 +80,18 @@ public class StashNotifierTest
 		return buildStashNotifier(
 				stashBaseUrl,
 				false,
-                false);
+				false,
+				null,
+				null,
+				null);
 	}
 
     public StashNotifier buildStashNotifier(String stashBaseUrl,
                                             boolean disableInprogressNotification,
-                                            boolean considerUnstableAsSuccess) {
+                                            boolean considerUnstableAsSuccess,
+                                            String failedMessage,
+                                            String successfulMessage,
+                                            String inProgressMessage) {
         return new StashNotifier(
                 stashBaseUrl,
                 "scot",
@@ -95,7 +101,10 @@ public class StashNotifierTest
                 "test-project",
                 true,
                 disableInprogressNotification,
-                considerUnstableAsSuccess);
+                considerUnstableAsSuccess,
+                failedMessage,
+                successfulMessage,
+                inProgressMessage);
     }
 
     StashNotifier sn;
@@ -245,7 +254,10 @@ public class StashNotifierTest
                 null,
                 false,
                 false,
-                false));
+                false,
+                null,
+                null,
+                null));
 
         doReturn(new ArrayList<Credentials>()).when(sn).lookupCredentials(
                 Mockito.<Class>anyObject(),
@@ -499,7 +511,10 @@ public class StashNotifierTest
                 null,
                 false,
                 false,
-                false);
+                false,
+                null,
+                null,
+                null);
 
         Collection<String> hashes = sn.lookupCommitSha1s(build, buildListener);
 
@@ -523,7 +538,10 @@ public class StashNotifierTest
                 null,
                 false,
                 false,
-                false);
+                false,
+                null,
+                null,
+                null);
 
         //when
         Collection<String> hashes = sn.lookupCommitSha1s(build, buildListener);
@@ -546,6 +564,99 @@ public class StashNotifierTest
     @Test
     public void test_lookupCommitSha1s_MacroEvaluationException() throws InterruptedException, MacroEvaluationException, IOException {
         lookupCommitSha1s_Exception(new MacroEvaluationException("BOOM"));
+    }
+
+    public String expandMessage(StashBuildState state, String message) throws InterruptedException, MacroEvaluationException, IOException {
+        PrintStream logger = mock(PrintStream.class);
+        when(buildListener.getLogger()).thenReturn(logger);
+        PowerMockito.mockStatic(TokenMacro.class);
+        PowerMockito.when(TokenMacro.expandAll(build, buildListener, message)).thenReturn(message);
+
+        String  failedMessage = null,
+                successfulMessage = null,
+                inProgressMessage = null;
+            
+        switch(state) {
+            case SUCCESSFUL:
+                successfulMessage = message;
+                break;
+            case FAILED:
+                failedMessage = message;
+                break;
+            case INPROGRESS:
+                inProgressMessage = message;
+                break;
+        }
+        
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                true,
+                null,
+                true,
+                false,
+                failedMessage,
+                successfulMessage,
+                inProgressMessage);
+
+        return sn.expandMessage(build, buildListener, state);
+    }
+    
+    public void expandMessage_Exception(Exception e) throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+        AbstractBuild build = mock(AbstractBuild.class);
+        String message = "some message";
+        String description = "some description";
+        PrintStream logger = mock(PrintStream.class);
+        when(buildListener.getLogger()).thenReturn(logger);
+        PowerMockito.mockStatic(TokenMacro.class);
+        PowerMockito.when(TokenMacro.expandAll(build, buildListener, message)).thenThrow(e);
+        when(build.getDescription()).thenReturn(description);
+
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                true,
+                null,
+                true,
+                false,
+                null,
+                message,
+                null);
+
+        //when
+        String buildMessage = sn.expandMessage(build, buildListener, StashBuildState.SUCCESSFUL);
+
+        //then
+        assertThat(buildMessage, is(description));
+        verify(logger).println("Cannot expand successful message from parameter. Processing with default message");
+    }
+
+    @Test
+    public void test_getOverriddenMessages() throws InterruptedException, MacroEvaluationException, IOException {
+        String message = "Overridden message";
+        assertThat(expandMessage(StashBuildState.FAILED, message), is(message));
+        assertThat(expandMessage(StashBuildState.SUCCESSFUL, message), is(message));
+        assertThat(expandMessage(StashBuildState.INPROGRESS, message), is(message));
+    }
+
+    @Test
+    public void test_expandMessage_IOException() throws InterruptedException, MacroEvaluationException, IOException {
+        expandMessage_Exception(new IOException("BOOM"));
+    }
+
+    @Test
+    public void test_expandMessage_InterruptedException() throws InterruptedException, MacroEvaluationException, IOException {
+        expandMessage_Exception(new InterruptedException("BOOM"));
+    }
+
+    @Test
+    public void test_expandMessage_MacroEvaluationException() throws InterruptedException, MacroEvaluationException, IOException {
+        expandMessage_Exception(new MacroEvaluationException("BOOM"));
     }
 
     @Test
@@ -613,7 +724,10 @@ public class StashNotifierTest
                 key,
                 true,
                 false,
-                false);
+                false,
+                null,
+                null,
+                null);
 
         String buildKey = sn.getBuildKey(build, buildListener);
         assertThat(buildKey, is(key));
@@ -664,7 +778,10 @@ public class StashNotifierTest
                 key,
                 true,
                 false,
-                false);
+                false,
+                null,
+                null,
+                null);
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
