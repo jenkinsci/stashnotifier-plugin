@@ -95,6 +95,30 @@ def notifyStash(String state) {
 }
 ```
 
+In [Declarative Pipelines](https://jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline), where Jenkins sets `currentBuild.result = null` for `SUCCESS` builds, the current value can be modified via a `script` step, e.g.:
+
+```groovy
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            steps {
+                echo 'Hello World'
+                // currentBuild.result == null here
+            }
+        }
+    }
+    post { 
+        always { 
+            script {
+                currentBuild.result = currentBuild.result ?: 'SUCCESS'
+                step([$class: 'StashNotifier'])
+            }
+        }
+    }
+}
+```
+
 ### Note on credentials
 
 Currently Stash Build Notifier Plugin accepts only raw plaintext credentials as it work over HTTP REST API of stash
