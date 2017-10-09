@@ -22,7 +22,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <artifactId>stashNotifier</artifactId>
-    <version>1.11.7-SNAPSHOT</version>
+    <version>1.12.0-SNAPSHOT</version>
     <name>Stash Notifier</name>
     <description>
         Jenkins plugin to notify Atlassian Stash (Bitbucket) git repository servers of
