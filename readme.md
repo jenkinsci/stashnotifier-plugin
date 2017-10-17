@@ -123,7 +123,7 @@ pipeline {
 
 ### Note on credentials
 
-Currently Stash Build Notifier Plugin accepts only raw plaintext credentials as it work over HTTP REST API of stash
+Currently Stash Build Notifier Plugin accepts only raw plaintext credentials as it works over the HTTP REST API of stash.
 
 
 Maintainers
