@@ -47,6 +47,8 @@ current build manually in the Pipeline script.
 
 ```groovy
 node {
+    checkout scm                            // Necessary so we know the current commit
+
     step([$class: 'StashNotifier'])         // Notifies the Stash Instance of an INPROGRESS build
 
     try {
