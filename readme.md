@@ -49,7 +49,7 @@ current build manually in the Pipeline script.
 node {
     checkout scm                            // Necessary so we know the current commit
 
-    notifyStash()                           // Notifies the Stash Instance of an INPROGRESS build
+    notifyBitbucket()                       // Notifies the Stash Instance of an INPROGRESS build
 
     try {
         // Do stuff
@@ -59,30 +59,30 @@ node {
         currentBuild.result = 'FAILED'      // Set result of currentBuild !Important!
     }
 
-    notifyStash()                           // Notifies the Stash Instance of the build result
+    notifyBitbucket()                       // Notifies the Stash Instance of the build result
 }
 ```
 
 In situations where an advanced setup is required the following can be used:
 ```groovy
 node {
-    this.notifyStash('INPROGRESS')         // Notifies the Stash Instance of an INPROGRESS build
+    this.notifyBitbucket('INPROGRESS')     // Notifies the Stash Instance of an INPROGRESS build
     
     try {
         // Do stuff
     
-        this.notifyStash('SUCCESS')
+        this.notifyBitbucket('SUCCESS')
     } catch(err) {
-        this.notifyStash('FAILED')
+        this.notifyBitbucket('FAILED')
     }
 }
 
-def notifyStash(String state) {
+def notifyBitbucket(String state) {
 
     if('SUCCESS' == state || 'FAILED' == state) {
         currentBuild.result = state         // Set result of currentBuild !Important!
     }
-    notifyStash commitSha1: "commit", 
+    notifyBitbucket commitSha1: "commit", 
                 credentialsId: '00000000-1111-2222-3333-123456789abc', 
                 disableInprogressNotification: false, 
                 considerUnstableAsSuccess: true, 
@@ -112,7 +112,7 @@ pipeline {
         always { 
             script {
                 currentBuild.result = currentBuild.result ?: 'SUCCESS'
-                notifyStash()
+                notifyBitbucket()
             }
         }
     }
