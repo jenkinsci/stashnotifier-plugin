@@ -49,7 +49,7 @@ current build manually in the Pipeline script.
 node {
     checkout scm                            // Necessary so we know the current commit
 
-    step([$class: 'StashNotifier'])         // Notifies the Stash Instance of an INPROGRESS build
+    notifyStash()                           // Notifies the Stash Instance of an INPROGRESS build
 
     try {
         // Do stuff
@@ -59,7 +59,7 @@ node {
         currentBuild.result = 'FAILED'      // Set result of currentBuild !Important!
     }
 
-    step([$class: 'StashNotifier'])         // Notifies the Stash Instance of the build result
+    notifyStash()                           // Notifies the Stash Instance of the build result
 }
 ```
 
@@ -82,17 +82,15 @@ def notifyStash(String state) {
     if('SUCCESS' == state || 'FAILED' == state) {
         currentBuild.result = state         // Set result of currentBuild !Important!
     }
-
-    step([$class: 'StashNotifier',
-          commitSha1: "$commit",            // jenkins parameter that resolves to commit's hash
-          credentialsId: '00000000-1111-2222-3333-123456789abc',
-          disableInprogressNotification: false,
-          considerUnstableAsSuccess: true,
-          ignoreUnverifiedSSLPeer: true,
-          includeBuildNumberInKey: false,
-          prependParentProjectKey: false,
-          projectKey: '',
-          stashServerBaseUrl: 'https://stash.company.com'])
+    notifyStash commitSha1: "commit", 
+                credentialsId: '00000000-1111-2222-3333-123456789abc', 
+                disableInprogressNotification: false, 
+                considerUnstableAsSuccess: true, 
+                ignoreUnverifiedSSLPeer: true, 
+                includeBuildNumberInKey: false, 
+                prependParentProjectKey: false, 
+                projectKey: '', 
+                stashServerBaseUrl: 'https://stash.company.com'
 
 }
 ```
@@ -114,7 +112,7 @@ pipeline {
         always { 
             script {
                 currentBuild.result = currentBuild.result ?: 'SUCCESS'
-                step([$class: 'StashNotifier'])
+                notifyStash()
             }
         }
     }
