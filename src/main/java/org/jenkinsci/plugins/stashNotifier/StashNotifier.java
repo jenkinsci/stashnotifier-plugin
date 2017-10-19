@@ -65,6 +65,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
+import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
@@ -524,6 +525,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		return (DescriptorImpl) super.getDescriptor();
 	}
 
+	@Symbol("notifyStash")
 	@Extension
 	public static final class DescriptorImpl
 		extends BuildStepDescriptor<Publisher> {
