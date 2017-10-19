@@ -525,7 +525,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		return (DescriptorImpl) super.getDescriptor();
 	}
 
-	@Symbol("notifyStash")
+	@Symbol({"notifyBitbucket", "notifyStash"})
 	@Extension
 	public static final class DescriptorImpl
 		extends BuildStepDescriptor<Publisher> {
