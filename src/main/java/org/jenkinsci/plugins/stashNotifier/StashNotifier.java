@@ -208,7 +208,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     @Override
 	public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener) {
-		    return disableInprogressNotification || processJenkinsEvent(build, listener, StashBuildState.INPROGRESS);
+		    return disableInprogressNotification || processJenkinsEvent(build, null, listener, StashBuildState.INPROGRESS);
 	}
 
 	@Override
@@ -216,7 +216,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			AbstractBuild<?, ?> build,
 			Launcher launcher,
 			BuildListener listener) {
-		return perform(build, listener, disableInprogressNotification);
+		return perform(build, null, listener, disableInprogressNotification);
 	}
 
 	@Override
@@ -224,12 +224,13 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 						@Nonnull FilePath workspace,
 						@Nonnull Launcher launcher,
 						@Nonnull TaskListener listener) throws InterruptedException, IOException {
-		if (!perform(run, listener, false)) {
+		if (!perform(run, workspace, listener, false)) {
 			run.setResult(Result.FAILURE);
 		}
 	}
 
 	private boolean perform(Run<?, ?> run,
+							FilePath workspace,
 							TaskListener listener,
 							boolean disableInProgress) {
 		StashBuildState state;
@@ -256,7 +257,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			state = StashBuildState.FAILED;
 		}
 
-		return processJenkinsEvent(run, listener, state);
+		return processJenkinsEvent(run, null, listener, state);
 	}
 
 	/**
@@ -279,6 +280,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	 * initiates the Stash notification.
 	 *
 	 * @param run		the run to notify Stash of
+	 * @param workspace	the workspace of a non-AbstractBuild build
 	 * @param listener	the Jenkins build listener
 	 * @param state		the state of the build (in progress, success, failed)
 	 * @return			always true in order not to abort the Job in case of
@@ -286,6 +288,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	 */
 	private boolean processJenkinsEvent(
 			final Run<?, ?> run,
+			final FilePath workspace,
 			final TaskListener listener,
 			final StashBuildState state) {
 
@@ -299,7 +302,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			return true;
 		}
 
-		Collection<String> commitSha1s = lookupCommitSha1s(run, listener);
+		Collection<String> commitSha1s = lookupCommitSha1s(run, workspace, listener);
 		for  (String commitSha1 : commitSha1s) {
 			try {
 				NotificationResult result
@@ -334,17 +337,19 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     protected Collection<String> lookupCommitSha1s(
 			@SuppressWarnings("rawtypes") Run run,
+			FilePath workspace,
 			TaskListener listener) {
 
 		if (commitSha1 != null && commitSha1.trim().length() > 0) {
 			PrintStream logger = listener.getLogger();
-			if (!(run instanceof AbstractBuild)) {
-				logger.println("Unable to expand commit SHA value with " + run.getClass().getName());
-				return Collections.singletonList(commitSha1);
-			}
 
 			try {
-				return Arrays.asList(TokenMacro.expandAll((AbstractBuild) run, listener, commitSha1));
+				if (run instanceof AbstractBuild) {
+					return Arrays.asList(TokenMacro.expandAll((AbstractBuild) run, listener, commitSha1));
+				}
+				else {
+					return Arrays.asList(TokenMacro.expandAll(run, workspace, listener, commitSha1));
+				}
 			} catch (IOException e) {
 				logger.println("Unable to expand commit SHA value");
 				e.printStackTrace(logger);

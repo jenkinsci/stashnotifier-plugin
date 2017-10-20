@@ -295,7 +295,7 @@ public class StashNotifierTest
         when(build.getResult()).thenReturn(result);
         Launcher launcher = mock(Launcher.class);
         sn = spy(sn);
-        doReturn(hashes).when(sn).lookupCommitSha1s(eq(build), eq(buildListener));
+        doReturn(hashes).when(sn).lookupCommitSha1s(eq(build), eq((FilePath)null), eq(buildListener));
         doReturn(notificationResult).when(sn).notifyStash(
                 any(PrintStream.class),
                 any(AbstractBuild.class),
@@ -397,7 +397,7 @@ public class StashNotifierTest
         when(buildListener.getLogger()).thenReturn(logger);
         when(build.getResult()).thenReturn(Result.SUCCESS);
         sn = spy(sn);
-        doReturn(new ArrayList<String>()).when(sn).lookupCommitSha1s(eq(build), eq(buildListener));
+        doReturn(new ArrayList<String>()).when(sn).lookupCommitSha1s(eq(build), eq((FilePath)null), eq(buildListener));
 
         //when
         boolean perform = sn.perform(build, mock(Launcher.class), buildListener);
@@ -470,7 +470,7 @@ public class StashNotifierTest
         when(buildListener.getLogger()).thenReturn(logger);
         when(build.getResult()).thenReturn(Result.SUCCESS);
         sn = spy(sn);
-        doReturn(new ArrayList<String>()).when(sn).lookupCommitSha1s(eq(build), eq(buildListener));
+        doReturn(new ArrayList<String>()).when(sn).lookupCommitSha1s(eq(build), eq((FilePath)null), eq(buildListener));
 
         //when
         sn.perform(build, workspace, mock(Launcher.class), buildListener);
@@ -501,7 +501,7 @@ public class StashNotifierTest
                 false,
                 false);
 
-        Collection<String> hashes = sn.lookupCommitSha1s(build, buildListener);
+        Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
 
         assertThat(hashes.size(), is(1));
         assertThat(hashes.iterator().next(), is(sha1));
@@ -526,7 +526,7 @@ public class StashNotifierTest
                 false);
 
         //when
-        Collection<String> hashes = sn.lookupCommitSha1s(build, buildListener);
+        Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
 
         //then
         assertThat(hashes.isEmpty(), is(true));
