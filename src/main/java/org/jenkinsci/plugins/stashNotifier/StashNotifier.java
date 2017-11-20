@@ -885,13 +885,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         json.put("key", abbreviate(getBuildKey(run, listener), MAX_FIELD_LENGTH));
 
-        // This is to replace the odd character Jenkins injects to separate
-        // nested jobs, especially when using the Cloudbees Folders plugin.
-        // These characters cause Stash to throw up.
-        String fullName = StringEscapeUtils.
-                escapeJavaScript(run.getFullDisplayName()).
-                replaceAll("\\\\u00BB", "\\/");
-        json.put("name", abbreviate(fullName, MAX_FIELD_LENGTH));
+        json.put("name", abbreviate(run.getFullDisplayName(), MAX_FIELD_LENGTH));
 
 		json.put("description", abbreviate(getBuildDescription(run, state), MAX_FIELD_LENGTH));
 		json.put("url", abbreviate(DisplayURLProvider.get().getRunURL(run), MAX_URL_FIELD_LENGTH));
