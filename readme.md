@@ -41,8 +41,8 @@ Atlassians [Stash Build Integration][] wiki page.
 
 ### Note on Pipeline Plugin usage
 
-See the following code for an example of how to use this plugin inside of a [Pipeline Plugin]
-(https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Plugin). You must set the result of the 
+See the following code for an example of how to use this plugin inside of a 
+[Pipeline Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Plugin). You must set the result of the 
 current build manually in the Pipeline script.
 
 ```groovy
