@@ -402,8 +402,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	 * @return			the HttpClient
 	 */
 	protected HttpClient getHttpClient(PrintStream logger, Run<?, ?> run, String stashServer) throws Exception {
-        boolean ignoreUnverifiedSSL = ignoreUnverifiedSSLPeer;
-        
         DescriptorImpl descriptor = getDescriptor();
 
         CertificateCredentials certificateCredentials = getCredentials(CertificateCredentials.class, run.getParent());
@@ -414,7 +412,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         requestBuilder = requestBuilder.setSocketTimeout(60000);
         builder.setDefaultRequestConfig(requestBuilder.build());
 
-        if (url.getProtocol().equals("https") && (ignoreUnverifiedSSL || descriptor.isIgnoreUnverifiedSsl())) {
+        boolean ignoreUnverifiedSSL = ignoreUnverifiedSSLPeer || descriptor.isIgnoreUnverifiedSsl();
+        if (url.getProtocol().equals("https") && ignoreUnverifiedSSL) {
 			// add unsafe trust manager to avoid thrown
 			// SSLPeerUnverifiedException
 			try {
@@ -423,7 +422,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                         sslContext,
                         new String[] { "TLSv1", "TLSv1.1", "TLSv1.2" },
                         null,
-                        ignoreUnverifiedSSL ? SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER : null
+                        SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER
                 );
 				builder.setSSLSocketFactory(sslConnSocketFactory);
 
