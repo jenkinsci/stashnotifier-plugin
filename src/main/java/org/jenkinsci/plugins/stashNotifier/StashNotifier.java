@@ -160,8 +160,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 				? stashServerBaseUrl.substring(0, stashServerBaseUrl.length() - 1)
 				: stashServerBaseUrl;
 		this.credentialsId = credentialsId;
-		this.ignoreUnverifiedSSLPeer
-				= ignoreUnverifiedSSLPeer;
+		this.ignoreUnverifiedSSLPeer = ignoreUnverifiedSSLPeer;
 		this.commitSha1 = commitSha1;
 		this.includeBuildNumberInKey = includeBuildNumberInKey;
 		this.projectKey = projectKey;
