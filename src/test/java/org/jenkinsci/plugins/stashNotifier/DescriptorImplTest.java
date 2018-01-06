@@ -41,7 +41,9 @@ import static org.mockito.Mockito.*;
 @PrepareForTest({StashNotifier.DescriptorImpl.class, CredentialsProvider.class, Jenkins.class})
 public class DescriptorImplTest {
 
-    /** Class under test. */
+    /**
+     * Class under test.
+     */
     private StashNotifier.DescriptorImpl desc;
 
     private JSONObject json;
