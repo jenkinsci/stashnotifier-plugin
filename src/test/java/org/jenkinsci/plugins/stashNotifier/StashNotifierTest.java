@@ -85,7 +85,9 @@ public class StashNotifierTest {
                 "test-project",
                 true,
                 disableInprogressNotification,
-                considerUnstableAsSuccess);
+                considerUnstableAsSuccess,
+                false,
+                null);
     }
 
     StashNotifier sn;
@@ -235,7 +237,9 @@ public class StashNotifierTest {
                 null,
                 false,
                 false,
-                false));
+                false,
+                false,
+                null));
 
         doReturn(new ArrayList<Credentials>()).when(sn).lookupCredentials(
                 Mockito.<Class>anyObject(),
@@ -489,7 +493,9 @@ public class StashNotifierTest {
                 null,
                 false,
                 false,
-                false);
+                false,
+                false,
+                null);
 
         Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
 
@@ -513,7 +519,9 @@ public class StashNotifierTest {
                 null,
                 false,
                 false,
-                false);
+                false,
+                false,
+                null);
 
         //when
         Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
@@ -603,7 +611,9 @@ public class StashNotifierTest {
                 key,
                 true,
                 false,
-                false);
+                false,
+                false,
+                null);
 
         String buildKey = sn.getBuildKey(build, buildListener);
         assertThat(buildKey, is(key));
@@ -630,7 +640,9 @@ public class StashNotifierTest {
                 key,
                 true,
                 false,
-                false);
+                false,
+                false,
+                null);
 
         String buildKey = sn.getBuildKey(run, buildListener);
         assertThat(buildKey, is(key));
@@ -654,7 +666,9 @@ public class StashNotifierTest {
                 key,
                 true,
                 false,
-                false);
+                false,
+                false,
+                null);
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -683,7 +697,9 @@ public class StashNotifierTest {
                 key,
                 true,
                 false,
-                false);
+                false,
+                false,
+                null);
 
         //when
         String buildKey = sn.getBuildKey(run, buildListener);

@@ -95,6 +95,9 @@ def notifyBitbucket(String state) {
 }
 ```
 
+Alternatively you can use `customBuildState` property. To use it set `useCustomBuildState` to `true` and `customBuildState` to one of `['SUCCESSFUL', 'FAILED', 'INPROGRESS']`
+
+
 In [Declarative Pipelines](https://jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline), where Jenkins sets `currentBuild.result = null` for `SUCCESS` builds, the current value can be modified via a `script` step, e.g.:
 
 ```groovy
