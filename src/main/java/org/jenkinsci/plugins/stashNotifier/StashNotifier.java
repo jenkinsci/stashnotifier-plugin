@@ -151,6 +151,16 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      */
     private final boolean considerUnstableAsSuccess;
 
+    /**
+     * whether to bypass all state deduction logic and use value provided in customBuildState
+     */
+    private final boolean useCustomBuildState;
+
+    /**
+     * build state to send. used only if useCustomBuildState is true
+     */
+    private final String customBuildState;
+
     private JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
 
 // public members ----------------------------------------------------------
@@ -170,7 +180,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             String projectKey,
             boolean prependParentProjectKey,
             boolean disableInprogressNotification,
-            boolean considerUnstableAsSuccess
+            boolean considerUnstableAsSuccess,
+            boolean useCustomBuildState,
+            String customBuildState
     ) {
 
 
@@ -185,6 +197,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         this.prependParentProjectKey = prependParentProjectKey;
         this.disableInprogressNotification = disableInprogressNotification;
         this.considerUnstableAsSuccess = considerUnstableAsSuccess;
+        this.useCustomBuildState = useCustomBuildState;
+        this.customBuildState = customBuildState;
     }
 
     public boolean isDisableInprogressNotification() {
@@ -251,27 +265,35 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                             TaskListener listener,
                             boolean disableInProgress) {
         StashBuildState state;
-
         PrintStream logger = listener.getLogger();
 
-        Result buildResult = run.getResult();
-        if (buildResult == null && disableInProgress) {
-            return true;
-        } else if (buildResult == null) {
-            state = StashBuildState.INPROGRESS;
-        } else if (buildResult == Result.SUCCESS) {
-            state = StashBuildState.SUCCESSFUL;
-        } else if (buildResult == Result.UNSTABLE && considerUnstableAsSuccess) {
-            logger.println("UNSTABLE reported to stash as SUCCESSFUL");
-            state = StashBuildState.SUCCESSFUL;
-        } else if (buildResult == Result.ABORTED && disableInProgress) {
-            logger.println("ABORTED");
-            return true;
-        } else if (buildResult.equals(Result.NOT_BUILT)) {
-            logger.println("NOT BUILT");
-            return true;
+        if (useCustomBuildState) {
+            try {
+                state = StashBuildState.valueOf(customBuildState);
+            } catch (IllegalArgumentException e) {
+                state = StashBuildState.FAILED;
+                logger.println("invalid build state: " + customBuildState);
+            }
         } else {
-            state = StashBuildState.FAILED;
+            Result buildResult = run.getResult();
+            if (buildResult == null && disableInProgress) {
+                return true;
+            } else if (buildResult == null) {
+                state = StashBuildState.INPROGRESS;
+            } else if (buildResult == Result.SUCCESS) {
+                state = StashBuildState.SUCCESSFUL;
+            } else if (buildResult == Result.UNSTABLE && considerUnstableAsSuccess) {
+                logger.println("UNSTABLE reported to stash as SUCCESSFUL");
+                state = StashBuildState.SUCCESSFUL;
+            } else if (buildResult == Result.ABORTED && disableInProgress) {
+                logger.println("ABORTED");
+                return true;
+            } else if (buildResult.equals(Result.NOT_BUILT)) {
+                logger.println("NOT BUILT");
+                return true;
+            } else {
+                state = StashBuildState.FAILED;
+            }
         }
 
         return processJenkinsEvent(run, null, listener, state);
