@@ -746,7 +746,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         HttpClient client = getHttpClient(logger, run, stashURL);
         try {
             HttpResponse res = client.execute(req);
-            if (res.getStatusLine().getStatusCode() != 204) {
+            if ((res.getStatusLine().getStatusCode() != 204) && (res.getStatusLine().getStatusCode() != 301)) {
                 return NotificationResult.newFailure(
                         EntityUtils.toString(res.getEntity()));
             } else {
