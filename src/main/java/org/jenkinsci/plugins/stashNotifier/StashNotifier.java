@@ -611,33 +611,65 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             }
         }
 
+        public void setStashRootUrl(String stashRootUrl) {
+			this.stashRootUrl = stashRootUrl;
+		}
+
         public boolean isDisableInprogressNotification() {
             return disableInprogressNotification;
         }
 
+        public void setDisableInprogressNotification(boolean disableInprogressNotification) {
+			this.disableInprogressNotification = disableInprogressNotification;
+		}
+
         public boolean isConsiderUnstableAsSuccess() {
             return considerUnstableAsSuccess;
+        }
+
+        public void setConsiderUnstableAsSuccess(boolean considerUnstableAsSuccess) {
+            this.considerUnstableAsSuccess = considerUnstableAsSuccess;
         }
 
         public String getCredentialsId() {
             return credentialsId;
         }
 
+        public void setCredentialsId(String credentialsId) {
+			this.credentialsId = credentialsId;
+		}
+
         public boolean isIgnoreUnverifiedSsl() {
             return ignoreUnverifiedSsl;
         }
+
+        public void setIgnoreUnverifiedSsl(boolean ignoreUnverifiedSsl) {
+			this.ignoreUnverifiedSsl = ignoreUnverifiedSsl;
+		}
 
         public boolean isIncludeBuildNumberInKey() {
             return includeBuildNumberInKey;
         }
 
+        public void setIncludeBuildNumberInKey(boolean includeBuildNumberInKey) {
+			this.includeBuildNumberInKey = includeBuildNumberInKey;
+		}
+
         public String getProjectKey() {
             return projectKey;
         }
 
+        public void setProjectKey(String projectKey) {
+			this.projectKey = projectKey;
+		}
+
         public boolean isPrependParentProjectKey() {
             return prependParentProjectKey;
         }
+
+        public void setPrependParentProjectKey(boolean prependParentProjectKey) {
+			this.prependParentProjectKey = prependParentProjectKey;
+		}
 
         public FormValidation doCheckCredentialsId(@QueryParameter String value, @AncestorInPath Item project)
                 throws IOException, ServletException {
