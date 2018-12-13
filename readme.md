@@ -20,6 +20,25 @@ Set up Stash Notifier by navigating to `Manage Jenkins --> Configure System` and
 
 ![Stash Notifier Settings](images/StashNotifierSettings.png)
 
+### Script setup
+
+Either automatically upon [Jenkins post-initialization](https://wiki.jenkins.io/display/JENKINS/Post-initialization+script) or through [Jenkins script console](https://wiki.jenkins.io/display/JENKINS/Jenkins+Script+Console), example:
+```groovy
+Jenkins
+.instance
+.getDescriptor('org.jenkinsci.plugins.stashNotifier.StashNotifier')
+.with{  
+        credentialsId = 'stash-creds' 
+        stashRootUrl = 'https://stash.acme.com'
+        ignoreUnverifiedSsl = true
+        disableInprogressNotification = true
+        includeBuildNumberInKey = false
+        prependParentProjectKey = false
+        considerUnstableAsSuccess = false
+}
+```
+
+
 Usage
 =====
 
