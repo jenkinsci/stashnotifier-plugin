@@ -3,11 +3,13 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>2.26</version>
+        <version>3.10</version>
         <relativePath />
     </parent>
     <packaging>hpi</packaging>
     <properties>
+        <revision>1.15</revision>
+        <changelist>-SNAPSHOT</changelist>
         <!-- Baseline Jenkins version you use to build the plugin. Users must have this version or newer to run. -->
         <jenkins.version>1.625.3</jenkins.version>
         <!-- Java Level to use. Java 7 required when using core >= 1.612 -->
@@ -22,7 +24,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <artifactId>stashNotifier</artifactId>
-    <version>1.15-SNAPSHOT</version>
+    <version>${revision}${changelist}</version>
     <name>Stash Notifier</name>
     <description>
         Jenkins plugin to notify Atlassian Stash (Bitbucket) git repository servers of
@@ -34,7 +36,7 @@
         <connection>scm:git:https://github.com/jenkinsci/stashnotifier-plugin.git</connection>
         <developerConnection>scm:git:https://github.com/jenkinsci/stashnotifier-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/stashnotifier-plugin</url>
-      <tag>HEAD</tag>
+      <tag>${scmTag}</tag>
   </scm>
 
     <developers>
@@ -143,6 +145,21 @@
         </dependency>
     </dependencies>
     <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>display-info</id>
+                            <configuration>
+                                <skip>true</skip>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
