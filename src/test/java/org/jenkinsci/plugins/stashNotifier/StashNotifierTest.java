@@ -13,7 +13,7 @@ import hudson.ProxyConfiguration;
 import hudson.model.*;
 import hudson.plugins.git.Revision;
 import hudson.plugins.git.util.Build;
-import hudson.plugins.git.util.BuildData;
+import hudson.plugins.git.util.BuildDetails;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
@@ -35,6 +35,7 @@ import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.eclipse.jgit.lib.ObjectId;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.junit.Before;
@@ -55,6 +56,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import static hudson.model.Result.SUCCESS;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -125,22 +127,20 @@ public class StashNotifierTest {
         CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
         HttpUriRequest req = mock(HttpUriRequest.class);
         StatusLine statusLine = mock(StatusLine.class);
-        BuildData action = mock(BuildData.class);
-        Revision revision = mock(Revision.class);
-        Build lastBuild = mock(Build.class);
-        List<BuildData> actions = Collections.singletonList(action);
+        Revision revision = new Revision(ObjectId.fromString(sha1));
+        Build lastBuild = new Build(revision, revision, 1, SUCCESS);
+        BuildDetails action = new BuildDetails(lastBuild, null, Collections.EMPTY_LIST);
+        List<BuildDetails> actions = Collections.singletonList(action);
 
         when(Hudson.getInstance()).thenReturn(jenkins);
         when(Jenkins.getInstance()).thenReturn(jenkins);
         when(jenkins.getRootUrl()).thenReturn("http://localhost/");
         when(build.getEnvironment(buildListener)).thenReturn(environment);
-        when(action.getLastBuiltRevision()).thenReturn(revision);
-        when(revision.getSha1String()).thenReturn(sha1);
         when(build.getProject()).thenReturn(project);
         when(run.getParent()).thenReturn(project);
         when(build.getFullDisplayName()).thenReturn("foo");
         when(build.getUrl()).thenReturn("foo");
-        when(build.getActions(BuildData.class)).thenReturn(actions);
+        when(build.getActions(BuildDetails.class)).thenReturn(actions);
         when(environment.expand(anyString())).thenReturn(sha1);
         when(buildListener.getLogger()).thenReturn(logger);
         when(Secret.fromString("tiger")).thenReturn(secret);
@@ -152,8 +152,6 @@ public class StashNotifierTest {
         when(client.execute((HttpUriRequest) anyObject())).thenReturn(resp);
         when(resp.getStatusLine()).thenReturn(statusLine);
         when(statusLine.getStatusCode()).thenReturn(204);
-        action.lastBuild = lastBuild;
-        when(lastBuild.getMarked()).thenReturn(revision);
 
 
         when(TokenMacro.expandAll(build, buildListener, "test-project")).thenReturn("prepend-key");
@@ -174,7 +172,7 @@ public class StashNotifierTest {
 
     @Test
     public void test_prebuild_null_revision() {
-        when(build.getActions(BuildData.class)).thenReturn(Collections.singletonList(mock(BuildData.class)));
+        when(build.getActions(BuildDetails.class)).thenReturn(Collections.singletonList(mock(BuildDetails.class)));
         assertTrue(sn.prebuild(build, buildListener));
     }
 
@@ -308,7 +306,7 @@ public class StashNotifierTest {
         PrintStream logger = mock(PrintStream.class);
 
         //when
-        test_perform_buildstep(Result.SUCCESS, logger, new NotificationResult(true, ""), hashes);
+        test_perform_buildstep(SUCCESS, logger, new NotificationResult(true, ""), hashes);
 
         //then
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
@@ -389,7 +387,7 @@ public class StashNotifierTest {
         //given
         PrintStream logger = mock(PrintStream.class);
         when(buildListener.getLogger()).thenReturn(logger);
-        when(build.getResult()).thenReturn(Result.SUCCESS);
+        when(build.getResult()).thenReturn(SUCCESS);
         sn = spy(sn);
         doReturn(new ArrayList<String>()).when(sn).lookupCommitSha1s(eq(build), eq((FilePath) null), eq(buildListener));
 
@@ -416,7 +414,7 @@ public class StashNotifierTest {
         PrintStream logger = mock(PrintStream.class);
 
         //when
-        test_perform_simplebuildstep(Result.SUCCESS, logger, new NotificationResult(true, ""), hashes);
+        test_perform_simplebuildstep(SUCCESS, logger, new NotificationResult(true, ""), hashes);
 
         //then
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
@@ -462,7 +460,7 @@ public class StashNotifierTest {
         //given
         PrintStream logger = mock(PrintStream.class);
         when(buildListener.getLogger()).thenReturn(logger);
-        when(build.getResult()).thenReturn(Result.SUCCESS);
+        when(build.getResult()).thenReturn(SUCCESS);
         sn = spy(sn);
         doReturn(new ArrayList<String>()).when(sn).lookupCommitSha1s(eq(build), eq((FilePath) null), eq(buildListener));
 
