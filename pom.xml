@@ -8,7 +8,7 @@
     </parent>
     <packaging>hpi</packaging>
     <properties>
-        <revision>1.16</revision>
+        <revision>1.17</revision>
         <changelist>-SNAPSHOT</changelist>
         <!-- Baseline Jenkins version you use to build the plugin. Users must have this version or newer to run. -->
         <jenkins.version>1.625.3</jenkins.version>
@@ -24,7 +24,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <artifactId>stashNotifier</artifactId>
-    <version>1.17-SNAPSHOT</version>
+    <version>${revision}${changelist}</version>
     <name>Stash Notifier</name>
     <description>
         Jenkins plugin to notify Atlassian Stash (Bitbucket) git repository servers of
