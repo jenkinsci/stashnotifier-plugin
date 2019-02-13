@@ -27,7 +27,7 @@ import hudson.Launcher;
 import hudson.ProxyConfiguration;
 import hudson.model.*;
 import hudson.plugins.git.Revision;
-import hudson.plugins.git.util.BuildDetails;
+import hudson.plugins.git.util.BuildData;
 import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
@@ -410,12 +410,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         // Use a set to remove duplicates
         Collection<String> sha1s = new HashSet<String>();
         // MultiSCM may add multiple BuildData actions for each SCM, but we are covered in any case
-        for (BuildDetails buildData : run.getActions(BuildDetails.class)) {
-            if (buildData.getBuild() == null) {
-                continue;
-            }
+        for (BuildData buildData : run.getActions(BuildData.class)) {
             // get the sha1 of the commit that was built
-            Revision lastBuiltRevision = buildData.getBuild().getRevision();
+            Revision lastBuiltRevision = buildData.getLastBuiltRevision();
             if (lastBuiltRevision == null) {
                 continue;
             }
@@ -427,7 +424,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             }
 
             // This might be different than the lastBuiltSha1 if using "Merge before run"
-            String markedSha1 = buildData.getBuild().getMarked().getSha1String();
+            String markedSha1 = buildData.lastBuild.getMarked().getSha1String();
 
             // Should never be null, but may be blank
             if (!markedSha1.isEmpty()) {
