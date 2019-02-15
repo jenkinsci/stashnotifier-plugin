@@ -12,6 +12,7 @@ Requirements
 * **[Stash][] 2.1** or newer. This plugin uses the Atlassian 
 [Stash Build REST API][] which was introduced with Stash 2.1. 
 * **Jenkins 1.498** or newer
+* ** Jenkins Git plugin version 4.0.0-rc or later
 
 Setup
 =====
