@@ -151,13 +151,40 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      */
     private final boolean considerUnstableAsSuccess;
 
-    private JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
+    private JenkinsLocationConfiguration globalConfig;
 
 // public members ----------------------------------------------------------
 
     @Override
     public BuildStepMonitor getRequiredMonitorService() {
         return BuildStepMonitor.NONE;
+    }
+
+    StashNotifier(
+            String stashServerBaseUrl,
+            String credentialsId,
+            boolean ignoreUnverifiedSSLPeer,
+            String commitSha1,
+            boolean includeBuildNumberInKey,
+            String projectKey,
+            boolean prependParentProjectKey,
+            boolean disableInprogressNotification,
+            boolean considerUnstableAsSuccess,
+            JenkinsLocationConfiguration globalConfig
+    ) {
+
+        this.stashServerBaseUrl = stashServerBaseUrl != null && stashServerBaseUrl.endsWith("/")
+                ? stashServerBaseUrl.substring(0, stashServerBaseUrl.length() - 1)
+                : stashServerBaseUrl;
+        this.credentialsId = credentialsId;
+        this.ignoreUnverifiedSSLPeer = ignoreUnverifiedSSLPeer;
+        this.commitSha1 = commitSha1;
+        this.includeBuildNumberInKey = includeBuildNumberInKey;
+        this.projectKey = projectKey;
+        this.prependParentProjectKey = prependParentProjectKey;
+        this.disableInprogressNotification = disableInprogressNotification;
+        this.considerUnstableAsSuccess = considerUnstableAsSuccess;
+        this.globalConfig = globalConfig;
     }
 
     @DataBoundConstructor
@@ -172,19 +199,18 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             boolean disableInprogressNotification,
             boolean considerUnstableAsSuccess
     ) {
-
-
-        this.stashServerBaseUrl = stashServerBaseUrl != null && stashServerBaseUrl.endsWith("/")
-                ? stashServerBaseUrl.substring(0, stashServerBaseUrl.length() - 1)
-                : stashServerBaseUrl;
-        this.credentialsId = credentialsId;
-        this.ignoreUnverifiedSSLPeer = ignoreUnverifiedSSLPeer;
-        this.commitSha1 = commitSha1;
-        this.includeBuildNumberInKey = includeBuildNumberInKey;
-        this.projectKey = projectKey;
-        this.prependParentProjectKey = prependParentProjectKey;
-        this.disableInprogressNotification = disableInprogressNotification;
-        this.considerUnstableAsSuccess = considerUnstableAsSuccess;
+        this(
+                stashServerBaseUrl,
+                credentialsId,
+                ignoreUnverifiedSSLPeer,
+                commitSha1,
+                includeBuildNumberInKey,
+                projectKey,
+                prependParentProjectKey,
+                disableInprogressNotification,
+                considerUnstableAsSuccess,
+                JenkinsLocationConfiguration.get()
+        );
     }
 
     public boolean isDisableInprogressNotification() {

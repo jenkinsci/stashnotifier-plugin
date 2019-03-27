@@ -16,6 +16,7 @@ import hudson.plugins.git.util.Build;
 import hudson.plugins.git.util.BuildData;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
+import jenkins.model.JenkinsLocationConfiguration;
 import org.acegisecurity.Authentication;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
@@ -85,7 +86,9 @@ public class StashNotifierTest {
                 "test-project",
                 true,
                 disableInprogressNotification,
-                considerUnstableAsSuccess);
+                considerUnstableAsSuccess,
+                new JenkinsLocationConfiguration()
+        );
     }
 
     StashNotifier sn;
@@ -235,7 +238,8 @@ public class StashNotifierTest {
                 null,
                 false,
                 false,
-                false));
+                false,
+                new JenkinsLocationConfiguration()));
 
         doReturn(new ArrayList<Credentials>()).when(sn).lookupCredentials(
                 Mockito.<Class>anyObject(),
@@ -489,7 +493,8 @@ public class StashNotifierTest {
                 null,
                 false,
                 false,
-                false);
+                false,
+                new JenkinsLocationConfiguration());
 
         Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
 
@@ -513,7 +518,8 @@ public class StashNotifierTest {
                 null,
                 false,
                 false,
-                false);
+                false,
+                new JenkinsLocationConfiguration());
 
         //when
         Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
@@ -603,7 +609,8 @@ public class StashNotifierTest {
                 key,
                 true,
                 false,
-                false);
+                false,
+                new JenkinsLocationConfiguration());
 
         String buildKey = sn.getBuildKey(build, buildListener);
         assertThat(buildKey, is(key));
@@ -630,7 +637,8 @@ public class StashNotifierTest {
                 key,
                 true,
                 false,
-                false);
+                false,
+                new JenkinsLocationConfiguration());
 
         String buildKey = sn.getBuildKey(run, buildListener);
         assertThat(buildKey, is(key));
@@ -654,7 +662,8 @@ public class StashNotifierTest {
                 key,
                 true,
                 false,
-                false);
+                false,
+                new JenkinsLocationConfiguration());
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -683,7 +692,8 @@ public class StashNotifierTest {
                 key,
                 true,
                 false,
-                false);
+                false,
+                new JenkinsLocationConfiguration());
 
         //when
         String buildKey = sn.getBuildKey(run, buildListener);
