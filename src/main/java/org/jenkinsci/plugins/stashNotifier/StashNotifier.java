@@ -379,15 +379,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 } else {
                     return Arrays.asList(TokenMacro.expandAll(run, workspace, listener, commitSha1));
                 }
-            } catch (IOException e) {
-                logger.println("Unable to expand commit SHA value");
-                e.printStackTrace(logger);
-                return Arrays.asList();
-            } catch (InterruptedException e) {
-                logger.println("Unable to expand commit SHA value");
-                e.printStackTrace(logger);
-                return Arrays.asList();
-            } catch (MacroEvaluationException e) {
+            } catch (IOException | InterruptedException | MacroEvaluationException e) {
                 logger.println("Unable to expand commit SHA value");
                 e.printStackTrace(logger);
                 return Arrays.asList();
@@ -469,12 +461,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             } catch (NoSuchAlgorithmException nsae) {
                 logger.println("Couldn't establish SSL context:");
                 nsae.printStackTrace(logger);
-            } catch (KeyManagementException kme) {
+            } catch (KeyManagementException | KeyStoreException kme) {
                 logger.println("Couldn't initialize SSL context:");
                 kme.printStackTrace(logger);
-            } catch (KeyStoreException kse) {
-                logger.println("Couldn't initialize SSL context:");
-                kse.printStackTrace(logger);
             }
         }
 
@@ -998,17 +987,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 } else {
                     key.append(TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, projectKey));
                 }
-            } catch (IOException ioe) {
+            } catch (IOException | InterruptedException | MacroEvaluationException ioe) {
                 logger.println("Cannot expand build key from parameter. Processing with default build key");
                 ioe.printStackTrace(logger);
-                key.append(getDefaultBuildKey(run));
-            } catch (InterruptedException ie) {
-                logger.println("Cannot expand build key from parameter. Processing with default build key");
-                ie.printStackTrace(logger);
-                key.append(getDefaultBuildKey(run));
-            } catch (MacroEvaluationException mee) {
-                logger.println("Cannot expand build key from parameter. Processing with default build key");
-                mee.printStackTrace(logger);
                 key.append(getDefaultBuildKey(run));
             }
         } else {
