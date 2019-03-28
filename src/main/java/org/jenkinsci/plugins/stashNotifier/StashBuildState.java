@@ -1,7 +1,7 @@
 package org.jenkinsci.plugins.stashNotifier;
 
 /**
- * States communicated to the Stash server.
+ * States communicated to the Bitbucket server.
  */
 public enum StashBuildState {
     SUCCESSFUL,

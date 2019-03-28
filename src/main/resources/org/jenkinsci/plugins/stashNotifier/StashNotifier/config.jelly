@@ -1,12 +1,6 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
-  <!--
-  	Create text fields for the following values
-  	- Stash server base URL
-  	- Stash credentials
-  	- Ignore unverified SSL certificate flag
-  -->
  <f:advanced>
-  <f:entry title="Stash base URL" field="stashServerBaseUrl">
+  <f:entry title="Server base URL" field="stashServerBaseUrl">
     <f:textbox />
   </f:entry>
    <f:entry title="${%Credentials}" field="credentialsId">
@@ -19,7 +13,7 @@
    		field="ignoreUnverifiedSSLPeer">
     <f:checkbox />
   </f:entry>
-  <f:entry title="Keep repeated builds in Stash" field="includeBuildNumberInKey">
+  <f:entry title="Keep repeated builds in Bitbucket" field="includeBuildNumberInKey">
     <f:checkbox />
   </f:entry>
   <f:entry title="Override project key" field="projectKey">

@@ -88,8 +88,8 @@ import java.security.cert.X509Certificate;
 import java.util.*;
 
 /**
- * Notifies a configured Atlassian Stash server instance of build results
- * through the Stash build API.
+ * Notifies a configured Atlassian Bitbucket server instance of build results
+ * through the Bitbucket build API.
  * <p>
  * Only basic authentication is supported at the moment.
  */
@@ -101,7 +101,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     // attributes --------------------------------------------------------------
 
     /**
-     * base url of Stash server, e. g. <tt>http://localhost:7990</tt>.
+     * base url of Bitbucket server, e. g. <tt>http://localhost:7990</tt>.
      */
     private final String stashServerBaseUrl;
 
@@ -121,7 +121,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     private final String commitSha1;
 
     /**
-     * if true, the build number is included in the Stash notification.
+     * if true, the build number is included in the Bitbucket notification.
      */
     private final boolean includeBuildNumberInKey;
 
@@ -282,7 +282,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         } else if (buildResult == Result.SUCCESS) {
             state = StashBuildState.SUCCESSFUL;
         } else if (buildResult == Result.UNSTABLE && considerUnstableAsSuccess) {
-            logger.println("UNSTABLE reported to stash as SUCCESSFUL");
+            logger.println("UNSTABLE reported to Bitbucket as SUCCESSFUL");
             state = StashBuildState.SUCCESSFUL;
         } else if (buildResult == Result.ABORTED && disableInProgress) {
             logger.println("ABORTED");
@@ -310,9 +310,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     /**
      * Processes the Jenkins events triggered before and after the run and
-     * initiates the Stash notification.
+     * initiates the Bitbucket notification.
      *
-     * @param run       the run to notify Stash of
+     * @param run       the run to notify Bitbucket of
      * @param workspace the workspace of a non-AbstractBuild build
      * @param listener  the Jenkins build listener
      * @param state     the state of the build (in progress, success, failed)
@@ -327,11 +327,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         PrintStream logger = listener.getLogger();
 
-        // exit if Jenkins root URL is not configured. Stash run API
+        // Exit if Jenkins root URL is not configured. Bitbucket run API
         // requires valid link to run in CI system.
         if (getRootUrl() == null) {
-            logger.println(
-                    "Cannot notify Stash! (Jenkins Root URL not configured)");
+            logger.println("Cannot notify Bitbucket! (Jenkins Root URL not configured)");
             return true;
         }
 
@@ -341,23 +340,21 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 NotificationResult result
                         = notifyStash(logger, run, commitSha1, listener, state);
                 if (result.indicatesSuccess) {
-                    logger.println(
-                            "Notified Stash for commit with id "
-                                    + commitSha1);
+                    logger.println("Notified Bitbucket for commit with id " + commitSha1);
                 } else {
                     logger.println(
-                            "Failed to notify Stash for commit "
+                            "Failed to notify Bitbucket for commit "
                                     + commitSha1
                                     + " (" + result.message + ")");
                 }
             } catch (SSLPeerUnverifiedException e) {
                 logger.println("SSLPeerUnverifiedException caught while "
-                        + "notifying Stash. Make sure your SSL certificate on "
-                        + "your Stash server is valid or check the "
+                        + "notifying Bitbucket. Make sure your SSL certificate on "
+                        + "your Bitbucket server is valid or check the "
                         + " 'Ignore unverifiable SSL certificate' checkbox in the "
-                        + "Stash plugin configuration of this job.");
+                        + "plugin configuration of this job.");
             } catch (Exception e) {
-                logger.println("Caught exception while notifying Stash with id "
+                logger.println("Caught exception while notifying Bitbucket with id "
                         + commitSha1);
                 e.printStackTrace(logger);
             }
@@ -734,7 +731,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         @Override
         public String getDisplayName() {
-            return "Notify Stash Instance";
+            return "Notify Bitbucket Instance";
         }
 
         @Override
@@ -762,14 +759,14 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     // non-public members ------------------------------------------------------
 
     /**
-     * Notifies the configured Stash server by POSTing the run results
-     * to the Stash run API.
+     * Notifies the configured Bitbucket server by POSTing the run results
+     * to the Bitbucket run API.
      *
      * @param logger     the logger to use
-     * @param run        the run to notify Stash of
+     * @param run        the run to notify Bitbucket of
      * @param commitSha1 the SHA1 of the run commit
      * @param listener   the run listener for logging
-     * @param state      the state of the build as defined by the Stash API.
+     * @param state      the state of the build as defined by the Bitbucket API.
      */
     protected NotificationResult notifyStash(
             final PrintStream logger,
@@ -782,7 +779,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         String stashURL = expandStashURL(run, listener);
 
-        logger.println("Notifying Stash at \"" + stashURL + "\"");
+        logger.println("Notifying Bitbucket at \"" + stashURL + "\"");
 
         HttpPost req = createRequest(stashBuildNotificationEntity, run.getParent(), commitSha1, stashURL);
         HttpClient client = getHttpClient(logger, run, stashURL);
@@ -867,14 +864,13 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     }
 
     /**
-     * Returns the HTTP POST request ready to be sent to the Stash build API for
+     * Returns the HTTP POST request ready to be sent to the Bitbucket build API for
      * the given run and change set.
      *
-     * @param stashBuildNotificationEntity a entity containing the parameters
-     *                                     for Stash
+     * @param stashBuildNotificationEntity a entity containing the parameters for Bitbucket
      * @param commitSha1                   the SHA1 of the commit that was built
      * @param url
-     * @return the HTTP POST request to the Stash build API
+     * @return the HTTP POST request to the Bitbucket build API
      */
     protected HttpPost createRequest(
             final HttpEntity stashBuildNotificationEntity,
@@ -923,7 +919,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         } catch (IOException | InterruptedException | MacroEvaluationException ex) {
             PrintStream logger = listener.getLogger();
-            logger.println("Unable to expand Stash Server URL");
+            logger.println("Unable to expand Bitbucker server URL");
             ex.printStackTrace(logger);
         }
         return url;
@@ -931,10 +927,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     /**
      * Returns the HTTP POST entity body with the JSON representation of the
-     * run result to be sent to the Stash build API.
+     * run result to be sent to the Bitbucket build API.
      *
-     * @param run the run to notify Stash of
-     * @return HTTP entity body for POST to Stash build API
+     * @param run the run to notify Bitbucket of
+     * @return HTTP entity body for POST to Bitbucket build API
      */
     private HttpEntity newStashBuildNotificationEntity(
             final Run<?, ?> run,
@@ -971,7 +967,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     /**
      * Return the old-fashion build key
      *
-     * @param run the run to notify Stash of
+     * @param run the run to notify Bitbucket of
      * @return default build key
      */
     private String getDefaultBuildKey(final Run<?, ?> run) {
@@ -988,11 +984,11 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     }
 
     /**
-     * Returns the run key used in the Stash notification. Includes the
+     * Returns the run key used in the Bitbucket notification. Includes the
      * run number depending on the user setting.
      *
-     * @param run the run to notify Stash of
-     * @return the run key for the Stash notification
+     * @param run the run to notify Bitbucket of
+     * @return the run key for the Bitbucket notification
      */
     protected String getBuildKey(final Run<?, ?> run,
                                  TaskListener listener) {
@@ -1035,7 +1031,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     }
 
     /**
-     * Returns the description of the run used for the Stash notification.
+     * Returns the description of the run used for the Bitbucket notification.
      * Uses the run description provided by the Jenkins job, if available.
      *
      * @param run   the run to be described

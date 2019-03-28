@@ -95,7 +95,7 @@ public class DescriptorImplTest {
         assertThat(desc.isApplicable(AbstractProject.class), is(true));
         assertThat(desc.getCredentialsId(), is("bitbucket-credentials"));
         assertThat(desc.isDisableInprogressNotification(), is(true));
-        assertThat(desc.getDisplayName(), is("Notify Stash Instance"));
+        assertThat(desc.getDisplayName(), is("Notify Bitbucket Instance"));
         assertThat(desc.isIncludeBuildNumberInKey(), is(true));
         assertThat(desc.isIgnoreUnverifiedSsl(), is(true));
         assertThat(desc.isPrependParentProjectKey(), is(true));
@@ -163,7 +163,7 @@ public class DescriptorImplTest {
 
     @Test
     public void test_doCheckStashServerBaseUrl() throws IOException, ServletException {
-        FormValidation listBoxModel = doCheckStashServerBaseUrl("http://some-stash-url");
+        FormValidation listBoxModel = doCheckStashServerBaseUrl("https://my.company.intranet/bitbucket");
         assertThat(listBoxModel.kind, is(FormValidation.Kind.OK));
     }
 }
