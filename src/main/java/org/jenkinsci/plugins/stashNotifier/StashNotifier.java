@@ -666,7 +666,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         @DataBoundSetter
         public void setProjectKey(String projectKey) {
-            this.projectKey =  StringUtils.trimToNull(projectKey);
+            this.projectKey = StringUtils.trimToNull(projectKey);
         }
 
         public boolean isPrependParentProjectKey() {
@@ -679,11 +679,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
 
         public String getStashRootUrl() {
-            if ((stashRootUrl == null) || (stashRootUrl.trim().isEmpty())) {
-                return null;
-            } else {
-                return stashRootUrl;
-            }
+            return stashRootUrl;
         }
 
         @DataBoundSetter
