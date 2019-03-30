@@ -73,21 +73,13 @@ public class DescriptorImplTest {
     public void testConfigure() throws Descriptor.FormException {
         //given
         doNothing().when(desc).save();
+        StaplerRequest request = mock(StaplerRequest.class);
 
         //when
-        desc.configure(mock(StaplerRequest.class), json);
+        desc.configure(request, json);
 
         //then
-        assertThat(desc.getStashRootUrl(), is("http://stash-root-url"));
-        assertThat(desc.getCredentialsId(), is("someCredentialsId"));
-        assertThat(desc.getProjectKey(), is("someProjectKey"));
-        assertThat(desc.getDisplayName(), is("Notify Stash Instance"));
-        assertThat(desc.isDisableInprogressNotification(), is(true));
-        assertThat(desc.isConsiderUnstableAsSuccess(), is(true));
-        assertThat(desc.isIgnoreUnverifiedSsl(), is(true));
-        assertThat(desc.isIncludeBuildNumberInKey(), is(true));
-        assertThat(desc.isPrependParentProjectKey(), is(true));
-        assertThat(desc.isApplicable(AbstractProject.class), is(true));
+        verify(request).bindJSON(desc, json);
     }
 
     @Test

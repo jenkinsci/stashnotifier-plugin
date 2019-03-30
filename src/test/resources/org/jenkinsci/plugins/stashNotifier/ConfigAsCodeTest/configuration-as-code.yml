@@ -1,0 +1,10 @@
+unclassified:
+  notifyBitbucket:
+    considerUnstableAsSuccess: true
+    credentialsId: "bitbucket-credentials"
+    disableInprogressNotification: true
+    ignoreUnverifiedSsl: true
+    includeBuildNumberInKey: true
+    prependParentProjectKey: true
+    projectKey: "JEN"
+    stashRootUrl: "https://bitbucket.com"
