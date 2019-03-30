@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.36</version>
+        <version>3.40</version>
         <relativePath />
     </parent>
     <packaging>hpi</packaging>
@@ -14,14 +14,6 @@
         <jenkins.version>2.60.3</jenkins.version>
         <!-- Java Level to use. Java 7 required when using core >= 1.612 -->
         <java.level>8</java.level>
-        <!-- Jenkins Test Harness version you use to test the plugin. -->
-        <!-- For Jenkins version >= 1.580.1 use JTH 2.x or higher. -->
-        <jenkins-test-harness.version>2.48</jenkins-test-harness.version>
-        <!-- Other properties you may want to use:
-             ~ hpi-plugin.version: The HPI Maven Plugin version used by the plugin..
-             ~ stapler-plugin.version: The Stapler Maven plugin version required by the plugin.
-        -->
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <artifactId>stashNotifier</artifactId>
     <version>${revision}${changelist}</version>

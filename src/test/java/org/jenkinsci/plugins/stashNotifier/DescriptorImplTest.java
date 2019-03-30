@@ -14,14 +14,17 @@ import org.acegisecurity.Authentication;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.*;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,7 +41,7 @@ import static org.mockito.Mockito.*;
  */
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({StashNotifier.DescriptorImpl.class, CredentialsProvider.class, Jenkins.class})
+@PrepareForTest({StashNotifier.DescriptorImpl.class, CredentialsProvider.class, Jenkins.class, TokenList.class})
 public class DescriptorImplTest {
 
     /**
@@ -57,14 +60,14 @@ public class DescriptorImplTest {
         when(Jenkins.getInstance()).thenReturn(jenkins);
 
         json = new JSONObject();
-        json.put("stashRootUrl", "http://stash-root-url");
-        json.put("credentialsId", "someCredentialsId");
-        json.put("projectKey", "someProjectKey");
+        json.put("considerUnstableAsSuccess", "true");
+        json.put("credentialsId", "bitbucket-credentials");
+        json.put("disableInprogressNotification", "true");
         json.put("ignoreUnverifiedSsl", "true");
         json.put("includeBuildNumberInKey", "true");
         json.put("prependParentProjectKey", "true");
-        json.put("disableInprogressNotification", "true");
-        json.put("considerUnstableAsSuccess", "true");
+        json.put("projectKey", "JEN");
+        json.put("stashRootUrl", "https://my.company.intranet/bitbucket");
 
         desc = spy(new StashNotifier.DescriptorImpl(false));
     }
@@ -73,13 +76,31 @@ public class DescriptorImplTest {
     public void testConfigure() throws Descriptor.FormException {
         //given
         doNothing().when(desc).save();
-        StaplerRequest request = mock(StaplerRequest.class);
+
+        ServletContext servletContext = PowerMockito.mock(ServletContext.class);
+        WebApp webApp = new WebApp(servletContext);
+
+        Stapler stapler = PowerMockito.mock(Stapler.class);
+        PowerMockito.when(stapler.getWebApp()).thenReturn(webApp);
+
+        HttpServletRequest servletRequest = PowerMockito.mock(HttpServletRequest.class);
+        TokenList tokenList = PowerMockito.mock(TokenList.class);
+
+        RequestImpl staplerRequest = new RequestImpl(stapler, servletRequest, new ArrayList<>(), tokenList);
 
         //when
-        desc.configure(request, json);
+        desc.configure(staplerRequest, json);
 
         //then
-        verify(request).bindJSON(desc, json);
+        assertThat(desc.isApplicable(AbstractProject.class), is(true));
+        assertThat(desc.getCredentialsId(), is("bitbucket-credentials"));
+        assertThat(desc.isDisableInprogressNotification(), is(true));
+        assertThat(desc.getDisplayName(), is("Notify Stash Instance"));
+        assertThat(desc.isIncludeBuildNumberInKey(), is(true));
+        assertThat(desc.isIgnoreUnverifiedSsl(), is(true));
+        assertThat(desc.isPrependParentProjectKey(), is(true));
+        assertThat(desc.getProjectKey(), is("JEN"));
+        assertThat(desc.getStashRootUrl(), is("https://my.company.intranet/bitbucket"));
     }
 
     @Test

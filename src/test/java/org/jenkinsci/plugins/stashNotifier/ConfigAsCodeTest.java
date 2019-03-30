@@ -24,13 +24,14 @@ public class ConfigAsCodeTest {
         ConfigurationAsCode.get().configure(configFileUrl.toString());
         StashNotifier.DescriptorImpl stashNotifierConfig = rule.jenkins.getDescriptorByType(StashNotifier.DescriptorImpl.class);
 
+        assertThat(stashNotifierConfig.isConsiderUnstableAsSuccess(), equalTo(true));
         assertThat(stashNotifierConfig.getCredentialsId(), equalTo("bitbucket-credentials"));
+        assertThat(stashNotifierConfig.isDisableInprogressNotification(), equalTo(true));
         assertThat(stashNotifierConfig.isIgnoreUnverifiedSsl(), equalTo(true));
         assertThat(stashNotifierConfig.isIncludeBuildNumberInKey(), equalTo(true));
-        assertThat(stashNotifierConfig.getProjectKey(), equalTo("JEN"));
         assertThat(stashNotifierConfig.isPrependParentProjectKey(), equalTo(true));
-        assertThat(stashNotifierConfig.isDisableInprogressNotification(), equalTo(true));
-        assertThat(stashNotifierConfig.isConsiderUnstableAsSuccess(), equalTo(true));
+        assertThat(stashNotifierConfig.getProjectKey(), equalTo("JEN"));
+        assertThat(stashNotifierConfig.getStashRootUrl(), equalTo("https://my.company.intranet/bitbucket"));
     }
 
     @Test
@@ -44,7 +45,7 @@ public class ConfigAsCodeTest {
         stashNotifierConfig.setIncludeBuildNumberInKey(true);
         stashNotifierConfig.setPrependParentProjectKey(true);
         stashNotifierConfig.setProjectKey("JEN");
-        stashNotifierConfig.setStashRootUrl("https://bitbucket.com");
+        stashNotifierConfig.setStashRootUrl("https://my.company.intranet/bitbucket");
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         ConfigurationAsCode.get().export(outputStream);

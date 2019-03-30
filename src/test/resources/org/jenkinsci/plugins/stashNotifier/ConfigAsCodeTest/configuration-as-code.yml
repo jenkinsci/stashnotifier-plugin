@@ -7,4 +7,4 @@ unclassified:
     includeBuildNumberInKey: true
     prependParentProjectKey: true
     projectKey: "JEN"
-    stashRootUrl: "https://bitbucket.com"
+    stashRootUrl: "https://my.company.intranet/bitbucket"
