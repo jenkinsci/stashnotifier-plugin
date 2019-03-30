@@ -77,14 +77,14 @@ public class DescriptorImplTest {
         //given
         doNothing().when(desc).save();
 
-        ServletContext servletContext = PowerMockito.mock(ServletContext.class);
+        ServletContext servletContext = mock(ServletContext.class);
         WebApp webApp = new WebApp(servletContext);
 
-        Stapler stapler = PowerMockito.mock(Stapler.class);
-        PowerMockito.when(stapler.getWebApp()).thenReturn(webApp);
+        Stapler stapler = mock(Stapler.class);
+        when(stapler.getWebApp()).thenReturn(webApp);
 
-        HttpServletRequest servletRequest = PowerMockito.mock(HttpServletRequest.class);
-        TokenList tokenList = PowerMockito.mock(TokenList.class);
+        HttpServletRequest servletRequest = mock(HttpServletRequest.class);
+        TokenList tokenList = mock(TokenList.class);
 
         RequestImpl staplerRequest = new RequestImpl(stapler, servletRequest, new ArrayList<>(), tokenList);
 
