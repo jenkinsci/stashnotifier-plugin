@@ -302,7 +302,7 @@ public class StashNotifierTest {
     @Test
     public void test_perform_build_step_success() throws Exception {
         //given
-        ArrayList<String> hashes = new ArrayList<String>();
+        ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
         PrintStream logger = mock(PrintStream.class);
 
@@ -319,7 +319,7 @@ public class StashNotifierTest {
     public void test_perform_build_step_success_for_unstable_build() throws Exception {
         //given
         sn = buildStashNotifier("http://localhost", false, true);
-        ArrayList<String> hashes = new ArrayList<String>();
+        ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
         PrintStream logger = mock(PrintStream.class);
 
@@ -338,7 +338,7 @@ public class StashNotifierTest {
     public void test_perform_build_step_aborted_without_notifying_stash() throws Exception {
         //given
         sn = buildStashNotifier("http://localhost", true, true);
-        ArrayList<String> hashes = new ArrayList<String>();
+        ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
         PrintStream logger = mock(PrintStream.class);
 
@@ -354,7 +354,7 @@ public class StashNotifierTest {
     @Test
     public void test_perform_build_step_failure() throws Exception {
         //given
-        ArrayList<String> hashes = new ArrayList<String>();
+        ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
         PrintStream logger = mock(PrintStream.class);
 
@@ -370,7 +370,7 @@ public class StashNotifierTest {
     @Test
     public void test_perform_build_step_not_built() throws Exception {
         //given
-        ArrayList<String> hashes = new ArrayList<String>();
+        ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
         PrintStream logger = mock(PrintStream.class);
 
@@ -410,7 +410,7 @@ public class StashNotifierTest {
     @Test
     public void test_perform_simple_build_step_success() throws Exception {
         //given
-        ArrayList<String> hashes = new ArrayList<String>();
+        ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
         PrintStream logger = mock(PrintStream.class);
 
@@ -427,7 +427,7 @@ public class StashNotifierTest {
     @Test
     public void test_perform_simple_build_step_failure() throws Exception {
         //given
-        ArrayList<String> hashes = new ArrayList<String>();
+        ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
         PrintStream logger = mock(PrintStream.class);
 
@@ -443,7 +443,7 @@ public class StashNotifierTest {
     @Test
     public void test_perform_simple_build_step_not_built() throws Exception {
         //given
-        ArrayList<String> hashes = new ArrayList<String>();
+        ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
         PrintStream logger = mock(PrintStream.class);
 
@@ -571,7 +571,7 @@ public class StashNotifierTest {
     public void test_createRequest() throws AuthenticationException {
         //given
         StashNotifier sn = spy(this.sn);
-        ArrayList<Credentials> credentialList = new ArrayList<Credentials>();
+        ArrayList<Credentials> credentialList = new ArrayList<>();
         UsernamePasswordCredentialsImpl credential = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, "", "", "admin", "tiger");
         credentialList.add(credential);
         doReturn(credentialList).when(sn).lookupCredentials(

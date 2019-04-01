@@ -387,7 +387,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
 
         // Use a set to remove duplicates
-        Collection<String> sha1s = new HashSet<String>();
+        Collection<String> sha1s = new HashSet<>();
         // MultiSCM may add multiple BuildData actions for each SCM, but we are covered in any case
         for (BuildData buildData : run.getActions(BuildData.class)) {
             // get the sha1 of the commit that was built
@@ -584,7 +584,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                                         StandardCredentials.class,
                                         project,
                                         ACL.SYSTEM,
-                                        new ArrayList<DomainRequirement>()));
+                                        new ArrayList<>()));
             } else if (jenkins != null && jenkins.hasPermission(Item.CONFIGURE)) {
                 return new StandardListBoxModel()
                         .withEmptySelection()
@@ -594,7 +594,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                                         StandardCredentials.class,
                                         jenkins,
                                         ACL.SYSTEM,
-                                        new ArrayList<DomainRequirement>()));
+                                        new ArrayList<>()));
             }
 
             return new StandardListBoxModel();
@@ -792,7 +792,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         String credentialsId = getCredentialsId();
         if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
             credentials = CredentialsMatchers.firstOrNull(
-                    lookupCredentials(clazz, project, ACL.SYSTEM, new ArrayList<DomainRequirement>()),
+                    lookupCredentials(clazz, project, ACL.SYSTEM, new ArrayList<>()),
                     CredentialsMatchers.withId(credentialsId));
         }
 
@@ -803,7 +803,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             }
             if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
                 credentials = CredentialsMatchers.firstOrNull(
-                        lookupCredentials(clazz, Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<DomainRequirement>()),
+                        lookupCredentials(clazz, Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<>()),
                         CredentialsMatchers.withId(credentialsId));
             }
         }
