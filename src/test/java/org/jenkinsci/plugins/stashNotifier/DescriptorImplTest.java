@@ -4,7 +4,6 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
-import hudson.model.Hudson;
 import hudson.model.Item;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -50,11 +49,11 @@ public class DescriptorImplTest {
     private StashNotifier.DescriptorImpl desc;
 
     private JSONObject json;
-    private Hudson jenkins;
+    private Jenkins jenkins;
 
     @Before
     public void setUp() throws Exception {
-        jenkins = PowerMockito.mock(Hudson.class);
+        jenkins = PowerMockito.mock(Jenkins.class);
 
         PowerMockito.mockStatic(Jenkins.class);
         when(Jenkins.getInstance()).thenReturn(jenkins);

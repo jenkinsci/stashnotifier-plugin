@@ -65,10 +65,11 @@ import static org.mockito.Mockito.*;
 @PrepareForTest({Secret.class, Jenkins.class, HttpClientBuilder.class, TokenMacro.class, CredentialsMatchers.class, com.cloudbees.plugins.credentials.CredentialsProvider.class, AbstractProject.class})
 @PowerMockIgnore("javax.net.ssl.*")
 public class StashNotifierTest {
+
     final static String sha1 = "1234567890123456789012345678901234567890";
     private HttpClientBuilder httpClientBuilder;
     private CloseableHttpClient client;
-    private Hudson jenkins;
+    private Jenkins jenkins;
 
     public StashNotifier buildStashNotifier(String stashBaseUrl) {
         return buildStashNotifier(stashBaseUrl, false, false);
@@ -103,11 +104,10 @@ public class StashNotifierTest {
         PowerMockito.mockStatic(Jenkins.class);
         PowerMockito.mockStatic(HttpClientBuilder.class);
         PowerMockito.mockStatic(TokenMacro.class);
-        PowerMockito.mockStatic(Hudson.class);
         PowerMockito.mockStatic(com.cloudbees.plugins.credentials.CredentialsProvider.class);
 
         buildListener = mock(BuildListener.class);
-        jenkins = mock(Hudson.class);
+        jenkins = mock(Jenkins.class);
         build = mock(AbstractBuild.class);
         run = mock(Run.class);
         AbstractProject project = PowerMockito.mock(AbstractProject.class);
@@ -130,7 +130,6 @@ public class StashNotifierTest {
         Build lastBuild = mock(Build.class);
         List<BuildData> actions = Collections.singletonList(action);
 
-        when(Hudson.getInstance()).thenReturn(jenkins);
         when(Jenkins.getInstance()).thenReturn(jenkins);
         when(jenkins.getRootUrl()).thenReturn("http://localhost/");
         when(build.getEnvironment(buildListener)).thenReturn(environment);
