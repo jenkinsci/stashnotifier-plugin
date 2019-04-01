@@ -21,10 +21,7 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.*;
 import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.ProxyConfiguration;
+import hudson.*;
 import hudson.model.*;
 import hudson.plugins.git.Revision;
 import hudson.plugins.git.util.BuildData;
@@ -69,10 +66,7 @@ import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
-import org.kohsuke.stapler.AncestorInPath;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.*;
 
 import javax.annotation.Nonnull;
 import javax.net.ssl.SSLContext;
@@ -311,10 +305,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     private String getRootUrl() {
         Jenkins instance = Jenkins.getInstance();
 
-        if (null == instance) {
-            return globalConfig.getUrl();
-        }
-
         return (instance.getRootUrl() != null) ? instance.getRootUrl() : globalConfig.getUrl();
     }
 
@@ -531,10 +521,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     private void configureProxy(HttpClientBuilder builder, URL url) {
         Jenkins jenkins = Jenkins.getInstance();
-        if (jenkins == null) {
-            return;
-        }
-
         ProxyConfiguration proxyConfig = jenkins.proxy;
         if (proxyConfig == null) {
             return;
@@ -584,14 +570,14 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
          * If you don't want fields to be persisted, use <tt>transient</tt>.
          */
 
+        private boolean considerUnstableAsSuccess;
         private String credentialsId;
-        private String stashRootUrl;
+        private boolean disableInprogressNotification;
         private boolean ignoreUnverifiedSsl;
         private boolean includeBuildNumberInKey;
-        private String projectKey;
         private boolean prependParentProjectKey;
-        private boolean disableInprogressNotification;
-        private boolean considerUnstableAsSuccess;
+        private String projectKey;
+        private String stashRootUrl;
 
         public DescriptorImpl() {
             this(true);
@@ -629,40 +615,76 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             return new StandardListBoxModel();
         }
 
-        public String getStashRootUrl() {
-            if ((stashRootUrl == null) || (stashRootUrl.trim().isEmpty())) {
-                return null;
-            } else {
-                return stashRootUrl;
-            }
-        }
-
-        public boolean isDisableInprogressNotification() {
-            return disableInprogressNotification;
-        }
-
         public boolean isConsiderUnstableAsSuccess() {
             return considerUnstableAsSuccess;
+        }
+
+        @DataBoundSetter
+        public void setConsiderUnstableAsSuccess(boolean considerUnstableAsSuccess) {
+            this.considerUnstableAsSuccess = considerUnstableAsSuccess;
         }
 
         public String getCredentialsId() {
             return credentialsId;
         }
 
+        @DataBoundSetter
+        public void setCredentialsId(String credentialsId) {
+            this.credentialsId = StringUtils.trimToNull(credentialsId);
+        }
+
+        public boolean isDisableInprogressNotification() {
+            return disableInprogressNotification;
+        }
+
+        @DataBoundSetter
+        public void setDisableInprogressNotification(boolean disableInprogressNotification) {
+            this.disableInprogressNotification = disableInprogressNotification;
+        }
+
         public boolean isIgnoreUnverifiedSsl() {
             return ignoreUnverifiedSsl;
+        }
+
+        @DataBoundSetter
+        public void setIgnoreUnverifiedSsl(boolean ignoreUnverifiedSsl) {
+            this.ignoreUnverifiedSsl = ignoreUnverifiedSsl;
         }
 
         public boolean isIncludeBuildNumberInKey() {
             return includeBuildNumberInKey;
         }
 
-        public String getProjectKey() {
-            return projectKey;
+        @DataBoundSetter
+        public void setIncludeBuildNumberInKey(boolean includeBuildNumberInKey) {
+            this.includeBuildNumberInKey = includeBuildNumberInKey;
         }
 
         public boolean isPrependParentProjectKey() {
             return prependParentProjectKey;
+        }
+
+        @DataBoundSetter
+        public void setPrependParentProjectKey(boolean prependParentProjectKey) {
+            this.prependParentProjectKey = prependParentProjectKey;
+        }
+
+        public String getProjectKey() {
+            return projectKey;
+        }
+
+        @DataBoundSetter
+        public void setProjectKey(String projectKey) {
+            this.projectKey = StringUtils.trimToNull(projectKey);
+        }
+
+        public String getStashRootUrl() {
+            return stashRootUrl;
+        }
+
+        @DataBoundSetter
+        public void setStashRootUrl(String stashRootUrl) {
+            this.stashRootUrl = StringUtils.trimToNull(stashRootUrl);
         }
 
         public FormValidation doCheckCredentialsId(@QueryParameter String value, @AncestorInPath Item project)
@@ -720,26 +742,20 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 StaplerRequest req,
                 JSONObject formData) throws FormException {
 
-            // to persist global configuration information,
-            // set that to properties and call save().
-            stashRootUrl = formData.getString("stashRootUrl");
-            ignoreUnverifiedSsl = formData.getBoolean("ignoreUnverifiedSsl");
-            includeBuildNumberInKey = formData.getBoolean("includeBuildNumberInKey");
+            this.considerUnstableAsSuccess = false;
+            this.credentialsId = null;
+            this.disableInprogressNotification = false;
+            this.ignoreUnverifiedSsl = false;
+            this.includeBuildNumberInKey = false;
+            this.prependParentProjectKey = false;
+            this.projectKey = null;
+            this.stashRootUrl = null;
 
-            if (formData.has("credentialsId") && StringUtils.isNotBlank(formData.getString("credentialsId"))) {
-                credentialsId = formData.getString("credentialsId");
-            }
-            if (formData.has("projectKey")) {
-                projectKey = formData.getString("projectKey");
-            }
-            prependParentProjectKey = formData.getBoolean("prependParentProjectKey");
-
-            disableInprogressNotification = formData.getBoolean("disableInprogressNotification");
-
-            considerUnstableAsSuccess = formData.getBoolean("considerUnstableAsSuccess");
+            req.bindJSON(this, formData);
 
             save();
-            return super.configure(req, formData);
+
+            return true;
         }
     }
 
