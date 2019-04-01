@@ -375,14 +375,14 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
             try {
                 if (run instanceof AbstractBuild) {
-                    return Arrays.asList(TokenMacro.expandAll((AbstractBuild) run, listener, commitSha1));
+                    return Collections.singletonList(TokenMacro.expandAll((AbstractBuild) run, listener, commitSha1));
                 } else {
-                    return Arrays.asList(TokenMacro.expandAll(run, workspace, listener, commitSha1));
+                    return Collections.singletonList(TokenMacro.expandAll(run, workspace, listener, commitSha1));
                 }
             } catch (IOException | InterruptedException | MacroEvaluationException e) {
                 logger.println("Unable to expand commit SHA value");
                 e.printStackTrace(logger);
-                return Arrays.asList();
+                return Collections.emptyList();
             }
         }
 
