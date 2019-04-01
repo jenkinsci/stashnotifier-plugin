@@ -99,7 +99,6 @@ public class DescriptorImplTest {
         assertThat(desc.isIncludeBuildNumberInKey(), is(true));
         assertThat(desc.isIgnoreUnverifiedSsl(), is(true));
         assertThat(desc.isPrependParentProjectKey(), is(true));
-        assertThat(desc.getProjectKey(), is("JEN"));
         assertThat(desc.getStashRootUrl(), is("https://my.company.intranet/bitbucket"));
     }
 

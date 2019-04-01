@@ -576,7 +576,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         private boolean ignoreUnverifiedSsl;
         private boolean includeBuildNumberInKey;
         private boolean prependParentProjectKey;
-        private String projectKey;
         private String stashRootUrl;
 
         public DescriptorImpl() {
@@ -669,15 +668,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             this.prependParentProjectKey = prependParentProjectKey;
         }
 
-        public String getProjectKey() {
-            return projectKey;
-        }
-
-        @DataBoundSetter
-        public void setProjectKey(String projectKey) {
-            this.projectKey = StringUtils.trimToNull(projectKey);
-        }
-
         public String getStashRootUrl() {
             return stashRootUrl;
         }
@@ -748,7 +738,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             this.ignoreUnverifiedSsl = false;
             this.includeBuildNumberInKey = false;
             this.prependParentProjectKey = false;
-            this.projectKey = null;
             this.stashRootUrl = null;
 
             req.bindJSON(this, formData);
@@ -1005,8 +994,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             }
         }
 
-        String overriddenKey = (projectKey != null && projectKey.trim().length() > 0) ? projectKey : getDescriptor().getProjectKey();
-        if (overriddenKey != null && overriddenKey.trim().length() > 0) {
+        if (projectKey != null && projectKey.trim().length() > 0) {
             PrintStream logger = listener.getLogger();
             try {
                 if (!(run instanceof AbstractBuild<?, ?>)) {
