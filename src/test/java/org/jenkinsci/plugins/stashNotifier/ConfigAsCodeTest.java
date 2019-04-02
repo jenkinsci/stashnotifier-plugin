@@ -30,7 +30,6 @@ public class ConfigAsCodeTest {
         assertThat(stashNotifierConfig.isIgnoreUnverifiedSsl(), equalTo(true));
         assertThat(stashNotifierConfig.isIncludeBuildNumberInKey(), equalTo(true));
         assertThat(stashNotifierConfig.isPrependParentProjectKey(), equalTo(true));
-        assertThat(stashNotifierConfig.getProjectKey(), equalTo("JEN"));
         assertThat(stashNotifierConfig.getStashRootUrl(), equalTo("https://my.company.intranet/bitbucket"));
     }
 
@@ -44,7 +43,6 @@ public class ConfigAsCodeTest {
         stashNotifierConfig.setIgnoreUnverifiedSsl(true);
         stashNotifierConfig.setIncludeBuildNumberInKey(true);
         stashNotifierConfig.setPrependParentProjectKey(true);
-        stashNotifierConfig.setProjectKey("JEN");
         stashNotifierConfig.setStashRootUrl("https://my.company.intranet/bitbucket");
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
