@@ -12,7 +12,6 @@
         <changelist>-SNAPSHOT</changelist>
         <!-- Baseline Jenkins version you use to build the plugin. Users must have this version or newer to run. -->
         <jenkins.version>2.60.3</jenkins.version>
-        <!-- Java Level to use. Java 7 required when using core >= 1.612 -->
         <java.level>8</java.level>
     </properties>
     <artifactId>stashNotifier</artifactId>
