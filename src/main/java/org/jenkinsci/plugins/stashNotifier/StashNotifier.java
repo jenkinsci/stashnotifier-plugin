@@ -106,7 +106,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     /**
      * The id of the credentials to use.
      */
-    private String credentialsId;
+    private final String credentialsId;
 
     /**
      * if true, ignore exception thrown in case of an unverified SSL peer.
@@ -143,7 +143,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      */
     private final boolean considerUnstableAsSuccess;
 
-    private JenkinsLocationConfiguration globalConfig;
+    private final JenkinsLocationConfiguration globalConfig;
 
 // public members ----------------------------------------------------------
 
