@@ -83,8 +83,6 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.util.*;
 
 /**
@@ -492,15 +490,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             customContext = customContext.loadKeyMaterial(((CertificateCredentials) credentials).getKeyStore(), ((CertificateCredentials) credentials).getPassword().getPlainText().toCharArray());
         }
         if (ignoreUnverifiedSSL) {
-            TrustStrategy easyStrategy = new TrustStrategy() {
-                @Override
-                public boolean isTrusted(X509Certificate[] chain, String authType)
-                        throws CertificateException {
-                    return true;
-                }
-            };
-            customContext = customContext
-                    .loadTrustMaterial(null, easyStrategy);
+            TrustStrategy easyStrategy = (chain, authType) -> true;
+            customContext = customContext.loadTrustMaterial(null, easyStrategy);
         }
         return customContext.useTLS().build();
     }
