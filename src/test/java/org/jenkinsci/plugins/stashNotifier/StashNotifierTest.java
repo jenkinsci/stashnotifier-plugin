@@ -313,7 +313,7 @@ public class StashNotifierTest {
         //then
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
         verify(logger).println(messageCaptor.capture());
-        assertThat(messageCaptor.getValue(), is(containsString("Notified Stash for commit with id")));
+        assertThat(messageCaptor.getValue(), is(containsString("Notified Bitbucket for commit with id")));
     }
 
     @Test
@@ -331,8 +331,8 @@ public class StashNotifierTest {
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
         verify(logger, atLeastOnce()).println(messageCaptor.capture());
         List<String> values = messageCaptor.getAllValues();
-        assertThat(values.get(0), is(containsString("UNSTABLE reported to stash as SUCCESSFUL")));
-        assertThat(values.get(1), is(containsString("Notified Stash for commit with id")));
+        assertThat(values.get(0), is(containsString("UNSTABLE reported to Bitbucket as SUCCESSFUL")));
+        assertThat(values.get(1), is(containsString("Notified Bitbucket for commit with id")));
     }
 
     @Test
@@ -365,7 +365,7 @@ public class StashNotifierTest {
         //then
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
         verify(logger).println(messageCaptor.capture());
-        assertThat(messageCaptor.getValue(), is(containsString("Failed to notify Stash for commit")));
+        assertThat(messageCaptor.getValue(), is(containsString("Failed to notify Bitbucket for commit")));
     }
 
     @Test
@@ -421,7 +421,7 @@ public class StashNotifierTest {
         //then
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
         verify(logger).println(messageCaptor.capture());
-        assertThat(messageCaptor.getValue(), is(containsString("Notified Stash for commit with id")));
+        assertThat(messageCaptor.getValue(), is(containsString("Notified Bitbucket for commit with id")));
     }
 
 
@@ -438,7 +438,7 @@ public class StashNotifierTest {
         //then
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
         verify(logger).println(messageCaptor.capture());
-        assertThat(messageCaptor.getValue(), is(containsString("Failed to notify Stash for commit")));
+        assertThat(messageCaptor.getValue(), is(containsString("Failed to notify Bitbucket for commit")));
     }
 
     @Test

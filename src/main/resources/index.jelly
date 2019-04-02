@@ -2,5 +2,5 @@
   This view is used to render the installed plugins page.
 -->
 <div>
-	This plugin notifies a Stash server of build results.
+	This plugin notifies a Bitbucket server of build results.
 </div>

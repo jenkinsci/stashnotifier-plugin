@@ -1,77 +1,74 @@
-Stash Build Notifier Plugin for Jenkins
-=======================================
+Bitbucket Server Notifier Plugin for Jenkins
+============================================
 
-This Jenkins plugin notifies Stash of build results. Failed or
-successful builds will show up as little icons in the Stash web 
-interface in commit logs. Clicking on such an icon will take the 
-user to the specific build.
+This Jenkins plugin notifies Bitbucket Server (formerly known as Stash) of build results.
+Failed or successful builds will show up as little icons in Bitbucket's web interface in
+commit logs. Clicking on such an icon will take the user to the specific build.
 
 Requirements
 ============
 
-* **[Stash][] 2.1** or newer. This plugin uses the Atlassian 
-[Stash Build REST API][] which was introduced with Stash 2.1. 
-* **Jenkins 1.498** or newer
+* **[Stash][] 2.1** or newer / **[Bitbucket Server][] 4.0** or newer
+* **Jenkins 1.625.3** or newer
+
+This plugin uses the Atlassian Stash / Bitbucket Server [Build REST API][].
 
 Setup
 =====
 
-Set up Stash Notifier by navigating to `Manage Jenkins --> Configure System` and scrolling down to the **Stash Notifier** section. Enter _at least_ your `Stash Root Url` and `Credentials`. Additional options are available as required. (Screenshot below is from Jenkins v2.44)
+Set up Bitbucket Server Notifier by navigating to `Manage Jenkins --> Configure System` and scrolling down to the **Bitbucket Server Notifier** section.
+Enter _at least_ your `Bitbucket Root Url` and `Credentials`.
+Additional options are available as required.
 
-![Stash Notifier Settings](images/StashNotifierSettings.png)
+![Bitbucket Server Notifier Settings](images/StashNotifierSettings.png)
 
 ### Script setup
 
-Either automatically upon [Jenkins post-initialization](https://wiki.jenkins.io/display/JENKINS/Post-initialization+script) or through [Jenkins script console](https://wiki.jenkins.io/display/JENKINS/Jenkins+Script+Console), example:
+Either automatically upon [Jenkins post-initialization][] or through [Jenkins Script Console][], example:
+
 ```groovy
 Jenkins
-.instance
-.getDescriptor('org.jenkinsci.plugins.stashNotifier.StashNotifier')
-.with{  
-        credentialsId = 'stash-creds' 
-        stashRootUrl = 'https://stash.acme.com'
+    .instance
+    .getDescriptor('org.jenkinsci.plugins.stashNotifier.StashNotifier')
+    .with{
+        credentialsId = 'bitbucket-creds'
+        stashRootUrl = 'https://my.company.intranet/bitbucket'
         ignoreUnverifiedSsl = true
         disableInprogressNotification = true
         includeBuildNumberInKey = false
         prependParentProjectKey = false
         considerUnstableAsSuccess = false
-}
+    }
 ```
-
 
 Usage
 =====
 
-Use the Stash Notifier by adding it as a _Post Step_ in your Jenkins build job 
-configuration. 
+Use the Bitbucket Server Notifier by adding it as a _Post Step_ in your Jenkins build job configuration.
 
-1. In your Jenkins job configuration go to the *Post-build Actions* section, 
-click on *Add post-build action* and select *Notify Stash Instance*
-2. Enter the Stash base URL, e. g. <tt>http://localhost:7990</tt> or 
-<tt>http://my.company/stash</tt>. If in doubt, go to your local Stash 
-server and check the URL in the browser. The URL 
-<tt>http://georg@localhost:7991/projects</tt> e. g. reveals the
-server base URL, which is <tt>http://localhost:7991</tt> in this case. 
-2. Use the [Credentials Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin) to select
-credentials for Stash. Please note that SSH credentials (public/private key) from Jenkins that might be
-added to Stash are **not** used for the authentication. Typically, in order to access Stash you would add
-a service account (username and password) to Jenkins.
+1. In your Jenkins job configuration go to the *Post-build Actions* section, click on *Add post-build action* and select *Notify Bitbucket Instance*.
+2. Enter the Bitbucket base URL, e. g. <tt>http://localhost:7990</tt> or <tt>https://my.company.intranet/bitbucket</tt>.
+If in doubt, go to your local Bitbucket server and check the URL in the browser.
+The URL <tt>http://georg@localhost:7991/projects</tt> e. g. reveals the server base URL, which is <tt>http://localhost:7991</tt> in this case.
+3. Use the [Credentials Plugin](https://wiki.jenkins.io/display/JENKINS/Credentials+Plugin) to select credentials for Bitbucket.
+Please note that SSH credentials (public/private key) from Jenkins that might be added to Bitbucket are **not** used for the authentication.
+Typically, in order to access Bitbucket you would add a service account (username and password) to Jenkins.
 
 That's it. If you have configured everything correctly, Jenkins will notify
-your Stash instance of subsequent builds. The result is illustrated on
-Atlassians [Stash Build Integration][] wiki page.
+your Bitbucket instance of subsequent builds. The result is illustrated on
+the Atlassian [Bitbucket Build Integration][] wiki page.
 
 ### Note on Pipeline Plugin usage
 
-See the following code for an example of how to use this plugin inside of a 
-[Pipeline Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Plugin). You must set the result of the 
+See the following code for an example of how to use this plugin inside of a
+[Pipeline](https://jenkins.io/solutions/pipeline/). You must set the result of the
 current build manually in the Pipeline script.
 
 ```groovy
 node {
     checkout scm                            // Necessary so we know the current commit
 
-    notifyBitbucket()                       // Notifies the Stash Instance of an INPROGRESS build
+    notifyBitbucket()                       // Notifies the Bitbucket instance of an INPROGRESS build
 
     try {
         // Do stuff
@@ -81,18 +78,19 @@ node {
         currentBuild.result = 'FAILED'      // Set result of currentBuild !Important!
     }
 
-    notifyBitbucket()                       // Notifies the Stash Instance of the build result
+    notifyBitbucket()                       // Notifies the Bitbucket instance of the build result
 }
 ```
 
 In situations where an advanced setup is required the following can be used:
+
 ```groovy
 node {
-    this.notifyBitbucket('INPROGRESS')     // Notifies the Stash Instance of an INPROGRESS build
-    
+    this.notifyBitbucket('INPROGRESS')     // Notifies the Bitbucket instance of an INPROGRESS build
+
     try {
         // Do stuff
-    
+
         this.notifyBitbucket('SUCCESS')
     } catch(err) {
         this.notifyBitbucket('FAILED')
@@ -100,19 +98,19 @@ node {
 }
 
 def notifyBitbucket(String state) {
-
-    if('SUCCESS' == state || 'FAILED' == state) {
+    if ('SUCCESS' == state || 'FAILED' == state) {
         currentBuild.result = state         // Set result of currentBuild !Important!
     }
-    notifyBitbucket commitSha1: "commit", 
-                credentialsId: '00000000-1111-2222-3333-123456789abc', 
-                disableInprogressNotification: false, 
-                considerUnstableAsSuccess: true, 
-                ignoreUnverifiedSSLPeer: true, 
-                includeBuildNumberInKey: false, 
-                prependParentProjectKey: false, 
-                projectKey: '', 
-                stashServerBaseUrl: 'https://stash.company.com'
+    notifyBitbucket(
+            commitSha1: 'commit',
+            credentialsId: '00000000-1111-2222-3333-123456789abc',
+            disableInprogressNotification: false,
+            considerUnstableAsSuccess: true,
+            ignoreUnverifiedSSLPeer: true,
+            includeBuildNumberInKey: false,
+            prependParentProjectKey: false,
+            projectKey: '',
+            stashServerBaseUrl: 'https://my.company.intranet/bitbucket')
 
 }
 ```
@@ -130,8 +128,8 @@ pipeline {
             }
         }
     }
-    post { 
-        always { 
+    post {
+        always {
             script {
                 currentBuild.result = currentBuild.result ?: 'SUCCESS'
                 notifyBitbucket()
@@ -143,8 +141,7 @@ pipeline {
 
 ### Note on credentials
 
-Currently Stash Build Notifier Plugin accepts only raw plaintext credentials as it works over the HTTP REST API of stash.
-
+Currently Bitbucket Server Build Notifier accepts only raw plaintext credentials as it uses the HTTP REST API of Bitbucket.
 
 Maintainers
 ===========
@@ -157,7 +154,9 @@ License
 
 [Apache 2.0 License](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-[Stash]: www.atlassian.com/software/stash
-[Stash Build Integration]: https://developer.atlassian.com/stash/docs/latest/how-tos/updating-build-status-for-commits.html
-[Stash Build REST API]: https://developer.atlassian.com/static/rest/stash/latest/stash-build-integration-rest.html
-
+[Stash]: https://confluence.atlassian.com/bitbucketserver/older-releases-776640690.html
+[Bitbucket Server]: https://confluence.atlassian.com/bitbucketserver/bitbucket-server-release-notes-872139866.html
+[Bitbucket Build Integration]: https://developer.atlassian.com/server/bitbucket/how-tos/updating-build-status-for-commits/
+[Build REST API]: https://docs.atlassian.com/DAC/rest/stash/2.1.0/stash-build-integration-rest.html
+[Jenkins post-initialization]: https://wiki.jenkins.io/display/JENKINS/Post-initialization+script
+[Jenkins Script Console]: https://wiki.jenkins.io/display/JENKINS/Jenkins+Script+Console
