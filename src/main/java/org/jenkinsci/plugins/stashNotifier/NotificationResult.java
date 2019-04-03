@@ -26,7 +26,7 @@ public final class NotificationResult {
     public final boolean indicatesSuccess;
 
     /**
-     * the error message in case the notification was not succesful or
+     * the error message in case the notification was not successful or
      * null, otherwise.
      */
     public final String message;
@@ -46,7 +46,7 @@ public final class NotificationResult {
      * returns a new NotificationResult instance indicating a failed
      * notification.
      *
-     * @param message the message indicating why the notifiation failed
+     * @param message the message indicating why the notification failed
      * @return a new NotificationResult instance indicating a successful
      * notification
      */

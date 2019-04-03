@@ -83,8 +83,6 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.util.*;
 
 /**
@@ -108,7 +106,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     /**
      * The id of the credentials to use.
      */
-    private String credentialsId;
+    private final String credentialsId;
 
     /**
      * if true, ignore exception thrown in case of an unverified SSL peer.
@@ -145,7 +143,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      */
     private final boolean considerUnstableAsSuccess;
 
-    private JenkinsLocationConfiguration globalConfig;
+    private final JenkinsLocationConfiguration globalConfig;
 
 // public members ----------------------------------------------------------
 
@@ -375,27 +373,19 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
             try {
                 if (run instanceof AbstractBuild) {
-                    return Arrays.asList(TokenMacro.expandAll((AbstractBuild) run, listener, commitSha1));
+                    return Collections.singletonList(TokenMacro.expandAll((AbstractBuild) run, listener, commitSha1));
                 } else {
-                    return Arrays.asList(TokenMacro.expandAll(run, workspace, listener, commitSha1));
+                    return Collections.singletonList(TokenMacro.expandAll(run, workspace, listener, commitSha1));
                 }
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException | MacroEvaluationException e) {
                 logger.println("Unable to expand commit SHA value");
                 e.printStackTrace(logger);
-                return Arrays.asList();
-            } catch (InterruptedException e) {
-                logger.println("Unable to expand commit SHA value");
-                e.printStackTrace(logger);
-                return Arrays.asList();
-            } catch (MacroEvaluationException e) {
-                logger.println("Unable to expand commit SHA value");
-                e.printStackTrace(logger);
-                return Arrays.asList();
+                return Collections.emptyList();
             }
         }
 
         // Use a set to remove duplicates
-        Collection<String> sha1s = new HashSet<String>();
+        Collection<String> sha1s = new HashSet<>();
         // MultiSCM may add multiple BuildData actions for each SCM, but we are covered in any case
         for (BuildData buildData : run.getActions(BuildData.class)) {
             // get the sha1 of the commit that was built
@@ -469,12 +459,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             } catch (NoSuchAlgorithmException nsae) {
                 logger.println("Couldn't establish SSL context:");
                 nsae.printStackTrace(logger);
-            } catch (KeyManagementException kme) {
+            } catch (KeyManagementException | KeyStoreException kme) {
                 logger.println("Couldn't initialize SSL context:");
                 kme.printStackTrace(logger);
-            } catch (KeyStoreException kse) {
-                logger.println("Couldn't initialize SSL context:");
-                kse.printStackTrace(logger);
             }
         }
 
@@ -503,15 +490,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             customContext = customContext.loadKeyMaterial(((CertificateCredentials) credentials).getKeyStore(), ((CertificateCredentials) credentials).getPassword().getPlainText().toCharArray());
         }
         if (ignoreUnverifiedSSL) {
-            TrustStrategy easyStrategy = new TrustStrategy() {
-                @Override
-                public boolean isTrusted(X509Certificate[] chain, String authType)
-                        throws CertificateException {
-                    return true;
-                }
-            };
-            customContext = customContext
-                    .loadTrustMaterial(null, easyStrategy);
+            TrustStrategy easyStrategy = (chain, authType) -> true;
+            customContext = customContext.loadTrustMaterial(null, easyStrategy);
         }
         return customContext.useTLS().build();
     }
@@ -595,7 +575,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                                         StandardCredentials.class,
                                         project,
                                         ACL.SYSTEM,
-                                        new ArrayList<DomainRequirement>()));
+                                        new ArrayList<>()));
             } else if (jenkins != null && jenkins.hasPermission(Item.CONFIGURE)) {
                 return new StandardListBoxModel()
                         .withEmptySelection()
@@ -605,7 +585,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                                         StandardCredentials.class,
                                         jenkins,
                                         ACL.SYSTEM,
-                                        new ArrayList<DomainRequirement>()));
+                                        new ArrayList<>()));
             }
 
             return new StandardListBoxModel();
@@ -803,7 +783,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         String credentialsId = getCredentialsId();
         if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
             credentials = CredentialsMatchers.firstOrNull(
-                    lookupCredentials(clazz, project, ACL.SYSTEM, new ArrayList<DomainRequirement>()),
+                    lookupCredentials(clazz, project, ACL.SYSTEM, new ArrayList<>()),
                     CredentialsMatchers.withId(credentialsId));
         }
 
@@ -814,7 +794,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             }
             if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
                 credentials = CredentialsMatchers.firstOrNull(
-                        lookupCredentials(clazz, Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<DomainRequirement>()),
+                        lookupCredentials(clazz, Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<>()),
                         CredentialsMatchers.withId(credentialsId));
             }
         }
@@ -998,17 +978,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 } else {
                     key.append(TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, projectKey));
                 }
-            } catch (IOException ioe) {
+            } catch (IOException | InterruptedException | MacroEvaluationException ioe) {
                 logger.println("Cannot expand build key from parameter. Processing with default build key");
                 ioe.printStackTrace(logger);
-                key.append(getDefaultBuildKey(run));
-            } catch (InterruptedException ie) {
-                logger.println("Cannot expand build key from parameter. Processing with default build key");
-                ie.printStackTrace(logger);
-                key.append(getDefaultBuildKey(run));
-            } catch (MacroEvaluationException mee) {
-                logger.println("Cannot expand build key from parameter. Processing with default build key");
-                mee.printStackTrace(logger);
                 key.append(getDefaultBuildKey(run));
             }
         } else {

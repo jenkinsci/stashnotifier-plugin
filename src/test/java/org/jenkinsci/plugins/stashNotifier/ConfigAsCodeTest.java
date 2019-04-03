@@ -1,7 +1,7 @@
 package org.jenkinsci.plugins.stashNotifier;
 
-import hudson.util.IOUtils;
 import io.jenkins.plugins.casc.ConfigurationAsCode;
+import org.apache.commons.io.IOUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
