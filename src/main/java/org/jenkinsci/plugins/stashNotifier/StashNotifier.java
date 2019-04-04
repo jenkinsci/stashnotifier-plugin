@@ -40,25 +40,28 @@ import org.acegisecurity.Authentication;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.*;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.conn.ssl.SSLContextBuilder;
-import org.apache.http.conn.ssl.SSLContexts;
-import org.apache.http.conn.ssl.TrustStrategy;
+import org.apache.http.conn.ssl.TrustAllStrategy;
+import org.apache.http.ssl.SSLContextBuilder;
+import org.apache.http.ssl.SSLContexts;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
@@ -415,85 +418,71 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * Returns the HttpClient through which the REST call is made. Uses an
      * unsafe TrustStrategy in case the user specified a HTTPS URL and
      * set the ignoreUnverifiedSSLPeer flag.
-     *
-     * @param logger      the logger to log messages to
-     * @param run
-     * @param stashServer
-     * @return the HttpClient
      */
-    protected HttpClient getHttpClient(PrintStream logger, Run<?, ?> run, String stashServer) throws Exception {
+    protected CloseableHttpClient getHttpClient(PrintStream logger, Run<?, ?> run, String stashServer) throws Exception {
         DescriptorImpl globalSettings = getDescriptor();
 
         CertificateCredentials certificateCredentials = getCredentials(CertificateCredentials.class, run.getParent());
 
-        URL url = new URL(stashServer);
-        HttpClientBuilder builder = HttpClientBuilder.create();
         RequestConfig.Builder requestBuilder = RequestConfig.custom();
-        requestBuilder = requestBuilder.setSocketTimeout(60000);
-        builder.setDefaultRequestConfig(requestBuilder.build());
+        requestBuilder.setSocketTimeout(60_000);
 
+        HttpClientBuilder clientBuilder = HttpClients.custom();
+        clientBuilder.setDefaultRequestConfig(requestBuilder.build());
+
+        URL url = new URL(stashServer);
         boolean ignoreUnverifiedSSL = ignoreUnverifiedSSLPeer || globalSettings.isIgnoreUnverifiedSsl();
+
         if (url.getProtocol().equals("https") && ignoreUnverifiedSSL) {
-            // add unsafe trust manager to avoid thrown
-            // SSLPeerUnverifiedException
+            // add unsafe trust manager to avoid thrown SSLPeerUnverifiedException
             try {
-                final SSLContext sslContext = buildSslContext(ignoreUnverifiedSSL, certificateCredentials);
+                SSLContext sslContext = buildSslContext(ignoreUnverifiedSSL, certificateCredentials);
                 SSLConnectionSocketFactory sslConnSocketFactory = new SSLConnectionSocketFactory(
                         sslContext,
                         new String[]{"TLSv1", "TLSv1.1", "TLSv1.2"},
                         null,
-                        SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER
+                        NoopHostnameVerifier.INSTANCE
                 );
-                builder.setSSLSocketFactory(sslConnSocketFactory);
+                clientBuilder.setSSLSocketFactory(sslConnSocketFactory);
 
-                Registry<ConnectionSocketFactory> registry
-                        = RegistryBuilder.<ConnectionSocketFactory>create()
+                Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
                         .register("https", sslConnSocketFactory)
                         .register("http", PlainConnectionSocketFactory.INSTANCE)
                         .build();
 
-                HttpClientConnectionManager ccm
-                        = new BasicHttpClientConnectionManager(registry);
-
-                builder.setConnectionManager(ccm);
+                HttpClientConnectionManager connectionManager = new BasicHttpClientConnectionManager(registry);
+                clientBuilder.setConnectionManager(connectionManager);
             } catch (NoSuchAlgorithmException nsae) {
                 logger.println("Couldn't establish SSL context:");
                 nsae.printStackTrace(logger);
-            } catch (KeyManagementException | KeyStoreException kme) {
+            } catch (KeyManagementException | KeyStoreException e) {
                 logger.println("Couldn't initialize SSL context:");
-                kme.printStackTrace(logger);
+                e.printStackTrace(logger);
             }
         }
 
         // Configure the proxy, if needed
         // Using the Jenkins methods handles the noProxyHost settings
-        configureProxy(builder, url);
+        configureProxy(clientBuilder, url);
 
-        return builder.build();
+        return clientBuilder.build();
     }
 
     /**
      * Helper in place to allow us to define out HttpClient SSL context
-     *
-     * @param ignoreUnverifiedSSL
-     * @param credentials
-     * @return
-     * @throws UnrecoverableKeyException
-     * @throws NoSuchAlgorithmException
-     * @throws KeyStoreException
-     * @throws KeyManagementException
      */
     private SSLContext buildSslContext(boolean ignoreUnverifiedSSL, Credentials credentials) throws UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
-
-        SSLContextBuilder customContext = SSLContexts.custom();
+        SSLContextBuilder contextBuilder = SSLContexts.custom();
+        contextBuilder.setProtocol("TLS");
         if (credentials instanceof CertificateCredentials) {
-            customContext = customContext.loadKeyMaterial(((CertificateCredentials) credentials).getKeyStore(), ((CertificateCredentials) credentials).getPassword().getPlainText().toCharArray());
+            contextBuilder.loadKeyMaterial(
+                    ((CertificateCredentials) credentials).getKeyStore(),
+                    ((CertificateCredentials) credentials).getPassword().getPlainText().toCharArray());
         }
         if (ignoreUnverifiedSSL) {
-            TrustStrategy easyStrategy = (chain, authType) -> true;
-            customContext = customContext.loadTrustMaterial(null, easyStrategy);
+            contextBuilder.loadTrustMaterial(null, TrustAllStrategy.INSTANCE);
         }
-        return customContext.useTLS().build();
+        return contextBuilder.build();
     }
 
     private void configureProxy(HttpClientBuilder builder, URL url) {
@@ -743,16 +732,14 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             final String commitSha1,
             final TaskListener listener,
             final StashBuildState state) throws Exception {
-        HttpEntity stashBuildNotificationEntity
-                = newStashBuildNotificationEntity(run, state, listener);
+        HttpEntity stashBuildNotificationEntity = newStashBuildNotificationEntity(run, state, listener);
 
         String stashURL = expandStashURL(run, listener);
 
         logger.println("Notifying Bitbucket at \"" + stashURL + "\"");
 
         HttpPost req = createRequest(stashBuildNotificationEntity, run.getParent(), commitSha1, stashURL);
-        HttpClient client = getHttpClient(logger, run, stashURL);
-        try {
+        try (CloseableHttpClient client = getHttpClient(logger, run, stashURL)) {
             HttpResponse res = client.execute(req);
             if (res.getStatusLine().getStatusCode() != 204) {
                 return NotificationResult.newFailure(
@@ -760,8 +747,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             } else {
                 return NotificationResult.newSuccess();
             }
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
@@ -866,7 +851,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                     null));
         }
 
-        req.addHeader("Content-type", "application/json");
+        req.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
         req.setEntity(stashBuildNotificationEntity);
 
         return req;

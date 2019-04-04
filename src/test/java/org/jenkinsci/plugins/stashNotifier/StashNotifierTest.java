@@ -29,7 +29,6 @@ import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.StringEntity;
@@ -121,7 +120,6 @@ public class StashNotifierTest {
         Secret secret = mock(Secret.class);
         httpClientBuilder = PowerMockito.mock(HttpClientBuilder.class);
         client = mock(CloseableHttpClient.class);
-        ClientConnectionManager connectionManager = mock(ClientConnectionManager.class);
         CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
         HttpUriRequest req = mock(HttpUriRequest.class);
         StatusLine statusLine = mock(StatusLine.class);
@@ -147,7 +145,6 @@ public class StashNotifierTest {
         when(secret.getPlainText()).thenReturn("tiger");
         when(HttpClientBuilder.create()).thenReturn(httpClientBuilder);
         when(httpClientBuilder.build()).thenReturn(client);
-        when(client.getConnectionManager()).thenReturn(connectionManager);
         when(client.execute((HttpUriRequest) anyObject())).thenReturn(resp);
         when(resp.getStatusLine()).thenReturn(statusLine);
         when(statusLine.getStatusCode()).thenReturn(204);
