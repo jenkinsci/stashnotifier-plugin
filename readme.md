@@ -17,7 +17,7 @@ Setup
 =====
 
 Set up Bitbucket Server Notifier by navigating to `Manage Jenkins --> Configure System` and scrolling down to the **Bitbucket Server Notifier** section.
-Enter _at least_ your `Bitbucket Root Url` and `Credentials`.
+Enter at least your `Server base URL` and `Credentials`.
 Additional options are available as required.
 
 ![Bitbucket Server Notifier Settings](images/StashNotifierSettings.png)
@@ -47,10 +47,10 @@ Usage
 Use the Bitbucket Server Notifier by adding it as a _Post Step_ in your Jenkins build job configuration.
 
 1. In your Jenkins job configuration go to the *Post-build Actions* section, click on *Add post-build action* and select *Notify Bitbucket Instance*.
-2. Enter the Bitbucket base URL, e. g. <tt>http://localhost:7990</tt> or <tt>https://my.company.intranet/bitbucket</tt>.
+2. Enter the `Server base URL`, e. g. <tt>http://localhost:7990</tt> or <tt>https://my.company.intranet/bitbucket</tt>.<br>
 If in doubt, go to your local Bitbucket server and check the URL in the browser.
 The URL <tt>http://georg@localhost:7991/projects</tt> e. g. reveals the server base URL, which is <tt>http://localhost:7991</tt> in this case.
-3. Use the [Credentials Plugin](https://wiki.jenkins.io/display/JENKINS/Credentials+Plugin) to select credentials for Bitbucket.
+3. Select the `Credentials` for authenticating with Bitbucket.<br>
 Please note that SSH credentials (public/private key) from Jenkins that might be added to Bitbucket are **not** used for the authentication.
 Typically, in order to access Bitbucket you would add a service account (username and password) to Jenkins.
 
