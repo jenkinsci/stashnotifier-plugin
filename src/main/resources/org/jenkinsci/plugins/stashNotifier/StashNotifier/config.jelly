@@ -1,32 +1,31 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
- <f:advanced>
-  <f:entry title="Server base URL" field="stashServerBaseUrl">
-    <f:textbox />
-  </f:entry>
-   <f:entry title="${%Credentials}" field="credentialsId">
-      <c:select/>
+  <f:advanced>
+    <f:entry title="Server base URL" field="stashServerBaseUrl">
+      <f:textbox />
     </f:entry>
-   <f:entry title="Commit SHA-1" field="commitSha1">
-    <f:textbox />
-  </f:entry>
-   <f:entry title="Ignore unverified SSL certificates"
-   		field="ignoreUnverifiedSSLPeer">
-    <f:checkbox />
-  </f:entry>
-  <f:entry title="Keep repeated builds in Bitbucket" field="includeBuildNumberInKey">
-    <f:checkbox />
-  </f:entry>
-  <f:entry title="Override project key" field="projectKey">
-    <f:textbox />
-  </f:entry>
-  <f:entry title="Prepend parent project name to key" field="prependParentProjectKey">
-    <f:checkbox />
-  </f:entry>
-  <f:entry title="Disable INPROGRESS notification" field="disableInprogressNotification">
-    <f:checkbox/>
-  </f:entry>
-  <f:entry title="Consider UNSTABLE builds as SUCCESS notification" field="considerUnstableAsSuccess">
-    <f:checkbox/>
-  </f:entry>
- </f:advanced>
+    <f:entry title="${%Credentials}" field="credentialsId">
+      <c:select/>
+     </f:entry>
+     <f:entry title="Commit SHA-1" field="commitSha1">
+      <f:textbox />
+    </f:entry>
+    <f:entry title="Ignore unverified SSL certificates" field="ignoreUnverifiedSSLPeer">
+      <f:checkbox />
+    </f:entry>
+    <f:entry title="Keep repeated builds in Bitbucket" field="includeBuildNumberInKey">
+      <f:checkbox />
+    </f:entry>
+    <f:entry title="Override project key" field="projectKey">
+      <f:textbox />
+    </f:entry>
+    <f:entry title="Prepend parent project name to key" field="prependParentProjectKey">
+      <f:checkbox />
+    </f:entry>
+    <f:entry title="Disable INPROGRESS notification" field="disableInprogressNotification">
+      <f:checkbox />
+    </f:entry>
+    <f:entry title="Consider UNSTABLE builds as SUCCESS notification" field="considerUnstableAsSuccess">
+      <f:checkbox />
+    </f:entry>
+  </f:advanced>
 </j:jelly>
