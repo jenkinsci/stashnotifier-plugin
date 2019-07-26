@@ -424,8 +424,12 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         CertificateCredentials certificateCredentials = getCredentials(CertificateCredentials.class, run.getParent());
 
-        RequestConfig.Builder requestBuilder = RequestConfig.custom();
-        requestBuilder.setSocketTimeout(60_000);
+        final int timeoutInMilliseconds = 60_000;
+
+        RequestConfig.Builder requestBuilder = RequestConfig.custom()
+                                            .setSocketTimeout(timeoutInMilliseconds)
+                                            .setConnectTimeout(timeoutInMilliseconds)
+                                            .setConnectionRequestTimeout(timeoutInMilliseconds);
 
         HttpClientBuilder clientBuilder = HttpClients.custom();
         clientBuilder.setDefaultRequestConfig(requestBuilder.build());
