@@ -15,7 +15,7 @@
         <java.level>8</java.level>
     </properties>
     <artifactId>stashNotifier</artifactId>
-    <version>${revision}${changelist}</version>
+    <version>1.19</version>
     <name>Bitbucket Server Notifier</name>
     <description>
         Jenkins plugin to notify Atlassian Bitbucket Server (formerly known as Stash)
@@ -27,7 +27,7 @@
         <connection>scm:git:https://github.com/jenkinsci/stashnotifier-plugin.git</connection>
         <developerConnection>scm:git:https://github.com/jenkinsci/stashnotifier-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/stashnotifier-plugin</url>
-      <tag>${scmTag}</tag>
+      <tag>1.19</tag>
   </scm>
 
     <developers>
