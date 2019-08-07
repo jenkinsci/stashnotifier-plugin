@@ -102,6 +102,11 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     // attributes --------------------------------------------------------------
 
     /**
+    * build name 
+    */
+    private final String buildName;
+
+    /**
      * base url of Bitbucket server, e. g. <tt>http://localhost:7990</tt>.
      */
     private final String stashServerBaseUrl;
@@ -156,6 +161,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     }
 
     StashNotifier(
+            String buildName,
             String stashServerBaseUrl,
             String credentialsId,
             boolean ignoreUnverifiedSSLPeer,
@@ -168,6 +174,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             JenkinsLocationConfiguration globalConfig
     ) {
 
+        this.buildName = buildName;
         this.stashServerBaseUrl = stashServerBaseUrl != null && stashServerBaseUrl.endsWith("/")
                 ? stashServerBaseUrl.substring(0, stashServerBaseUrl.length() - 1)
                 : stashServerBaseUrl;
@@ -184,6 +191,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     @DataBoundConstructor
     public StashNotifier(
+            String buildName,
             String stashServerBaseUrl,
             String credentialsId,
             boolean ignoreUnverifiedSSLPeer,
@@ -195,6 +203,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             boolean considerUnstableAsSuccess
     ) {
         this(
+                buildName,
                 stashServerBaseUrl,
                 credentialsId,
                 ignoreUnverifiedSSLPeer,
@@ -206,6 +215,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 considerUnstableAsSuccess,
                 JenkinsLocationConfiguration.get()
         );
+    }
+
+    public String getBuildName() {
+        return buildName;
     }
 
     public boolean isDisableInprogressNotification() {
@@ -901,7 +914,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         json.put("key", abbreviate(getBuildKey(run, listener), MAX_FIELD_LENGTH));
 
-        json.put("name", abbreviate(run.getFullDisplayName(), MAX_FIELD_LENGTH));
+        json.put("name", getName(run));
 
         json.put("description", abbreviate(getBuildDescription(run, state), MAX_FIELD_LENGTH));
         json.put("url", abbreviate(DisplayURLProvider.get().getRunURL(run), MAX_URL_FIELD_LENGTH));
@@ -920,6 +933,15 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             return text;
         }
         return text.substring(0, maxWidth - 3) + "...";
+    }
+    
+    private String getName(final Run<?, ?> run) {
+
+        if (getBuildName() == null) {
+            return abbreviate(run.getFullDisplayName(), MAX_FIELD_LENGTH);
+        }
+
+        return getBuildName();
     }
 
     /**

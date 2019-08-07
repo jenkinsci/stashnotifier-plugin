@@ -16,7 +16,7 @@
     </properties>
     <artifactId>stashNotifier</artifactId>
     <version>${revision}${changelist}</version>
-    <name>Bitbucket Server Notifier</name>
+    <name>OVO Bitbucket Server Notifier</name>
     <description>
         Jenkins plugin to notify Atlassian Bitbucket Server (formerly known as Stash)
         instances of build results through the REST build API.

@@ -78,6 +78,7 @@ public class StashNotifierTest {
                                             boolean disableInprogressNotification,
                                             boolean considerUnstableAsSuccess) {
         return new StashNotifier(
+                "build-name",
                 stashBaseUrl,
                 "scot",
                 true,
@@ -226,6 +227,7 @@ public class StashNotifierTest {
     public void test_build_http_client_https() throws Exception {
         //given
         sn = spy(new StashNotifier(
+                null,
                 "https://localhost",
                 "scot",
                 true,
@@ -481,6 +483,7 @@ public class StashNotifierTest {
         PowerMockito.mockStatic(TokenMacro.class);
         PowerMockito.when(TokenMacro.expandAll(build, buildListener, sha1)).thenReturn(sha1);
         sn = new StashNotifier(
+                null,
                 "https://localhost",
                 "scot",
                 true,
@@ -506,6 +509,7 @@ public class StashNotifierTest {
         PowerMockito.mockStatic(TokenMacro.class);
         PowerMockito.when(TokenMacro.expandAll(build, buildListener, sha1)).thenThrow(e);
         sn = new StashNotifier(
+                null,
                 "http://localhost",
                 "scot",
                 true,
@@ -597,6 +601,7 @@ public class StashNotifierTest {
         PowerMockito.when(TokenMacro.expandAll(build, buildListener, key)).thenReturn(key);
 
         sn = new StashNotifier(
+                null,
                 "",
                 "scot",
                 true,
@@ -625,6 +630,7 @@ public class StashNotifierTest {
         PowerMockito.when(TokenMacro.expandAll(run, new FilePath(tempDir), buildListener, key)).thenReturn(key);
 
         sn = new StashNotifier(
+                null,
                 "",
                 "scot",
                 true,
@@ -650,6 +656,7 @@ public class StashNotifierTest {
         PowerMockito.when(TokenMacro.expandAll(build, buildListener, key)).thenThrow(e);
 
         sn = new StashNotifier(
+                null,
                 "",
                 "scot",
                 true,
@@ -680,6 +687,7 @@ public class StashNotifierTest {
         PowerMockito.when(TokenMacro.expandAll(run, new FilePath(tempDir), buildListener, key)).thenThrow(e);
 
         sn = new StashNotifier(
+                null,
                 "",
                 "scot",
                 true,
