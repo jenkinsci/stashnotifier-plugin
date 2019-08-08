@@ -18,6 +18,7 @@ import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
 import org.acegisecurity.Authentication;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.StatusLine;
@@ -698,7 +699,7 @@ public class StashNotifierTest {
                 true,
                 null,
                 null,
-                null,
+                "build-name",
                 true,
                 key,
                 true,
@@ -713,12 +714,12 @@ public class StashNotifierTest {
     @Test
     public void test_getBuildKey_withBuildName() throws InterruptedException, MacroEvaluationException, IOException {
         //given
-        String key = "someKey";
+        String parentName = "someKey";
+        int number = 11;
         String buildName = "buildName";
-        PrintStream logger = mock(PrintStream.class);
-        when(buildListener.getLogger()).thenReturn(logger);
-        PowerMockito.mockStatic(TokenMacro.class);
-        PowerMockito.when(TokenMacro.expandAll(build, buildListener, key)).thenReturn(key);
+
+        when(build.getParent().getName()).thenReturn(parentName);
+        when(build.getNumber()).thenReturn(number);
 
         sn = new StashNotifier(
                 "",
@@ -728,14 +729,14 @@ public class StashNotifierTest {
                 null,
                 buildName,
                 true,
-                key,
+                null,
                 true,
                 false,
                 false,
                 new JenkinsLocationConfiguration());
 
         String buildKey = sn.getBuildKey(build, buildListener);
-        assertThat(buildKey, is(key + buildName));
+        assertThat(buildKey, is(StringEscapeUtils.escapeJavaScript(parentName + "-" + number + "-" + jenkins.getRootUrl() + "-" + buildName)));
     }
 
 

@@ -992,6 +992,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
         key.append('-').append(getRootUrl());
 
+        if (buildName != null && buildName.trim().length() > 0) {
+            key.append('-').append(buildName);
+        }
+
         return key.toString();
     }
 
@@ -1028,10 +1032,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             }
         } else {
             key.append(getDefaultBuildKey(run));
-        }
-
-        if (buildName != null && buildName.trim().length() > 0) {
-            key.append(buildName);
         }
 
         return StringEscapeUtils.escapeJavaScript(key.toString());
