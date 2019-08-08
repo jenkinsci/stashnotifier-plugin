@@ -82,6 +82,8 @@ public class StashNotifierTest {
                 "scot",
                 true,
                 null,
+                null,
+                null,
                 true,
                 "test-project",
                 true,
@@ -229,6 +231,8 @@ public class StashNotifierTest {
                 "https://localhost",
                 "scot",
                 true,
+                null,
+                null,
                 null,
                 true,
                 null,
@@ -485,6 +489,8 @@ public class StashNotifierTest {
                 "scot",
                 true,
                 sha1,
+                null,
+                null,
                 true,
                 null,
                 false,
@@ -510,6 +516,8 @@ public class StashNotifierTest {
                 "scot",
                 true,
                 sha1,
+                null,
+                null,
                 true,
                 null,
                 false,
@@ -588,6 +596,94 @@ public class StashNotifierTest {
     }
 
     @Test
+    public void test_getPushedBuildState_overwritten() throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+        StashBuildState state = StashBuildState.SUCCESSFUL;
+
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                state.name(),
+                null,
+                true,
+                null,
+                true,
+                false,
+                false,
+                new JenkinsLocationConfiguration());
+
+        assertThat(sn.getPushedBuildState(StashBuildState.FAILED), is(state));
+    }
+
+    @Test
+    public void test_getPushedBuildState_not_overwritten() throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                null,
+                null,
+                true,
+                null,
+                true,
+                false,
+                false,
+                new JenkinsLocationConfiguration());
+
+        assertThat(sn.getPushedBuildState(StashBuildState.FAILED), is(StashBuildState.FAILED));
+    }
+
+    @Test
+    public void test_getBuildName_overwritten() throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+        when(run.getFullDisplayName()).thenReturn("default-name");
+        String name = "custom-name";
+
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                null,
+                name,
+                true,
+                null,
+                true,
+                false,
+                false,
+                new JenkinsLocationConfiguration());
+
+        assertThat(sn.getBuildName(run), is(name));
+    }
+
+    @Test
+    public void test_getBuildName_not_overwritten() throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+        when(run.getFullDisplayName()).thenReturn("default-name");
+
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                null,
+                null,
+                true,
+                null,
+                true,
+                false,
+                false,
+                new JenkinsLocationConfiguration());
+
+        assertThat(sn.getBuildName(run), is("default-name"));
+    }
+
+    @Test
     public void test_getBuildKey() throws InterruptedException, MacroEvaluationException, IOException {
         //given
         String key = "someKey";
@@ -600,6 +696,8 @@ public class StashNotifierTest {
                 "",
                 "scot",
                 true,
+                null,
+                null,
                 null,
                 true,
                 key,
@@ -629,6 +727,8 @@ public class StashNotifierTest {
                 "scot",
                 true,
                 null,
+                null,
+                null,
                 true,
                 key,
                 true,
@@ -653,6 +753,8 @@ public class StashNotifierTest {
                 "",
                 "scot",
                 true,
+                null,
+                null,
                 null,
                 true,
                 key,
@@ -683,6 +785,8 @@ public class StashNotifierTest {
                 "",
                 "scot",
                 true,
+                null,
+                null,
                 null,
                 true,
                 key,
