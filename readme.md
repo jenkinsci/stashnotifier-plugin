@@ -87,14 +87,14 @@ Or you could as well use
 ```groovy
     checkout scm
     
-    notifyBitbucket(buildState: 'INPROGRESS')        // Notifies the Bitbucket instance of an INPROGRESS build
+    notifyBitbucket(buildStatus: 'INPROGRESS')        // Notifies the Bitbucket instance of an INPROGRESS build
     
     try {
         // Do stuff
-        notifyBitbucket(buildState: 'SUCCESSFUL')    // Notifies the Bitbucket instance of an SUCCESSFUL build
+        notifyBitbucket(buildStatus: 'SUCCESSFUL')    // Notifies the Bitbucket instance of an SUCCESSFUL build
     } catch(err) {
         // Do clean up
-        notifyBitbucket(buildState: 'FAILED')        // Notifies the Bitbucket instance of an FAILED build
+        notifyBitbucket(buildStatus: 'FAILED')        // Notifies the Bitbucket instance of an FAILED build
     }
 ```
 
@@ -120,7 +120,7 @@ def notifyBitbucket(String state) {
             disableInprogressNotification: false,
             considerUnstableAsSuccess: true,
             ignoreUnverifiedSSLPeer: true,
-            buildState: state,
+            buildStatus: state,
             buildName: 'Performance Testing',
             includeBuildNumberInKey: false,
             prependParentProjectKey: false,

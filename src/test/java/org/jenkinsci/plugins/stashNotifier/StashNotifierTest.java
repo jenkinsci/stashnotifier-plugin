@@ -614,7 +614,7 @@ public class StashNotifierTest {
                 false,
                 new JenkinsLocationConfiguration());
 
-        assertThat(sn.getPushedBuildState(StashBuildState.FAILED), is(state));
+        assertThat(sn.getPushedBuildStatus(StashBuildState.FAILED), is(state));
     }
 
     @Test
@@ -635,7 +635,7 @@ public class StashNotifierTest {
                 false,
                 new JenkinsLocationConfiguration());
 
-        assertThat(sn.getPushedBuildState(StashBuildState.FAILED), is(StashBuildState.FAILED));
+        assertThat(sn.getPushedBuildStatus(StashBuildState.FAILED), is(StashBuildState.FAILED));
     }
 
     @Test
@@ -708,6 +708,34 @@ public class StashNotifierTest {
 
         String buildKey = sn.getBuildKey(build, buildListener);
         assertThat(buildKey, is(key));
+    }
+
+    @Test
+    public void test_getBuildKey_withBuildName() throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+        String key = "someKey";
+        String buildName = "buildName";
+        PrintStream logger = mock(PrintStream.class);
+        when(buildListener.getLogger()).thenReturn(logger);
+        PowerMockito.mockStatic(TokenMacro.class);
+        PowerMockito.when(TokenMacro.expandAll(build, buildListener, key)).thenReturn(key);
+
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                null,
+                buildName,
+                true,
+                key,
+                true,
+                false,
+                false,
+                new JenkinsLocationConfiguration());
+
+        String buildKey = sn.getBuildKey(build, buildListener);
+        assertThat(buildKey, is(key + buildName));
     }
 
 

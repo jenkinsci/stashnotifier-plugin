@@ -127,7 +127,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * specify a specific build state to be pushed.
      * If null, the current build result will be used.
      */
-    private final StashBuildState buildState;
+    private final StashBuildState buildStatus;
 
     /**
      * specify a build name to be included in the Bitbucket notification.
@@ -174,7 +174,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             String credentialsId,
             boolean ignoreUnverifiedSSLPeer,
             String commitSha1,
-            String buildState,
+            String buildStatus,
             String buildName,
             boolean includeBuildNumberInKey,
             String projectKey,
@@ -193,11 +193,11 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         StashBuildState overwrittenBuildState = null;
         try {
-            overwrittenBuildState = StashBuildState.valueOf(buildState);
+            overwrittenBuildState = StashBuildState.valueOf(buildStatus);
         } catch (Exception e) {
             // ignore unknown or null values
         }
-        this.buildState = overwrittenBuildState;
+        this.buildStatus = overwrittenBuildState;
 
         this.buildName = buildName;
         this.includeBuildNumberInKey = includeBuildNumberInKey;
@@ -214,7 +214,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             String credentialsId,
             boolean ignoreUnverifiedSSLPeer,
             String commitSha1,
-            String buildState,
+            String buildStatus,
             String buildName,
             boolean includeBuildNumberInKey,
             String projectKey,
@@ -227,7 +227,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 credentialsId,
                 ignoreUnverifiedSSLPeer,
                 commitSha1,
-                buildState,
+                buildStatus,
                 buildName,
                 includeBuildNumberInKey,
                 projectKey,
@@ -262,8 +262,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         return commitSha1;
     }
 
-    public StashBuildState getBuildState() {
-        return buildState;
+    public StashBuildState getBuildStatus() {
+        return buildStatus;
     }
 
     public String getBuildName() {
@@ -774,8 +774,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             final String commitSha1,
             final TaskListener listener,
             final StashBuildState state) throws Exception {
-        StashBuildState buildState = getPushedBuildState(state);
-        HttpEntity stashBuildNotificationEntity = newStashBuildNotificationEntity(run, buildState, listener);
+        StashBuildState buildStatus = getPushedBuildStatus(state);
+        HttpEntity stashBuildNotificationEntity = newStashBuildNotificationEntity(run, buildStatus, listener);
 
         String stashURL = expandStashURL(run, listener);
 
@@ -864,14 +864,14 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * Returns the build state to be pushed. This will select the specifically overwritten build state
      * or the current build state else.
      *
-     * @param currentBuildState the state of the current build
+     * @param currentBuildStatus the state of the current build
      * @return the selected build state
      */
-    protected StashBuildState getPushedBuildState(StashBuildState currentBuildState) {
-        if (buildState != null) {
-            return buildState;
+    protected StashBuildState getPushedBuildStatus(StashBuildState currentBuildStatus) {
+        if (buildStatus != null) {
+            return buildStatus;
         } else {
-            return currentBuildState;
+            return currentBuildStatus;
         }
     }
 
@@ -1030,6 +1030,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             key.append(getDefaultBuildKey(run));
         }
 
+        if (buildName != null && buildName.trim().length() > 0) {
+            key.append(buildName);
+        }
+
         return StringEscapeUtils.escapeJavaScript(key.toString());
     }
 
@@ -1041,7 +1045,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * @return the selected build state
      */
     protected String getBuildName(final Run<?, ?> run) {
-        if (buildName != null) {
+        if (buildName != null && buildName.trim().length() > 0) {
             return buildName;
         } else {
             return run.getFullDisplayName();
