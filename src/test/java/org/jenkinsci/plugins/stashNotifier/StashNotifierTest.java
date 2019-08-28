@@ -18,6 +18,7 @@ import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
 import org.acegisecurity.Authentication;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.StatusLine;
@@ -81,6 +82,8 @@ public class StashNotifierTest {
                 stashBaseUrl,
                 "scot",
                 true,
+                null,
+                null,
                 null,
                 true,
                 "test-project",
@@ -229,6 +232,8 @@ public class StashNotifierTest {
                 "https://localhost",
                 "scot",
                 true,
+                null,
+                null,
                 null,
                 true,
                 null,
@@ -485,6 +490,8 @@ public class StashNotifierTest {
                 "scot",
                 true,
                 sha1,
+                null,
+                null,
                 true,
                 null,
                 false,
@@ -510,6 +517,8 @@ public class StashNotifierTest {
                 "scot",
                 true,
                 sha1,
+                null,
+                null,
                 true,
                 null,
                 false,
@@ -588,6 +597,94 @@ public class StashNotifierTest {
     }
 
     @Test
+    public void test_getPushedBuildState_overwritten() throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+        StashBuildState state = StashBuildState.SUCCESSFUL;
+
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                state.name(),
+                null,
+                true,
+                null,
+                true,
+                false,
+                false,
+                new JenkinsLocationConfiguration());
+
+        assertThat(sn.getPushedBuildStatus(StashBuildState.FAILED), is(state));
+    }
+
+    @Test
+    public void test_getPushedBuildState_not_overwritten() throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                null,
+                null,
+                true,
+                null,
+                true,
+                false,
+                false,
+                new JenkinsLocationConfiguration());
+
+        assertThat(sn.getPushedBuildStatus(StashBuildState.FAILED), is(StashBuildState.FAILED));
+    }
+
+    @Test
+    public void test_getBuildName_overwritten() throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+        when(run.getFullDisplayName()).thenReturn("default-name");
+        String name = "custom-name";
+
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                null,
+                name,
+                true,
+                null,
+                true,
+                false,
+                false,
+                new JenkinsLocationConfiguration());
+
+        assertThat(sn.getBuildName(run), is(name));
+    }
+
+    @Test
+    public void test_getBuildName_not_overwritten() throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+        when(run.getFullDisplayName()).thenReturn("default-name");
+
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                null,
+                null,
+                true,
+                null,
+                true,
+                false,
+                false,
+                new JenkinsLocationConfiguration());
+
+        assertThat(sn.getBuildName(run), is("default-name"));
+    }
+
+    @Test
     public void test_getBuildKey() throws InterruptedException, MacroEvaluationException, IOException {
         //given
         String key = "someKey";
@@ -601,6 +698,8 @@ public class StashNotifierTest {
                 "scot",
                 true,
                 null,
+                null,
+                "build-name",
                 true,
                 key,
                 true,
@@ -610,6 +709,34 @@ public class StashNotifierTest {
 
         String buildKey = sn.getBuildKey(build, buildListener);
         assertThat(buildKey, is(key));
+    }
+
+    @Test
+    public void test_getBuildKey_withBuildName() throws InterruptedException, MacroEvaluationException, IOException {
+        //given
+        String parentName = "someKey";
+        int number = 11;
+        String buildName = "buildName";
+
+        when(build.getParent().getName()).thenReturn(parentName);
+        when(build.getNumber()).thenReturn(number);
+
+        sn = new StashNotifier(
+                "",
+                "scot",
+                true,
+                null,
+                null,
+                buildName,
+                true,
+                null,
+                true,
+                false,
+                false,
+                new JenkinsLocationConfiguration());
+
+        String buildKey = sn.getBuildKey(build, buildListener);
+        assertThat(buildKey, is(StringEscapeUtils.escapeJavaScript(parentName + "-" + number + "-" + jenkins.getRootUrl() + "-" + buildName)));
     }
 
 
@@ -628,6 +755,8 @@ public class StashNotifierTest {
                 "",
                 "scot",
                 true,
+                null,
+                null,
                 null,
                 true,
                 key,
@@ -653,6 +782,8 @@ public class StashNotifierTest {
                 "",
                 "scot",
                 true,
+                null,
+                null,
                 null,
                 true,
                 key,
@@ -683,6 +814,8 @@ public class StashNotifierTest {
                 "",
                 "scot",
                 true,
+                null,
+                null,
                 null,
                 true,
                 key,

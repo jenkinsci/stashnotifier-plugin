@@ -18,10 +18,15 @@ package org.jenkinsci.plugins.stashNotifier;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.*;
+import com.cloudbees.plugins.credentials.common.CertificateCredentials;
+import com.cloudbees.plugins.credentials.common.StandardCredentials;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import hudson.*;
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.ProxyConfiguration;
 import hudson.model.*;
 import hudson.plugins.git.Revision;
 import hudson.plugins.git.util.BuildData;
@@ -43,9 +48,10 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
-import org.apache.http.auth.*;
-import org.apache.http.client.methods.HttpPost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.AuthenticationException;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.HttpClientConnectionManager;
@@ -54,16 +60,12 @@ import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.TrustAllStrategy;
-import org.apache.http.ssl.SSLContextBuilder;
-import org.apache.http.ssl.SSLContexts;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.client.ProxyAuthenticationStrategy;
+import org.apache.http.impl.client.*;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
+import org.apache.http.ssl.SSLContextBuilder;
+import org.apache.http.ssl.SSLContexts;
 import org.apache.http.util.EntityUtils;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
@@ -122,6 +124,18 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     private final String commitSha1;
 
     /**
+     * specify a specific build state to be pushed.
+     * If null, the current build result will be used.
+     */
+    private final StashBuildState buildStatus;
+
+    /**
+     * specify a build name to be included in the Bitbucket notification.
+     * If null, the usual full project name will be used.
+     */
+    private final String buildName;
+
+    /**
      * if true, the build number is included in the Bitbucket notification.
      */
     private final boolean includeBuildNumberInKey;
@@ -160,6 +174,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             String credentialsId,
             boolean ignoreUnverifiedSSLPeer,
             String commitSha1,
+            String buildStatus,
+            String buildName,
             boolean includeBuildNumberInKey,
             String projectKey,
             boolean prependParentProjectKey,
@@ -174,6 +190,16 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         this.credentialsId = credentialsId;
         this.ignoreUnverifiedSSLPeer = ignoreUnverifiedSSLPeer;
         this.commitSha1 = commitSha1;
+
+        StashBuildState overwrittenBuildState = null;
+        try {
+            overwrittenBuildState = StashBuildState.valueOf(buildStatus);
+        } catch (Exception e) {
+            // ignore unknown or null values
+        }
+        this.buildStatus = overwrittenBuildState;
+
+        this.buildName = buildName;
         this.includeBuildNumberInKey = includeBuildNumberInKey;
         this.projectKey = projectKey;
         this.prependParentProjectKey = prependParentProjectKey;
@@ -188,6 +214,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             String credentialsId,
             boolean ignoreUnverifiedSSLPeer,
             String commitSha1,
+            String buildStatus,
+            String buildName,
             boolean includeBuildNumberInKey,
             String projectKey,
             boolean prependParentProjectKey,
@@ -199,6 +227,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 credentialsId,
                 ignoreUnverifiedSSLPeer,
                 commitSha1,
+                buildStatus,
+                buildName,
                 includeBuildNumberInKey,
                 projectKey,
                 prependParentProjectKey,
@@ -230,6 +260,14 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     public String getCommitSha1() {
         return commitSha1;
+    }
+
+    public StashBuildState getBuildStatus() {
+        return buildStatus;
+    }
+
+    public String getBuildName() {
+        return buildName;
     }
 
     public boolean getIncludeBuildNumberInKey() {
@@ -736,7 +774,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             final String commitSha1,
             final TaskListener listener,
             final StashBuildState state) throws Exception {
-        HttpEntity stashBuildNotificationEntity = newStashBuildNotificationEntity(run, state, listener);
+        StashBuildState buildStatus = getPushedBuildStatus(state);
+        HttpEntity stashBuildNotificationEntity = newStashBuildNotificationEntity(run, buildStatus, listener);
 
         String stashURL = expandStashURL(run, listener);
 
@@ -822,6 +861,21 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     }
 
     /**
+     * Returns the build state to be pushed. This will select the specifically overwritten build state
+     * or the current build state else.
+     *
+     * @param currentBuildStatus the state of the current build
+     * @return the selected build state
+     */
+    protected StashBuildState getPushedBuildStatus(StashBuildState currentBuildStatus) {
+        if (buildStatus != null) {
+            return buildStatus;
+        } else {
+            return currentBuildStatus;
+        }
+    }
+
+    /**
      * Returns the HTTP POST request ready to be sent to the Bitbucket build API for
      * the given run and change set.
      *
@@ -901,7 +955,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         json.put("key", abbreviate(getBuildKey(run, listener), MAX_FIELD_LENGTH));
 
-        json.put("name", abbreviate(run.getFullDisplayName(), MAX_FIELD_LENGTH));
+        json.put("name", abbreviate(getBuildName(run), MAX_FIELD_LENGTH));
 
         json.put("description", abbreviate(getBuildDescription(run, state), MAX_FIELD_LENGTH));
         json.put("url", abbreviate(DisplayURLProvider.get().getRunURL(run), MAX_URL_FIELD_LENGTH));
@@ -937,6 +991,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             key.append('-').append(run.getNumber());
         }
         key.append('-').append(getRootUrl());
+
+        if (buildName != null && buildName.trim().length() > 0) {
+            key.append('-').append(buildName);
+        }
 
         return key.toString();
     }
@@ -977,6 +1035,21 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
 
         return StringEscapeUtils.escapeJavaScript(key.toString());
+    }
+
+    /**
+     * Returns the build name to be pushed. This will select the specifically overwritten build name
+     * or get the build name from the {@link Run}.
+     *
+     * @param run the run to notify Bitbucket of
+     * @return the selected build state
+     */
+    protected String getBuildName(final Run<?, ?> run) {
+        if (buildName != null && buildName.trim().length() > 0) {
+            return buildName;
+        } else {
+            return run.getFullDisplayName();
+        }
     }
 
     /**

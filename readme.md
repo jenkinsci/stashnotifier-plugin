@@ -82,6 +82,22 @@ node {
 }
 ```
 
+Or you could as well use
+
+```groovy
+    checkout scm
+    
+    notifyBitbucket(buildStatus: 'INPROGRESS')        // Notifies the Bitbucket instance of an INPROGRESS build
+    
+    try {
+        // Do stuff
+        notifyBitbucket(buildStatus: 'SUCCESSFUL')    // Notifies the Bitbucket instance of an SUCCESSFUL build
+    } catch(err) {
+        // Do clean up
+        notifyBitbucket(buildStatus: 'FAILED')        // Notifies the Bitbucket instance of an FAILED build
+    }
+```
+
 In situations where an advanced setup is required the following can be used:
 
 ```groovy
@@ -98,15 +114,14 @@ node {
 }
 
 def notifyBitbucket(String state) {
-    if ('SUCCESS' == state || 'FAILED' == state) {
-        currentBuild.result = state         // Set result of currentBuild !Important!
-    }
     notifyBitbucket(
             commitSha1: 'commit',
             credentialsId: '00000000-1111-2222-3333-123456789abc',
             disableInprogressNotification: false,
             considerUnstableAsSuccess: true,
             ignoreUnverifiedSSLPeer: true,
+            buildStatus: state,
+            buildName: 'Performance Testing',
             includeBuildNumberInKey: false,
             prependParentProjectKey: false,
             projectKey: '',
