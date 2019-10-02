@@ -106,61 +106,61 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     /**
      * base url of Bitbucket server, e. g. <tt>http://localhost:7990</tt>.
      */
-    private final String stashServerBaseUrl;
+    private String stashServerBaseUrl;
 
     /**
      * The id of the credentials to use.
      */
-    private final String credentialsId;
+    private String credentialsId;
 
     /**
      * if true, ignore exception thrown in case of an unverified SSL peer.
      */
-    private final boolean ignoreUnverifiedSSLPeer;
+    private boolean ignoreUnverifiedSSLPeer;
 
     /**
      * specify the commit from config
      */
-    private final String commitSha1;
+    private String commitSha1;
 
     /**
      * specify a specific build state to be pushed.
      * If null, the current build result will be used.
      */
-    private final StashBuildState buildStatus;
+    private StashBuildState buildStatus;
 
     /**
      * specify a build name to be included in the Bitbucket notification.
      * If null, the usual full project name will be used.
      */
-    private final String buildName;
+    private String buildName;
 
     /**
      * if true, the build number is included in the Bitbucket notification.
      */
-    private final boolean includeBuildNumberInKey;
+    private boolean includeBuildNumberInKey;
 
     /**
      * specify project key manually
      */
-    private final String projectKey;
+    private String projectKey;
 
     /**
      * append parent project key to key formation
      */
-    private final boolean prependParentProjectKey;
+    private boolean prependParentProjectKey;
 
     /**
      * whether to send INPROGRESS notification at the build start
      */
-    private final boolean disableInprogressNotification;
+    private boolean disableInprogressNotification;
 
     /**
      * whether to consider UNSTABLE builds as failures or success
      */
-    private final boolean considerUnstableAsSuccess;
+    private boolean considerUnstableAsSuccess;
 
-    private final JenkinsLocationConfiguration globalConfig;
+    private JenkinsLocationConfiguration globalConfig;
 
 // public members ----------------------------------------------------------
 
@@ -183,14 +183,81 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             boolean considerUnstableAsSuccess,
             JenkinsLocationConfiguration globalConfig
     ) {
+        this.globalConfig = globalConfig;
+        setStashServerBaseUrl(stashServerBaseUrl);
+        setCredentialsId(credentialsId);
+        setIgnoreUnverifiedSSLPeer(ignoreUnverifiedSSLPeer);
+        setCommitSha1(commitSha1);
+        setBuildStatus(buildStatus);
+        setBuildName(buildName);
+        setIncludeBuildNumberInKey(includeBuildNumberInKey);
+        setProjectKey(projectKey);
+        setPrependParentProjectKey(prependParentProjectKey);
+        setDisableInprogressNotification(disableInprogressNotification);
+        setConsiderUnstableAsSuccess(considerUnstableAsSuccess);
+    }
 
+    StashNotifier(
+            JenkinsLocationConfiguration globalConfig
+    ) {
+        this.globalConfig = globalConfig;
+    }
+
+    @DataBoundConstructor
+    public StashNotifier() {
+        this(
+                JenkinsLocationConfiguration.get()
+        );
+    }
+
+    public String getStashServerBaseUrl() {
+        return stashServerBaseUrl;
+    }
+
+    @DataBoundSetter
+    public void setStashServerBaseUrl(String stashServerBaseUrl) {
         this.stashServerBaseUrl = stashServerBaseUrl != null && stashServerBaseUrl.endsWith("/")
                 ? stashServerBaseUrl.substring(0, stashServerBaseUrl.length() - 1)
                 : stashServerBaseUrl;
-        this.credentialsId = credentialsId;
-        this.ignoreUnverifiedSSLPeer = ignoreUnverifiedSSLPeer;
-        this.commitSha1 = commitSha1;
+    }
 
+    public String getCredentialsId() {
+        return credentialsId;
+    }
+
+    @DataBoundSetter
+    public void setCredentialsId(String credentialsId) {
+        this.credentialsId = credentialsId;
+    }
+
+    public boolean isIgnoreUnverifiedSSLPeer() {
+        return ignoreUnverifiedSSLPeer;
+    }
+
+    @DataBoundSetter
+    public void setIgnoreUnverifiedSSLPeer(boolean ignoreUnverifiedSSLPeer) {
+        this.ignoreUnverifiedSSLPeer = ignoreUnverifiedSSLPeer;
+    }
+
+    public String getCommitSha1() {
+        return commitSha1;
+    }
+
+    @DataBoundSetter
+    public void setCommitSha1(String commitSha1) {
+        this.commitSha1 = commitSha1;
+    }
+
+    public StashBuildState getBuildStatus() {
+        return buildStatus;
+    }
+
+    public void setBuildStatus(StashBuildState buildStatus) {
+        this.buildStatus = buildStatus;
+    }
+
+    @DataBoundSetter
+    public void setBuildStatus(String buildStatus) {
         StashBuildState overwrittenBuildState = null;
         try {
             overwrittenBuildState = StashBuildState.valueOf(buildStatus);
@@ -198,88 +265,60 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             // ignore unknown or null values
         }
         this.buildStatus = overwrittenBuildState;
-
-        this.buildName = buildName;
-        this.includeBuildNumberInKey = includeBuildNumberInKey;
-        this.projectKey = projectKey;
-        this.prependParentProjectKey = prependParentProjectKey;
-        this.disableInprogressNotification = disableInprogressNotification;
-        this.considerUnstableAsSuccess = considerUnstableAsSuccess;
-        this.globalConfig = globalConfig;
-    }
-
-    @DataBoundConstructor
-    public StashNotifier(
-            String stashServerBaseUrl,
-            String credentialsId,
-            boolean ignoreUnverifiedSSLPeer,
-            String commitSha1,
-            String buildStatus,
-            String buildName,
-            boolean includeBuildNumberInKey,
-            String projectKey,
-            boolean prependParentProjectKey,
-            boolean disableInprogressNotification,
-            boolean considerUnstableAsSuccess
-    ) {
-        this(
-                stashServerBaseUrl,
-                credentialsId,
-                ignoreUnverifiedSSLPeer,
-                commitSha1,
-                buildStatus,
-                buildName,
-                includeBuildNumberInKey,
-                projectKey,
-                prependParentProjectKey,
-                disableInprogressNotification,
-                considerUnstableAsSuccess,
-                JenkinsLocationConfiguration.get()
-        );
-    }
-
-    public boolean isDisableInprogressNotification() {
-        return disableInprogressNotification;
-    }
-
-    public boolean isConsiderUnstableAsSuccess() {
-        return considerUnstableAsSuccess;
-    }
-
-    public String getCredentialsId() {
-        return credentialsId;
-    }
-
-    public String getStashServerBaseUrl() {
-        return stashServerBaseUrl;
-    }
-
-    public boolean getIgnoreUnverifiedSSLPeer() {
-        return ignoreUnverifiedSSLPeer;
-    }
-
-    public String getCommitSha1() {
-        return commitSha1;
-    }
-
-    public StashBuildState getBuildStatus() {
-        return buildStatus;
     }
 
     public String getBuildName() {
         return buildName;
     }
 
-    public boolean getIncludeBuildNumberInKey() {
+    @DataBoundSetter
+    public void setBuildName(String buildName) {
+        this.buildName = buildName;
+    }
+
+    public boolean isIncludeBuildNumberInKey() {
         return includeBuildNumberInKey;
+    }
+
+    @DataBoundSetter
+    public void setIncludeBuildNumberInKey(boolean includeBuildNumberInKey) {
+        this.includeBuildNumberInKey = includeBuildNumberInKey;
     }
 
     public String getProjectKey() {
         return projectKey;
     }
 
-    public boolean getPrependParentProjectKey() {
+    @DataBoundSetter
+    public void setProjectKey(String projectKey) {
+        this.projectKey = projectKey;
+    }
+
+    public boolean isPrependParentProjectKey() {
         return prependParentProjectKey;
+    }
+
+    @DataBoundSetter
+    public void setPrependParentProjectKey(boolean prependParentProjectKey) {
+        this.prependParentProjectKey = prependParentProjectKey;
+    }
+
+    public boolean isDisableInprogressNotification() {
+        return disableInprogressNotification;
+    }
+
+    @DataBoundSetter
+    public void setDisableInprogressNotification(boolean disableInprogressNotification) {
+        this.disableInprogressNotification = disableInprogressNotification;
+    }
+
+    public boolean isConsiderUnstableAsSuccess() {
+        return considerUnstableAsSuccess;
+    }
+
+    @DataBoundSetter
+    public void setConsiderUnstableAsSuccess(boolean considerUnstableAsSuccess) {
+        this.considerUnstableAsSuccess = considerUnstableAsSuccess;
     }
 
     @Override
