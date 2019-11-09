@@ -21,7 +21,7 @@
         Jenkins plugin to notify Atlassian Bitbucket Server (formerly known as Stash)
         instances of build results through the REST build API.
     </description>
-    <url>https://wiki.jenkins.io/display/JENKINS/Bitbucket+(Stash)+Notifier+Plugin</url>
+    <url>https://github.com/jenkinsci/stashnotifier-plugin</url>
 
     <scm>
         <connection>scm:git:https://github.com/jenkinsci/stashnotifier-plugin.git</connection>
