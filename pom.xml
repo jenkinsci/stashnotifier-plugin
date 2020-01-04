@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.40</version>
+        <version>3.55</version>
         <relativePath />
     </parent>
     <packaging>hpi</packaging>
@@ -27,8 +27,8 @@
         <connection>scm:git:https://github.com/jenkinsci/stashnotifier-plugin.git</connection>
         <developerConnection>scm:git:https://github.com/jenkinsci/stashnotifier-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/stashnotifier-plugin</url>
-      <tag>${scmTag}</tag>
-  </scm>
+        <tag>${scmTag}</tag>
+    </scm>
 
     <developers>
         <developer>
