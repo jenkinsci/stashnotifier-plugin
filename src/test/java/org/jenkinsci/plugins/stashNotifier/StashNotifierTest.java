@@ -23,7 +23,6 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.StatusLine;
 import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.AuthenticationException;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.AuthenticationStrategy;
 import org.apache.http.client.CredentialsProvider;
@@ -104,7 +103,7 @@ public class StashNotifierTest {
     FilePath workspace;
 
     @Before
-    public void setUp() throws IOException, InterruptedException, MacroEvaluationException {
+    public void setUp() throws Exception {
         PowerMockito.mockStatic(Secret.class);
         PowerMockito.mockStatic(Jenkins.class);
         PowerMockito.mockStatic(HttpClientBuilder.class);
@@ -485,7 +484,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void lookupCommitSha1s() throws InterruptedException, MacroEvaluationException, IOException {
+    public void lookupCommitSha1s() throws Exception {
         PowerMockito.mockStatic(TokenMacro.class);
         PowerMockito.when(TokenMacro.expandAll(build, buildListener, sha1)).thenReturn(sha1);
         sn = new StashNotifier(
@@ -538,22 +537,22 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_lookupCommitSha1s_IOException() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_lookupCommitSha1s_IOException() throws Exception {
         lookupCommitSha1s_Exception(new IOException("BOOM"));
     }
 
     @Test
-    public void test_lookupCommitSha1s_InterruptedException() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_lookupCommitSha1s_InterruptedException() throws Exception {
         lookupCommitSha1s_Exception(new InterruptedException("BOOM"));
     }
 
     @Test
-    public void test_lookupCommitSha1s_MacroEvaluationException() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_lookupCommitSha1s_MacroEvaluationException() throws Exception {
         lookupCommitSha1s_Exception(new MacroEvaluationException("BOOM"));
     }
 
     @Test
-    public void test_getBuildDescription() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getBuildDescription() {
         //given
         AbstractBuild build = mock(AbstractBuild.class);
         when(build.getDescription()).thenReturn("some description");
@@ -565,19 +564,19 @@ public class StashNotifierTest {
         assertThat(description, is("some description"));
     }
 
-    private String getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState buildState) throws InterruptedException, MacroEvaluationException, IOException {
+    private String getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState buildState) {
         return sn.getBuildDescription(mock(AbstractBuild.class), buildState);
     }
 
     @Test
-    public void test_getBuildDescription_state() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getBuildDescription_state() {
         assertThat(getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState.SUCCESSFUL), is("built by Jenkins @ http://localhost/"));
         assertThat(getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState.FAILED), is("built by Jenkins @ http://localhost/"));
         assertThat(getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState.INPROGRESS), is("building on Jenkins @ http://localhost/"));
     }
 
     @Test
-    public void test_createRequest() throws AuthenticationException {
+    public void test_createRequest() throws Exception {
         //given
         StashNotifier sn = spy(this.sn);
         ArrayList<Credentials> credentialList = new ArrayList<>();
@@ -600,7 +599,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getPushedBuildState_overwritten() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getPushedBuildState_overwritten() {
         //given
         StashBuildState state = StashBuildState.SUCCESSFUL;
 
@@ -622,7 +621,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getPushedBuildState_not_overwritten() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getPushedBuildState_not_overwritten() {
         //given
 
         sn = new StashNotifier(
@@ -643,7 +642,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildName_overwritten() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getBuildName_overwritten() {
         //given
         when(run.getFullDisplayName()).thenReturn("default-name");
         String name = "custom-name";
@@ -666,7 +665,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildName_not_overwritten() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getBuildName_not_overwritten() {
         //given
         when(run.getFullDisplayName()).thenReturn("default-name");
 
@@ -688,7 +687,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildKey() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getBuildKey() throws Exception {
         //given
         String key = "someKey";
         PrintStream logger = mock(PrintStream.class);
@@ -715,7 +714,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildKey_withBuildName() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getBuildKey_withBuildName() {
         //given
         String parentName = "someKey";
         int number = 11;
@@ -744,7 +743,7 @@ public class StashNotifierTest {
 
 
     @Test
-    public void test_getRunKey() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getRunKey() throws Exception {
         //given
         String key = "someKey";
         PrintStream logger = mock(PrintStream.class);
@@ -836,32 +835,32 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildKey_IOException() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getBuildKey_IOException() throws Exception {
         getBuildKey_Exception(new IOException("BOOM"));
     }
 
     @Test
-    public void test_getBuildKey_InterruptedException() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getBuildKey_InterruptedException() throws Exception {
         getBuildKey_Exception(new InterruptedException("BOOM"));
     }
 
     @Test
-    public void test_getBuildKey_MacroEvaluationException() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getBuildKey_MacroEvaluationException() throws Exception {
         getBuildKey_Exception(new MacroEvaluationException("BOOM"));
     }
 
     @Test
-    public void test_getRunKey_IOException() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getRunKey_IOException() throws Exception {
         getRunKey_Exception(new IOException("BOOM"));
     }
 
     @Test
-    public void test_getRunKey_InterruptedException() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getRunKey_InterruptedException() throws Exception {
         getRunKey_Exception(new InterruptedException("BOOM"));
     }
 
     @Test
-    public void test_getRunKey_MacroEvaluationException() throws InterruptedException, MacroEvaluationException, IOException {
+    public void test_getRunKey_MacroEvaluationException() throws Exception {
         getRunKey_Exception(new MacroEvaluationException("BOOM"));
     }
 
