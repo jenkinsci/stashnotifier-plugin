@@ -93,7 +93,7 @@ public class StashNotifierTest {
                 true,
                 disableInprogressNotification,
                 considerUnstableAsSuccess,
-                new JenkinsLocationConfiguration()
+                mock(JenkinsLocationConfiguration.class)
         );
     }
 
@@ -243,7 +243,7 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
-                new JenkinsLocationConfiguration()));
+                mock(JenkinsLocationConfiguration.class)));
 
         doReturn(new ArrayList<Credentials>()).when(sn).lookupCredentials(
                 Mockito.<Class>anyObject(),
@@ -500,7 +500,7 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
-                new JenkinsLocationConfiguration());
+                mock(JenkinsLocationConfiguration.class));
 
         Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
 
@@ -527,7 +527,7 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
-                new JenkinsLocationConfiguration());
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
@@ -616,7 +616,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                new JenkinsLocationConfiguration());
+                mock(JenkinsLocationConfiguration.class));
 
         assertThat(sn.getPushedBuildStatus(StashBuildState.FAILED), is(state));
     }
@@ -637,7 +637,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                new JenkinsLocationConfiguration());
+                mock(JenkinsLocationConfiguration.class));
 
         assertThat(sn.getPushedBuildStatus(StashBuildState.FAILED), is(StashBuildState.FAILED));
     }
@@ -660,7 +660,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                new JenkinsLocationConfiguration());
+                mock(JenkinsLocationConfiguration.class));
 
         assertThat(sn.getBuildName(run), is(name));
     }
@@ -682,7 +682,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                new JenkinsLocationConfiguration());
+                mock(JenkinsLocationConfiguration.class));
 
         assertThat(sn.getBuildName(run), is("default-name"));
     }
@@ -708,7 +708,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                new JenkinsLocationConfiguration());
+                mock(JenkinsLocationConfiguration.class));
 
         String buildKey = sn.getBuildKey(build, buildListener);
         assertThat(buildKey, is(key));
@@ -736,7 +736,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                new JenkinsLocationConfiguration());
+                mock(JenkinsLocationConfiguration.class));
 
         String buildKey = sn.getBuildKey(build, buildListener);
         assertThat(buildKey, is(StringEscapeUtils.escapeJavaScript(parentName + "-" + number + "-" + jenkins.getRootUrl() + "-" + buildName)));
@@ -766,7 +766,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                new JenkinsLocationConfiguration());
+                mock(JenkinsLocationConfiguration.class));
 
         String buildKey = sn.getBuildKey(run, buildListener);
         assertThat(buildKey, is(key));
@@ -793,7 +793,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                new JenkinsLocationConfiguration());
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -825,7 +825,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                new JenkinsLocationConfiguration());
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         String buildKey = sn.getBuildKey(run, buildListener);
