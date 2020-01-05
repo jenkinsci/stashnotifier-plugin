@@ -74,11 +74,11 @@ public class StashNotifierTest {
     private CloseableHttpClient client;
     private Jenkins jenkins;
 
-    public StashNotifier buildStashNotifier(String stashBaseUrl) {
+    private StashNotifier buildStashNotifier(String stashBaseUrl) {
         return buildStashNotifier(stashBaseUrl, false, false);
     }
 
-    public StashNotifier buildStashNotifier(String stashBaseUrl,
+    private StashNotifier buildStashNotifier(String stashBaseUrl,
                                             boolean disableInprogressNotification,
                                             boolean considerUnstableAsSuccess) {
         return new StashNotifier(
@@ -428,7 +428,6 @@ public class StashNotifierTest {
         assertThat(messageCaptor.getValue(), is(containsString("Notified Bitbucket for commit with id")));
     }
 
-
     @Test
     public void test_perform_simple_build_step_failure() throws Exception {
         //given
@@ -508,8 +507,7 @@ public class StashNotifierTest {
         assertThat(hashes.iterator().next(), is(sha1));
     }
 
-
-    public void lookupCommitSha1s_Exception(Exception e) throws InterruptedException, MacroEvaluationException, IOException {
+    private void lookupCommitSha1s_Exception(Exception e) throws InterruptedException, MacroEvaluationException, IOException {
         //given
         PrintStream logger = mock(PrintStream.class);
         when(buildListener.getLogger()).thenReturn(logger);
@@ -772,8 +770,7 @@ public class StashNotifierTest {
         assertThat(buildKey, is(key));
     }
 
-
-    public void getBuildKey_Exception(Exception e) throws InterruptedException, MacroEvaluationException, IOException {
+    private void getBuildKey_Exception(Exception e) throws InterruptedException, MacroEvaluationException, IOException {
         //given
         String key = "someKey";
         PrintStream logger = mock(PrintStream.class);
@@ -803,7 +800,7 @@ public class StashNotifierTest {
         verify(logger).println("Cannot expand build key from parameter. Processing with default build key");
     }
 
-    public void getRunKey_Exception(Exception e) throws InterruptedException, MacroEvaluationException, IOException {
+    private void getRunKey_Exception(Exception e) throws InterruptedException, MacroEvaluationException, IOException {
         //given
         String key = "someKey";
         PrintStream logger = mock(PrintStream.class);
