@@ -51,7 +51,7 @@ public class DescriptorImplTest {
     private Jenkins jenkins;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         jenkins = PowerMockito.mock(Jenkins.class);
 
         PowerMockito.mockStatic(Jenkins.class);
@@ -71,7 +71,7 @@ public class DescriptorImplTest {
     }
 
     @Test
-    public void testConfigure() throws Descriptor.FormException {
+    public void testConfigure() throws Exception {
         //given
         doNothing().when(desc).save();
 
@@ -153,13 +153,13 @@ public class DescriptorImplTest {
     }
 
     @Test
-    public void test_doCheckStashServerBaseUrl_empty() throws IOException, ServletException {
+    public void test_doCheckStashServerBaseUrl_empty() throws Exception {
         FormValidation listBoxModel = doCheckStashServerBaseUrl("");
         assertThat(listBoxModel.kind, is(FormValidation.Kind.ERROR));
     }
 
     @Test
-    public void test_doCheckStashServerBaseUrl() throws IOException, ServletException {
+    public void test_doCheckStashServerBaseUrl() throws Exception {
         FormValidation listBoxModel = doCheckStashServerBaseUrl("https://my.company.intranet/bitbucket");
         assertThat(listBoxModel.kind, is(FormValidation.Kind.OK));
     }
