@@ -24,7 +24,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -138,29 +137,15 @@ public class DescriptorImplTest {
         assertThat(listBoxModel, is(not(nullValue())));
     }
 
-    private FormValidation doCheckStashServerBaseUrl(String url) throws IOException, ServletException {
-        //given
-        Item project = mock(Item.class);
-        when(project.hasPermission(eq(Item.CONFIGURE))).thenReturn(true);
-        PowerMockito.mockStatic(CredentialsProvider.class);
-        PowerMockito.when(CredentialsProvider.lookupCredentials(
-                Mockito.<Class>anyObject(),
-                Mockito.<Item>anyObject(),
-                Mockito.<Authentication>anyObject(),
-                Mockito.<List<DomainRequirement>>anyObject())).thenReturn(new ArrayList());
-
-        return desc.doCheckStashServerBaseUrl(url);
-    }
-
     @Test
     public void test_doCheckStashServerBaseUrl_empty() throws Exception {
-        FormValidation listBoxModel = doCheckStashServerBaseUrl("");
+        FormValidation listBoxModel = desc.doCheckStashServerBaseUrl("");
         assertThat(listBoxModel.kind, is(FormValidation.Kind.ERROR));
     }
 
     @Test
     public void test_doCheckStashServerBaseUrl() throws Exception {
-        FormValidation listBoxModel = doCheckStashServerBaseUrl("https://my.company.intranet/bitbucket");
+        FormValidation listBoxModel = desc.doCheckStashServerBaseUrl("https://my.company.intranet/bitbucket");
         assertThat(listBoxModel.kind, is(FormValidation.Kind.OK));
     }
 }
