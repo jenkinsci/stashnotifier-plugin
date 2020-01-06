@@ -1,9 +1,7 @@
 package org.jenkinsci.plugins.stashNotifier;
 
 import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import hudson.model.AbstractProject;
-import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -14,29 +12,29 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.kohsuke.stapler.*;
-import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
 import java.util.ArrayList;
 
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.core.Is.is;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 /**
  * Created by Vlad Medvedev on 27.01.2016.
  * vladislav.medvedev@devfactory.com
  */
-
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({StashNotifier.DescriptorImpl.class, CredentialsProvider.class, Jenkins.class, TokenList.class})
 public class DescriptorImplTest {
@@ -115,7 +113,7 @@ public class DescriptorImplTest {
     public void test_doFillCredentialsIdItems_no_permission() {
         //given
         Item project = mock(Item.class);
-        when(project.hasPermission(eq(Item.CONFIGURE))).thenReturn(false);
+        when(project.hasPermission(Item.CONFIGURE)).thenReturn(false);
         when(jenkins.hasPermission(Item.CONFIGURE)).thenReturn(false);
 
         //when
@@ -129,13 +127,14 @@ public class DescriptorImplTest {
     public void test_doFillCredentialsIdItems_has_permission() {
         //given
         Item project = mock(Item.class);
-        when(project.hasPermission(eq(Item.CONFIGURE))).thenReturn(true);
+        when(project.hasPermission(Item.CONFIGURE)).thenReturn(true);
         PowerMockito.mockStatic(CredentialsProvider.class);
         PowerMockito.when(CredentialsProvider.lookupCredentials(
-                Mockito.<Class>anyObject(),
-                Mockito.<Item>anyObject(),
-                Mockito.<Authentication>anyObject(),
-                Mockito.<ArrayList<DomainRequirement>>anyObject())).thenReturn(new ArrayList());
+                any(),
+                any(Item.class),
+                any(Authentication.class),
+                anyList()
+        )).thenReturn(new ArrayList<>());
 
         //when
         ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(project);
