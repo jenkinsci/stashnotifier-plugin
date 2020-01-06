@@ -40,7 +40,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -182,13 +181,6 @@ public class StashNotifierTest {
     @Test
     public void test_build_http_client_with_proxy() throws Exception {
         //given
-        StashNotifier sn = spy(this.sn);
-        doReturn(new ArrayList<Credentials>()).when(sn).lookupCredentials(
-                Mockito.<Class>anyObject(),
-                Mockito.<Item>anyObject(),
-                Mockito.<Authentication>anyObject(),
-                Mockito.<ArrayList<DomainRequirement>>anyObject());
-
         String address = "192.168.1.1";
         int port = 8080;
         String login = "admin";
@@ -230,7 +222,7 @@ public class StashNotifierTest {
     @Test
     public void test_build_http_client_https() throws Exception {
         //given
-        sn = spy(new StashNotifier(
+        sn = new StashNotifier(
                 "https://localhost",
                 "scot",
                 true,
@@ -242,13 +234,8 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class)));
+                mock(JenkinsLocationConfiguration.class));
 
-        doReturn(new ArrayList<Credentials>()).when(sn).lookupCredentials(
-                Mockito.<Class>anyObject(),
-                Mockito.<Item>anyObject(),
-                Mockito.<Authentication>anyObject(),
-                Mockito.<ArrayList<DomainRequirement>>anyObject());
         PrintStream logger = mock(PrintStream.class);
 
         //when
@@ -576,15 +563,7 @@ public class StashNotifierTest {
     @Test
     public void test_createRequest() throws Exception {
         //given
-        StashNotifier sn = spy(this.sn);
-        ArrayList<Credentials> credentialList = new ArrayList<>();
         UsernamePasswordCredentialsImpl credential = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, "", "", "admin", "tiger");
-        credentialList.add(credential);
-        doReturn(credentialList).when(sn).lookupCredentials(
-                Mockito.<Class>anyObject(),
-                Mockito.<Item>anyObject(),
-                Mockito.<Authentication>anyObject(),
-                Mockito.<ArrayList<DomainRequirement>>anyObject());
         PowerMockito.mockStatic(CredentialsMatchers.class);
         when(CredentialsMatchers.firstOrNull(anyCollection(), any(CredentialsMatcher.class))).thenReturn(credential);
 

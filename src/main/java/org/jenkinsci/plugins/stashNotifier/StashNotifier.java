@@ -22,7 +22,6 @@ import com.cloudbees.plugins.credentials.common.CertificateCredentials;
 import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -41,7 +40,6 @@ import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
-import org.acegisecurity.Authentication;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
@@ -811,7 +809,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         String credentialsId = getCredentialsId();
         if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
             credentials = CredentialsMatchers.firstOrNull(
-                    lookupCredentials(clazz, project, ACL.SYSTEM, new ArrayList<>()),
+                    CredentialsProvider.lookupCredentials(clazz, project, ACL.SYSTEM, new ArrayList<>()),
                     CredentialsMatchers.withId(credentialsId));
         }
 
@@ -822,42 +820,12 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             }
             if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
                 credentials = CredentialsMatchers.firstOrNull(
-                        lookupCredentials(clazz, Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<>()),
+                        CredentialsProvider.lookupCredentials(clazz, Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<>()),
                         CredentialsMatchers.withId(credentialsId));
             }
         }
 
         return credentials;
-    }
-
-    /**
-     * Returns all credentials which are available to the specified {@link Authentication}
-     * for use by the specified {@link Item}.
-     *
-     * @param type               the type of credentials to get.
-     * @param authentication     the authentication.
-     * @param item               the item.
-     * @param domainRequirements the credential domains to match.
-     * @param <C>                the credentials type.
-     * @return the list of credentials.
-     */
-    protected <C extends Credentials> List<C> lookupCredentials(Class<C> type, Item item, Authentication authentication, ArrayList<DomainRequirement> domainRequirements) {
-        return CredentialsProvider.lookupCredentials(type, item, authentication, domainRequirements);
-    }
-
-    /**
-     * Returns all credentials which are available to the specified {@link Authentication}
-     * for use by the specified {@link Item}.
-     *
-     * @param type               the type of credentials to get.
-     * @param authentication     the authentication.
-     * @param itemGroup          the item group.
-     * @param domainRequirements the credential domains to match.
-     * @param <C>                the credentials type.
-     * @return the list of credentials.
-     */
-    protected <C extends Credentials> List<C> lookupCredentials(Class<C> type, ItemGroup<?> itemGroup, Authentication authentication, ArrayList<DomainRequirement> domainRequirements) {
-        return CredentialsProvider.lookupCredentials(type, itemGroup, authentication, domainRequirements);
     }
 
     /**
