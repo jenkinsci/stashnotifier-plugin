@@ -1,10 +1,8 @@
 package org.jenkinsci.plugins.stashNotifier;
 
-import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsMatcher;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsScope;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import hudson.EnvVars;
 import hudson.FilePath;
@@ -59,8 +57,19 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({Secret.class, Jenkins.class, HttpClientBuilder.class, TokenMacro.class, CredentialsMatchers.class, com.cloudbees.plugins.credentials.CredentialsProvider.class, AbstractProject.class})
@@ -149,20 +158,19 @@ public class StashNotifierTest {
         when(secret.getPlainText()).thenReturn("tiger");
         when(HttpClientBuilder.create()).thenReturn(httpClientBuilder);
         when(httpClientBuilder.build()).thenReturn(client);
-        when(client.execute((HttpUriRequest) anyObject())).thenReturn(resp);
+        when(client.execute(any(HttpUriRequest.class))).thenReturn(resp);
         when(resp.getStatusLine()).thenReturn(statusLine);
         when(statusLine.getStatusCode()).thenReturn(204);
         action.lastBuild = lastBuild;
         when(lastBuild.getMarked()).thenReturn(revision);
 
-
         when(TokenMacro.expandAll(build, buildListener, "test-project")).thenReturn("prepend-key");
         when(com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
-                (Class) anyObject(),
-                (ItemGroup) anyObject(),
-                (Authentication) anyObject(),
-                (List<DomainRequirement>) anyList()
-        )).thenReturn(new ArrayList<Credentials>());
+                any(),
+                any(ItemGroup.class),
+                any(Authentication.class),
+                anyList()
+        )).thenReturn(new ArrayList<>());
 
         sn = buildStashNotifier("http://localhost");
     }
@@ -279,7 +287,7 @@ public class StashNotifierTest {
         when(build.getResult()).thenReturn(result);
         Launcher launcher = mock(Launcher.class);
         sn = spy(sn);
-        doReturn(hashes).when(sn).lookupCommitSha1s(eq(build), eq((FilePath) null), eq(buildListener));
+        doReturn(hashes).when(sn).lookupCommitSha1s(eq(build), nullable(FilePath.class), eq(buildListener));
         doReturn(notificationResult).when(sn).notifyStash(
                 any(PrintStream.class),
                 any(AbstractBuild.class),
@@ -879,6 +887,7 @@ public class StashNotifierTest {
         when(resp.getStatusLine()).thenReturn(sl);
         when(resp.getEntity()).thenReturn(new StringEntity(""));
         when(client.execute(eq(httpPost))).thenReturn(resp);
+        when(TokenMacro.expandAll(build, buildListener, "http://localhost")).thenReturn("http://localhost");
         doReturn(client).when(sn).getHttpClient(any(PrintStream.class), any(AbstractBuild.class), anyString());
         return sn.notifyStash(logger, build, sha1, buildListener, StashBuildState.FAILED);
     }
