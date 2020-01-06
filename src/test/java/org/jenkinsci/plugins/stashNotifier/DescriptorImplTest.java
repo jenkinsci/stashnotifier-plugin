@@ -101,20 +101,27 @@ public class DescriptorImplTest {
 
     @Test
     public void test_doFillCredentialsIdItems_project_null() {
+        //given
         when(jenkins.hasPermission(Item.CONFIGURE)).thenReturn(false);
 
+        //when
         ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(null);
 
+        //then
         assertThat(listBoxModel, is(not(nullValue())));
     }
 
     @Test
     public void test_doFillCredentialsIdItems_no_permission() {
+        //given
         Item project = mock(Item.class);
         when(project.hasPermission(eq(Item.CONFIGURE))).thenReturn(false);
         when(jenkins.hasPermission(Item.CONFIGURE)).thenReturn(false);
 
+        //when
         ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(project);
+
+        //then
         assertThat(listBoxModel, is(not(nullValue())));
     }
 
@@ -139,13 +146,19 @@ public class DescriptorImplTest {
 
     @Test
     public void test_doCheckStashServerBaseUrl_empty() throws Exception {
+        //when
         FormValidation listBoxModel = desc.doCheckStashServerBaseUrl("");
+
+        //then
         assertThat(listBoxModel.kind, is(FormValidation.Kind.ERROR));
     }
 
     @Test
     public void test_doCheckStashServerBaseUrl() throws Exception {
+        //when
         FormValidation listBoxModel = desc.doCheckStashServerBaseUrl("https://my.company.intranet/bitbucket");
+
+        //then
         assertThat(listBoxModel.kind, is(FormValidation.Kind.OK));
     }
 }
