@@ -86,7 +86,10 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 
 /**
  * Notifies a configured Atlassian Bitbucket server instance of build results
@@ -214,9 +217,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     @DataBoundSetter
     public void setStashServerBaseUrl(String stashServerBaseUrl) {
-        this.stashServerBaseUrl = stashServerBaseUrl != null && stashServerBaseUrl.endsWith("/")
-                ? stashServerBaseUrl.substring(0, stashServerBaseUrl.length() - 1)
-                : stashServerBaseUrl;
+        this.stashServerBaseUrl = StringUtils.stripEnd(stashServerBaseUrl, "/");
     }
 
     public String getCredentialsId() {
@@ -256,13 +257,11 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     @DataBoundSetter
     public void setBuildStatus(String buildStatus) {
-        StashBuildState overwrittenBuildState = null;
         try {
-            overwrittenBuildState = StashBuildState.valueOf(buildStatus);
+            this.buildStatus = StashBuildState.valueOf(buildStatus);
         } catch (Exception e) {
             // ignore unknown or null values
         }
-        this.buildStatus = overwrittenBuildState;
     }
 
     public String getBuildName() {
