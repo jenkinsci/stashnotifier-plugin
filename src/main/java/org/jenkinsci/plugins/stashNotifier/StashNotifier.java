@@ -198,17 +198,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         setConsiderUnstableAsSuccess(considerUnstableAsSuccess);
     }
 
-    StashNotifier(
-            JenkinsLocationConfiguration globalConfig
-    ) {
-        this.globalConfig = globalConfig;
-    }
-
     @DataBoundConstructor
     public StashNotifier() {
-        this(
-                JenkinsLocationConfiguration.get()
-        );
+        this.globalConfig = JenkinsLocationConfiguration.get();
     }
 
     public String getStashServerBaseUrl() {
