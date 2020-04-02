@@ -10,6 +10,12 @@
     <f:entry title="Commit SHA-1" field="commitSha1">
       <f:textbox />
     </f:entry>
+    <f:entry title="Build Name" field="buildName">
+      <f:textbox />
+    </f:entry>
+    <f:entry title="Build Status" field="buildStatus">
+      <f:textbox />
+    </f:entry>
     <f:entry title="Ignore unverified SSL certificates" field="ignoreUnverifiedSSLPeer">
       <f:checkbox />
     </f:entry>
