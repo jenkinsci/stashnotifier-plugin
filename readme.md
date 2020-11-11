@@ -73,7 +73,7 @@ node {
     try {
         // Do stuff
 
-        currentBuild.result = 'SUCCESS'     // Set result of currentBuild !Important!
+        currentBuild.result = 'SUCCESSFUL'     // Set result of currentBuild !Important!
     } catch(err) {
         currentBuild.result = 'FAILED'      // Set result of currentBuild !Important!
     }
@@ -107,7 +107,7 @@ node {
     try {
         // Do stuff
 
-        this.notifyBitbucket('SUCCESS')
+        this.notifyBitbucket('SUCCESSFUL')
     } catch(err) {
         this.notifyBitbucket('FAILED')
     }
@@ -130,7 +130,7 @@ def notifyBitbucket(String state) {
 }
 ```
 
-In [Declarative Pipelines](https://jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline), where Jenkins sets `currentBuild.result = null` for `SUCCESS` builds, the current value can be modified via a `script` step, e.g.:
+In [Declarative Pipelines](https://jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline), where Jenkins sets `currentBuild.result = null` for `SUCCESSFUL` builds, the current value can be modified via a `script` step, e.g.:
 
 ```groovy
 pipeline {
@@ -146,7 +146,7 @@ pipeline {
     post {
         always {
             script {
-                currentBuild.result = currentBuild.result ?: 'SUCCESS'
+                currentBuild.result = currentBuild.result ?: 'SUCCESSFUL'
                 notifyBitbucket()
             }
         }
