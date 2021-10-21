@@ -15,9 +15,9 @@ import hudson.plugins.git.util.BuildData;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
+import net.sf.json.JSONObject;
 import org.acegisecurity.Authentication;
 import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.StatusLine;
 import org.apache.http.auth.AuthScope;
@@ -46,6 +46,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -579,7 +580,7 @@ public class StashNotifierTest {
         when(CredentialsMatchers.firstOrNull(anyCollection(), any(CredentialsMatcher.class))).thenReturn(credential);
 
         //when
-        HttpPost request = sn.createRequest(mock(HttpEntity.class), mock(Item.class), sha1, "http://localhost");
+        HttpPost request = sn.createRequest(URI.create("http://localhost"), new JSONObject(), credential);
 
         //then
         assertThat(request, is(not(nullValue())));
@@ -880,7 +881,7 @@ public class StashNotifierTest {
         when(buildListener.getLogger()).thenReturn(logger);
         doReturn("someKey1").when(sn).getBuildKey(eq(build), eq(buildListener));
         HttpPost httpPost = mock(HttpPost.class);
-        doReturn(httpPost).when(sn).createRequest(any(HttpEntity.class), any(Item.class), anyString(), anyString());
+        doReturn(httpPost).when(sn).createRequest(any(URI.class), any(JSONObject.class), eq(null));
         CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
         StatusLine sl = mock(StatusLine.class);
         when(sl.getStatusCode()).thenReturn(statusCode);
