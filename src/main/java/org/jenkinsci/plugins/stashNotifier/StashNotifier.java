@@ -773,7 +773,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             final TaskListener listener,
             final StashBuildState state) throws Exception {
         StashBuildState buildStatus = getPushedBuildStatus(state);
-        HttpEntity stashBuildNotificationEntity = newStashBuildNotificationEntity(run, buildStatus, listener);
+        JSONObject payload = createNotificationPayload(run, buildStatus, listener);
+        HttpEntity stashBuildNotificationEntity = new StringEntity(payload.toString(), "UTF-8");
 
         String stashURL = expandStashURL(run, listener);
 
@@ -909,26 +910,40 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * Returns the HTTP POST entity body with the JSON representation of the
      * run result to be sent to the Bitbucket build API.
      *
+     * @see #createNotificationPayload(Run, StashBuildState, TaskListener)
+     * @deprecated in favor of client-agnostic methods
      * @param run the run to notify Bitbucket of
      * @return HTTP entity body for POST to Bitbucket build API
      */
+    @Deprecated
     private HttpEntity newStashBuildNotificationEntity(
             final Run<?, ?> run,
             final StashBuildState state,
             TaskListener listener) throws UnsupportedEncodingException {
 
+        JSONObject json = createNotificationPayload(run, state, listener);
+        return new StringEntity(json.toString(), "UTF-8");
+    }
+
+    /**
+     * Returns the HTTP POST entity body with the JSON representation of the
+     * run result to be sent to the Bitbucket build API.
+     *
+     * @param run the run to notify Bitbucket of
+     * @return JSON body for POST to Bitbucket build API
+     */
+    private JSONObject createNotificationPayload(
+            final Run<?, ?> run,
+            final StashBuildState state,
+            TaskListener listener) throws UnsupportedEncodingException {
+
         JSONObject json = new JSONObject();
-
         json.put("state", state.name());
-
         json.put("key", abbreviate(getBuildKey(run, listener), MAX_FIELD_LENGTH));
-
         json.put("name", abbreviate(getBuildName(run), MAX_FIELD_LENGTH));
-
         json.put("description", abbreviate(getBuildDescription(run, state), MAX_FIELD_LENGTH));
         json.put("url", abbreviate(DisplayURLProvider.get().getRunURL(run), MAX_URL_FIELD_LENGTH));
-
-        return new StringEntity(json.toString(), "UTF-8");
+        return json;
     }
 
     private static String abbreviate(String text, int maxWidth) {
