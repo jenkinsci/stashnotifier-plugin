@@ -53,6 +53,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -81,6 +82,7 @@ public class StashNotifierTest {
     private HttpClientBuilder httpClientBuilder;
     private CloseableHttpClient client;
     private Jenkins jenkins;
+    private final HttpNotifier httpNotifier = mock(HttpNotifier.class);
 
     private StashNotifier buildStashNotifier(String stashBaseUrl) {
         return buildStashNotifier(stashBaseUrl, false, false);
@@ -101,7 +103,8 @@ public class StashNotifierTest {
                 true,
                 disableInprogressNotification,
                 considerUnstableAsSuccess,
-                mock(JenkinsLocationConfiguration.class)
+                mock(JenkinsLocationConfiguration.class),
+                httpNotifier
         );
     }
 
@@ -243,7 +246,8 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class));
+                mock(JenkinsLocationConfiguration.class),
+                httpNotifier);
 
         PrintStream logger = mock(PrintStream.class);
 
@@ -495,7 +499,8 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class));
+                mock(JenkinsLocationConfiguration.class),
+                httpNotifier);
 
         //when
         Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
@@ -523,7 +528,8 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class));
+                mock(JenkinsLocationConfiguration.class),
+                httpNotifier);
 
         //when
         Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
@@ -604,7 +610,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class));
+                mock(JenkinsLocationConfiguration.class),
+                httpNotifier);
 
         //when
         StashBuildState pushedBuildStatus = sn.getPushedBuildStatus(StashBuildState.FAILED);
@@ -628,7 +635,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class));
+                mock(JenkinsLocationConfiguration.class),
+                httpNotifier);
 
         //when
         StashBuildState pushedBuildStatus = sn.getPushedBuildStatus(StashBuildState.FAILED);
@@ -655,7 +663,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class));
+                mock(JenkinsLocationConfiguration.class),
+                httpNotifier);
 
         //when
         String buildName = sn.getBuildName(run);
@@ -681,7 +690,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class));
+                mock(JenkinsLocationConfiguration.class),
+                httpNotifier);
 
         //when
         String buildName = sn.getBuildName(run);
@@ -711,7 +721,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class));
+                mock(JenkinsLocationConfiguration.class),
+                httpNotifier);
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -742,7 +753,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class));
+                mock(JenkinsLocationConfiguration.class),
+                httpNotifier);
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -774,7 +786,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class));
+                mock(JenkinsLocationConfiguration.class),
+                httpNotifier);
 
         //when
         String buildKey = sn.getBuildKey(run, buildListener);
@@ -803,7 +816,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class));
+                mock(JenkinsLocationConfiguration.class),
+                httpNotifier);
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -835,7 +849,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class));
+                mock(JenkinsLocationConfiguration.class),
+                httpNotifier);
 
         //when
         String buildKey = sn.getBuildKey(run, buildListener);
@@ -894,14 +909,11 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void notifyStash_success() throws Exception {
+    public void notifyStashDelegatesToHttpNotifier() throws Exception {
+        NotificationResult result = NotificationResult.newFailure("some value for test");
+        when(httpNotifier.send(any(), any(), any(), any())).thenReturn(result);
         NotificationResult notificationResult = notifyStash(204);
-        assertThat(notificationResult.indicatesSuccess, is(true));
-    }
-
-    @Test
-    public void notifyStash_fail() throws Exception {
-        NotificationResult notificationResult = notifyStash(400);
-        assertThat(notificationResult.indicatesSuccess, is(false));
+        verify(httpNotifier).send(any(), any(), any(), any());
+        assertThat(notificationResult, equalTo(result));
     }
 }
