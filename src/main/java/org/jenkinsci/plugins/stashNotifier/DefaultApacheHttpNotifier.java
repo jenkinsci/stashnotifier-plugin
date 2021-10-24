@@ -47,7 +47,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 
-public class DefaultApacheHttpNotifier implements HttpNotifier {
+class DefaultApacheHttpNotifier implements HttpNotifier {
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultApacheHttpNotifier.class);
 
     @Override

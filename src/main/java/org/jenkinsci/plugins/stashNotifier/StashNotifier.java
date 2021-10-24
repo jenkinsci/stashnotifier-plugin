@@ -158,7 +158,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     private final boolean considerUnstableAsSuccess;
 
     private final JenkinsLocationConfiguration globalConfig;
-    private final HttpNotifier httpNotifier;
+    private final HttpNotifierSelector httpNotifierSelector;
 
 // public members ----------------------------------------------------------
 
@@ -180,7 +180,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             boolean disableInprogressNotification,
             boolean considerUnstableAsSuccess,
             JenkinsLocationConfiguration globalConfig,
-            HttpNotifier httpNotifier
+            HttpNotifierSelector httpNotifierSelector
     ) {
 
         this.stashServerBaseUrl = stashServerBaseUrl != null && stashServerBaseUrl.endsWith("/")
@@ -205,7 +205,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         this.disableInprogressNotification = disableInprogressNotification;
         this.considerUnstableAsSuccess = considerUnstableAsSuccess;
         this.globalConfig = globalConfig;
-        this.httpNotifier = httpNotifier;
+        this.httpNotifierSelector = httpNotifierSelector;
     }
 
     @DataBoundConstructor
@@ -235,7 +235,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 disableInprogressNotification,
                 considerUnstableAsSuccess,
                 JenkinsLocationConfiguration.get(),
-                new DefaultApacheHttpNotifier()
+                Jenkins.getInstance().getInjector().getInstance(HttpNotifierSelector.class)
         );
     }
 
@@ -800,7 +800,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 logger,
                 run.getExternalizableId()
         );
-        return httpNotifier.send(uri, payload, settings, context);
+        HttpNotifier notifier = httpNotifierSelector.select(new SelectionContext(run.getParent().getFullName()));
+        return notifier.send(uri, payload, settings, context);
     }
 
     /**
