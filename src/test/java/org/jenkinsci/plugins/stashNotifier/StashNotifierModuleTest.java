@@ -68,7 +68,7 @@ public class StashNotifierModuleTest {
 
     private static class AlwaysSucceedsHttpNotifier implements HttpNotifier {
         @Override
-        public NotificationResult send(URI uri, JSONObject payload, NotificationSettings settings, NotificationContext context) {
+        public @NonNull NotificationResult send(@NonNull URI uri, @NonNull JSONObject payload, @NonNull NotificationSettings settings, @NonNull NotificationContext context) {
             return NotificationResult.newSuccess();
         }
     }

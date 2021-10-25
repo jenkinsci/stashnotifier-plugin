@@ -3,6 +3,7 @@ package org.jenkinsci.plugins.stashNotifier;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.common.CertificateCredentials;
 import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ProxyConfiguration;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
@@ -51,7 +52,7 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultApacheHttpNotifier.class);
 
     @Override
-    public NotificationResult send(URI uri, JSONObject payload, NotificationSettings settings, NotificationContext context) {
+    public @NonNull NotificationResult send(@NonNull URI uri, @NonNull JSONObject payload, @NonNull NotificationSettings settings, @NonNull NotificationContext context) {
         PrintStream logger = context.getLogger();
         try (CloseableHttpClient client = getHttpClient(logger, uri, settings.isIgnoreUnverifiedSSL())) {
             HttpPost req = createRequest(uri, payload, settings.getCredentials());
