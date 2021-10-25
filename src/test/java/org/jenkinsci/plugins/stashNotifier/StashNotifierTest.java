@@ -92,7 +92,7 @@ public class StashNotifierTest {
     private StashNotifier buildStashNotifier(String stashBaseUrl,
                                             boolean disableInprogressNotification,
                                             boolean considerUnstableAsSuccess) {
-        return new StashNotifier(
+        StashNotifier notifier = new StashNotifier(
                 stashBaseUrl,
                 "scot",
                 true,
@@ -104,9 +104,10 @@ public class StashNotifierTest {
                 true,
                 disableInprogressNotification,
                 considerUnstableAsSuccess,
-                mock(JenkinsLocationConfiguration.class),
-                httpNotifierSelector
+                mock(JenkinsLocationConfiguration.class)
         );
+        notifier.setHttpNotifierSelector(httpNotifierSelector);
+        return notifier;
     }
 
     StashNotifier sn;
@@ -248,8 +249,8 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class),
-                httpNotifierSelector);
+                mock(JenkinsLocationConfiguration.class)
+        );
 
         PrintStream logger = mock(PrintStream.class);
 
@@ -501,8 +502,8 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class),
-                httpNotifierSelector);
+                mock(JenkinsLocationConfiguration.class)
+        );
 
         //when
         Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
@@ -530,8 +531,8 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class),
-                httpNotifierSelector);
+                mock(JenkinsLocationConfiguration.class)
+        );
 
         //when
         Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
@@ -612,8 +613,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class),
-                httpNotifierSelector);
+                mock(JenkinsLocationConfiguration.class)
+        );
 
         //when
         StashBuildState pushedBuildStatus = sn.getPushedBuildStatus(StashBuildState.FAILED);
@@ -637,8 +638,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class),
-                httpNotifierSelector);
+                mock(JenkinsLocationConfiguration.class)
+        );
 
         //when
         StashBuildState pushedBuildStatus = sn.getPushedBuildStatus(StashBuildState.FAILED);
@@ -665,8 +666,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class),
-                httpNotifierSelector);
+                mock(JenkinsLocationConfiguration.class)
+        );
 
         //when
         String buildName = sn.getBuildName(run);
@@ -692,8 +693,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class),
-                httpNotifierSelector);
+                mock(JenkinsLocationConfiguration.class)
+        );
 
         //when
         String buildName = sn.getBuildName(run);
@@ -723,8 +724,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class),
-                httpNotifierSelector);
+                mock(JenkinsLocationConfiguration.class)
+        );
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -755,8 +756,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class),
-                httpNotifierSelector);
+                mock(JenkinsLocationConfiguration.class)
+        );
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -788,8 +789,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class),
-                httpNotifierSelector);
+                mock(JenkinsLocationConfiguration.class)
+        );
 
         //when
         String buildKey = sn.getBuildKey(run, buildListener);
@@ -818,8 +819,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class),
-                httpNotifierSelector);
+                mock(JenkinsLocationConfiguration.class)
+        );
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -851,8 +852,8 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class),
-                httpNotifierSelector);
+                mock(JenkinsLocationConfiguration.class)
+        );
 
         //when
         String buildKey = sn.getBuildKey(run, buildListener);

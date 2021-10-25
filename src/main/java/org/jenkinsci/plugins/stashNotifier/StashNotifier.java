@@ -22,6 +22,7 @@ import com.cloudbees.plugins.credentials.common.CertificateCredentials;
 import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
+import com.google.inject.Injector;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -70,6 +71,7 @@ import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.*;
 
 import javax.annotation.Nonnull;
+import javax.inject.Inject;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.servlet.ServletException;
@@ -158,7 +160,12 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     private final boolean considerUnstableAsSuccess;
 
     private final JenkinsLocationConfiguration globalConfig;
-    private final HttpNotifierSelector httpNotifierSelector;
+
+    /**
+     * gives us the desired {@link HttpNotifier}. Transient because
+     * we resolve this at runtime rather than serializing.
+     */
+    private transient HttpNotifierSelector httpNotifierSelector;
 
 // public members ----------------------------------------------------------
 
@@ -179,8 +186,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             boolean prependParentProjectKey,
             boolean disableInprogressNotification,
             boolean considerUnstableAsSuccess,
-            JenkinsLocationConfiguration globalConfig,
-            HttpNotifierSelector httpNotifierSelector
+            JenkinsLocationConfiguration globalConfig
     ) {
 
         this.stashServerBaseUrl = stashServerBaseUrl != null && stashServerBaseUrl.endsWith("/")
@@ -205,7 +211,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         this.disableInprogressNotification = disableInprogressNotification;
         this.considerUnstableAsSuccess = considerUnstableAsSuccess;
         this.globalConfig = globalConfig;
-        this.httpNotifierSelector = httpNotifierSelector;
     }
 
     @DataBoundConstructor
@@ -234,8 +239,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 prependParentProjectKey,
                 disableInprogressNotification,
                 considerUnstableAsSuccess,
-                JenkinsLocationConfiguration.get(),
-                Jenkins.getInstance().getInjector().getInstance(HttpNotifierSelector.class)
+                JenkinsLocationConfiguration.get()
         );
     }
 
@@ -281,6 +285,20 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     public boolean getPrependParentProjectKey() {
         return prependParentProjectKey;
+    }
+
+    @Inject
+    void setHttpNotifierSelector(HttpNotifierSelector httpNotifierSelector) {
+        this.httpNotifierSelector = httpNotifierSelector;
+    }
+
+    HttpNotifierSelector getHttpNotifierSelector() {
+        if (httpNotifierSelector == null) {
+            Jenkins jenkins = Jenkins.getInstance();
+            Injector injector = jenkins.getInjector();
+            injector.injectMembers(this);
+        }
+        return httpNotifierSelector;
     }
 
     @Override
@@ -800,7 +818,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 logger,
                 run.getExternalizableId()
         );
-        HttpNotifier notifier = httpNotifierSelector.select(new SelectionContext(run.getParent().getFullName()));
+        HttpNotifier notifier = getHttpNotifierSelector().select(new SelectionContext(run.getParent().getFullName()));
         return notifier.send(uri, payload, settings, context);
     }
 
