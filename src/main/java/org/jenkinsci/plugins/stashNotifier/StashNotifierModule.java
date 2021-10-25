@@ -21,9 +21,16 @@ public class StashNotifierModule extends AbstractModule {
 
     @Provides
     @Singleton
-    @Named("fallback")
-    HttpNotifierSelector providesDefaultApacheHttpNotifierSelector() {
-        return new DefaultHttpNotifierSelector(new DefaultApacheHttpNotifier());
+    @StashNotifierDefault
+    HttpNotifier providesDefaultHttpNotifier() {
+        return new DefaultApacheHttpNotifier();
+    }
+
+    @Provides
+    @Singleton
+    @StashNotifierDefault
+    HttpNotifierSelector providesDefaultApacheHttpNotifierSelector(@StashNotifierDefault HttpNotifier httpNotifier) {
+        return new DefaultHttpNotifierSelector(httpNotifier);
     }
 
     @Provides
@@ -33,7 +40,7 @@ public class StashNotifierModule extends AbstractModule {
 
     @Provides
     @Singleton
-    HttpNotifierSelector providesHttpNotifierSelector(@Named("fallback") HttpNotifierSelector fallback,
+    HttpNotifierSelector providesHttpNotifierSelector(@StashNotifierDefault HttpNotifierSelector fallback,
                                                       @Named("preferredHttpNotifierSelector") String preferredHttpNotifierSelector,
                                                       List<HttpNotifierSelector> httpNotifierSelectors) {
         HttpNotifierSelector selector = httpNotifierSelectors.stream()
