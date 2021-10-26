@@ -61,6 +61,6 @@ public class StashNotifierModule extends AbstractModule {
     @Named("preferredHttpNotifierSelector")
     String providesPreferredHttpNotifierSelector() {
         String override = HttpNotifierSelector.class.getName() + ".className";
-        return System.getProperty(override, DefaultApacheHttpNotifier.class.getName());
+        return System.getProperty(override, DefaultHttpNotifierSelector.class.getName());
     }
 }
