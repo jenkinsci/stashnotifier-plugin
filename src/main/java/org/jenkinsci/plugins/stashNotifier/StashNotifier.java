@@ -878,7 +878,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * Returns the HTTP POST request ready to be sent to the Bitbucket build API for
      * the given run and change set.
      *
-     * @see #createRequest(URI, JSONObject, UsernamePasswordCredentials)
+     * @see DefaultApacheHttpNotifier#createRequest(URI, JSONObject, UsernamePasswordCredentials)
      * @deprecated in favor of method overload
      * @param stashBuildNotificationEntity a entity containing the parameters for Bitbucket
      * @param commitSha1                   the SHA1 of the commit that was built
@@ -912,39 +912,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         req.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
         req.setEntity(stashBuildNotificationEntity);
-
-        return req;
-    }
-
-    /**
-     * Returns the HTTP POST request ready to be sent to the Bitbucket build API for
-     * the given run and change set.
-     *
-     * @see DefaultApacheHttpNotifier#createRequest(URI, JSONObject, UsernamePasswordCredentials)
-     * @param uri           uri for the POST request
-     * @param payload       a entity containing the parameters for Bitbucket
-     * @param credentials   the SHA1 of the commit that was built
-     * @return the HTTP POST request to the Bitbucket build API
-     */
-    @Deprecated
-    protected HttpPost createRequest(
-            final URI uri,
-            final JSONObject payload,
-            final UsernamePasswordCredentials credentials) throws AuthenticationException {
-
-        HttpPost req = new HttpPost(uri.toString());
-
-        if (credentials != null) {
-            req.addHeader(new BasicScheme().authenticate(
-                    new org.apache.http.auth.UsernamePasswordCredentials(
-                            credentials.getUsername(),
-                            credentials.getPassword().getPlainText()),
-                    req,
-                    null));
-        }
-
-        req.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-        req.setEntity(new StringEntity(payload.toString(), "UTF-8"));
 
         return req;
     }
