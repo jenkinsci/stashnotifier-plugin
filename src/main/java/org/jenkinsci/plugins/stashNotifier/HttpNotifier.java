@@ -10,7 +10,7 @@ import java.net.URI;
  */
 public interface HttpNotifier {
     /**
-     * Basic contract for sending {@link "https://docs.atlassian.com/bitbucket-server/rest/7.17.0/bitbucket-build-rest.html#idp7" Bitbucket build status notifications}.
+     * Basic contract for sending Bitbucket build status notifications.
      *
      * @param uri fully-formed URI (stash-base-uri/rest/build-status/1.0/commits/commit-id)
      * @param payload body of status to post
