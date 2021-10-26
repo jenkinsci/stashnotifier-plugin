@@ -928,7 +928,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      */
     @Deprecated
     protected HttpPost createRequest(
-            final URI uri, 
+            final URI uri,
             final JSONObject payload,
             final UsernamePasswordCredentials credentials) throws AuthenticationException {
 

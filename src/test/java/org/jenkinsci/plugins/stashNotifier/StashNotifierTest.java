@@ -1,9 +1,6 @@
 package org.jenkinsci.plugins.stashNotifier;
 
-import com.cloudbees.plugins.credentials.CredentialsMatcher;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.CredentialsScope;
-import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -15,7 +12,6 @@ import hudson.plugins.git.util.BuildData;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
-import net.sf.json.JSONObject;
 import org.acegisecurity.Authentication;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.http.HttpHost;
@@ -46,7 +42,6 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -55,12 +50,9 @@ import java.util.List;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -249,8 +241,7 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class)
-        );
+                mock(JenkinsLocationConfiguration.class));
 
         PrintStream logger = mock(PrintStream.class);
 
@@ -502,8 +493,7 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class)
-        );
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
@@ -531,8 +521,7 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class)
-        );
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         Collection<String> hashes = sn.lookupCommitSha1s(build, null, buildListener);
@@ -582,21 +571,6 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_createRequest() throws Exception {
-        //given
-        UsernamePasswordCredentialsImpl credential = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, "", "", "admin", "tiger");
-        PowerMockito.mockStatic(CredentialsMatchers.class);
-        when(CredentialsMatchers.firstOrNull(anyCollection(), any(CredentialsMatcher.class))).thenReturn(credential);
-
-        //when
-        HttpPost request = sn.createRequest(URI.create("http://localhost"), new JSONObject(), credential);
-
-        //then
-        assertThat(request, is(not(nullValue())));
-        assertThat(request.getHeaders("Authorization"), is(not(nullValue())));
-    }
-
-    @Test
     public void test_getPushedBuildState_overwritten() {
         //given
         StashBuildState state = StashBuildState.SUCCESSFUL;
@@ -613,8 +587,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class)
-        );
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         StashBuildState pushedBuildStatus = sn.getPushedBuildStatus(StashBuildState.FAILED);
@@ -638,8 +611,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class)
-        );
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         StashBuildState pushedBuildStatus = sn.getPushedBuildStatus(StashBuildState.FAILED);
@@ -666,8 +638,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class)
-        );
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         String buildName = sn.getBuildName(run);
@@ -693,8 +664,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class)
-        );
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         String buildName = sn.getBuildName(run);
@@ -724,8 +694,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class)
-        );
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -756,8 +725,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class)
-        );
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -789,8 +757,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class)
-        );
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         String buildKey = sn.getBuildKey(run, buildListener);
@@ -819,8 +786,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class)
-        );
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         String buildKey = sn.getBuildKey(build, buildListener);
@@ -852,8 +818,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
-                mock(JenkinsLocationConfiguration.class)
-        );
+                mock(JenkinsLocationConfiguration.class));
 
         //when
         String buildKey = sn.getBuildKey(run, buildListener);
@@ -899,7 +864,6 @@ public class StashNotifierTest {
         when(buildListener.getLogger()).thenReturn(logger);
         doReturn("someKey1").when(sn).getBuildKey(eq(build), eq(buildListener));
         HttpPost httpPost = mock(HttpPost.class);
-        doReturn(httpPost).when(sn).createRequest(any(URI.class), any(JSONObject.class), eq(null));
         CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
         StatusLine sl = mock(StatusLine.class);
         when(sl.getStatusCode()).thenReturn(statusCode);
