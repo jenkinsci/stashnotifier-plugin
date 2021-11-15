@@ -1,9 +1,6 @@
 package org.jenkinsci.plugins.stashNotifier;
 
-import com.cloudbees.plugins.credentials.CredentialsMatcher;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.CredentialsScope;
-import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -17,7 +14,6 @@ import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
 import org.acegisecurity.Authentication;
 import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.StatusLine;
 import org.apache.http.auth.AuthScope;
@@ -52,13 +48,11 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -80,6 +74,8 @@ public class StashNotifierTest {
     private HttpClientBuilder httpClientBuilder;
     private CloseableHttpClient client;
     private Jenkins jenkins;
+    private final HttpNotifierSelector httpNotifierSelector = mock(HttpNotifierSelector.class);
+    private final HttpNotifier httpNotifier = mock(HttpNotifier.class);
 
     private StashNotifier buildStashNotifier(String stashBaseUrl) {
         return buildStashNotifier(stashBaseUrl, false, false);
@@ -88,7 +84,7 @@ public class StashNotifierTest {
     private StashNotifier buildStashNotifier(String stashBaseUrl,
                                             boolean disableInprogressNotification,
                                             boolean considerUnstableAsSuccess) {
-        return new StashNotifier(
+        StashNotifier notifier = new StashNotifier(
                 stashBaseUrl,
                 "scot",
                 true,
@@ -102,6 +98,8 @@ public class StashNotifierTest {
                 considerUnstableAsSuccess,
                 mock(JenkinsLocationConfiguration.class)
         );
+        notifier.setHttpNotifierSelector(httpNotifierSelector);
+        return notifier;
     }
 
     StashNotifier sn;
@@ -171,6 +169,7 @@ public class StashNotifierTest {
                 any(Authentication.class),
                 anyList()
         )).thenReturn(new ArrayList<>());
+        when(httpNotifierSelector.select(any())).thenReturn(httpNotifier);
 
         sn = buildStashNotifier("http://localhost");
     }
@@ -572,21 +571,6 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_createRequest() throws Exception {
-        //given
-        UsernamePasswordCredentialsImpl credential = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, "", "", "admin", "tiger");
-        PowerMockito.mockStatic(CredentialsMatchers.class);
-        when(CredentialsMatchers.firstOrNull(anyCollection(), any(CredentialsMatcher.class))).thenReturn(credential);
-
-        //when
-        HttpPost request = sn.createRequest(mock(HttpEntity.class), mock(Item.class), sha1, "http://localhost");
-
-        //then
-        assertThat(request, is(not(nullValue())));
-        assertThat(request.getHeaders("Authorization"), is(not(nullValue())));
-    }
-
-    @Test
     public void test_getPushedBuildState_overwritten() {
         //given
         StashBuildState state = StashBuildState.SUCCESSFUL;
@@ -880,7 +864,6 @@ public class StashNotifierTest {
         when(buildListener.getLogger()).thenReturn(logger);
         doReturn("someKey1").when(sn).getBuildKey(eq(build), eq(buildListener));
         HttpPost httpPost = mock(HttpPost.class);
-        doReturn(httpPost).when(sn).createRequest(any(HttpEntity.class), any(Item.class), anyString(), anyString());
         CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
         StatusLine sl = mock(StatusLine.class);
         when(sl.getStatusCode()).thenReturn(statusCode);
@@ -893,14 +876,11 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void notifyStash_success() throws Exception {
+    public void notifyStashDelegatesToHttpNotifier() throws Exception {
+        NotificationResult result = NotificationResult.newFailure("some value for test");
+        when(httpNotifier.send(any(), any(), any(), any())).thenReturn(result);
         NotificationResult notificationResult = notifyStash(204);
-        assertThat(notificationResult.indicatesSuccess, is(true));
-    }
-
-    @Test
-    public void notifyStash_fail() throws Exception {
-        NotificationResult notificationResult = notifyStash(400);
-        assertThat(notificationResult.indicatesSuccess, is(false));
+        verify(httpNotifier).send(any(), any(), any(), any());
+        assertThat(notificationResult, equalTo(result));
     }
 }
