@@ -55,7 +55,7 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
     public @NonNull NotificationResult send(@NonNull URI uri, @NonNull JSONObject payload, @NonNull NotificationSettings settings, @NonNull NotificationContext context) {
         PrintStream logger = context.getLogger();
         try (CloseableHttpClient client = getHttpClient(logger, uri, settings.isIgnoreUnverifiedSSL())) {
-            HttpPost req = createRequest(uri, payload, settings.getCredentials());
+            HttpPost req = createRequest(logger, uri, payload, settings);
             HttpResponse res = client.execute(req);
             if (res.getStatusLine().getStatusCode() != 204) {
                 return NotificationResult.newFailure(EntityUtils.toString(res.getEntity()));
@@ -70,21 +70,27 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
     }
 
     HttpPost createRequest(
+            final PrintStream logger,
             final URI uri,
             final JSONObject payload,
-            final UsernamePasswordCredentials credentials) throws AuthenticationException {
-
+            final @NonNull NotificationSettings settings) throws AuthenticationException {
         HttpPost req = new HttpPost(uri.toString());
-
+        UsernamePasswordCredentials credentials = settings.getCredentials();
         if (credentials != null) {
-            req.addHeader(new BasicScheme().authenticate(
+            if (!settings.isTokenCredentials()) {
+                logger.println("createRequest - using basic HTTP auth");
+                req.addHeader(new BasicScheme().authenticate(
                     new org.apache.http.auth.UsernamePasswordCredentials(
                             credentials.getUsername(),
                             credentials.getPassword().getPlainText()),
                     req,
                     null));
+            }
+            else {
+                logger.println("createRequest - using token auth");
+                req.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + credentials.getPassword().getPlainText());
+            }
         }
-
         req.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
         req.setEntity(new StringEntity(payload.toString(), "UTF-8"));
 
@@ -98,10 +104,10 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
                 .setSocketTimeout(timeoutInMilliseconds)
                 .setConnectTimeout(timeoutInMilliseconds)
                 .setConnectionRequestTimeout(timeoutInMilliseconds);
-
+                
         HttpClientBuilder clientBuilder = HttpClients.custom();
         clientBuilder.setDefaultRequestConfig(requestBuilder.build());
-
+        
         URL url = stashServer.toURL();
 
         if (url.getProtocol().equals("https") && ignoreUnverifiedSSL) {

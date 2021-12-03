@@ -159,6 +159,11 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      */
     private final boolean considerUnstableAsSuccess;
 
+    /**
+     * whether to use provided credials as Bitbucket Personal Access Token
+     */
+    private final boolean useCredentialsAsPersonalAccessToken;
+
     private final JenkinsLocationConfiguration globalConfig;
 
     /**
@@ -186,6 +191,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             boolean prependParentProjectKey,
             boolean disableInprogressNotification,
             boolean considerUnstableAsSuccess,
+            boolean useCredentialsAsPersonalAccessToken,
             JenkinsLocationConfiguration globalConfig
     ) {
 
@@ -210,6 +216,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         this.prependParentProjectKey = prependParentProjectKey;
         this.disableInprogressNotification = disableInprogressNotification;
         this.considerUnstableAsSuccess = considerUnstableAsSuccess;
+        this.useCredentialsAsPersonalAccessToken = useCredentialsAsPersonalAccessToken;
         this.globalConfig = globalConfig;
     }
 
@@ -225,7 +232,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             String projectKey,
             boolean prependParentProjectKey,
             boolean disableInprogressNotification,
-            boolean considerUnstableAsSuccess
+            boolean considerUnstableAsSuccess,
+            boolean useCredentialsAsPersonalAccessToken
     ) {
         this(
                 stashServerBaseUrl,
@@ -239,6 +247,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 prependParentProjectKey,
                 disableInprogressNotification,
                 considerUnstableAsSuccess,
+                useCredentialsAsPersonalAccessToken,
                 JenkinsLocationConfiguration.get()
         );
     }
@@ -249,6 +258,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     public boolean isConsiderUnstableAsSuccess() {
         return considerUnstableAsSuccess;
+    }
+
+    public boolean isUseCredentialsAsPersonalAccessToken() {
+        return useCredentialsAsPersonalAccessToken;
     }
 
     public String getCredentialsId() {
@@ -610,7 +623,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         private boolean includeBuildNumberInKey;
         private boolean prependParentProjectKey;
         private String stashRootUrl;
-
+        private boolean useCredentialsAsPersonalAccessToken;
         public DescriptorImpl() {
             this(true);
         }
@@ -645,6 +658,15 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             }
 
             return new StandardListBoxModel();
+        }
+
+        public boolean isUseCredentialsAsPersonalAccessToken() {
+            return useCredentialsAsPersonalAccessToken;
+        }
+
+        @DataBoundSetter
+        public void setUseCredentialsAsPersonalAccessToken(boolean useCredentialsAsPersonalAccessToken) {
+            this.useCredentialsAsPersonalAccessToken = useCredentialsAsPersonalAccessToken;
         }
 
         public boolean isConsiderUnstableAsSuccess() {
@@ -764,7 +786,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         public boolean configure(
                 StaplerRequest req,
                 JSONObject formData) throws FormException {
-
+            this.useCredentialsAsPersonalAccessToken = false;
             this.considerUnstableAsSuccess = false;
             this.credentialsId = null;
             this.disableInprogressNotification = false;
@@ -811,7 +833,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         URI uri = BuildStatusUriFactory.create(stashURL, commitSha1);
         NotificationSettings settings = new NotificationSettings(
-                ignoreUnverifiedSSLPeer || getDescriptor().isIgnoreUnverifiedSsl(),
+                ignoreUnverifiedSSLPeer || getDescriptor().isIgnoreUnverifiedSsl(), 
+                isUseCredentialsAsPersonalAccessToken() || getDescriptor().isUseCredentialsAsPersonalAccessToken(),
                 usernamePasswordCredentials
         );
         NotificationContext context = new NotificationContext(

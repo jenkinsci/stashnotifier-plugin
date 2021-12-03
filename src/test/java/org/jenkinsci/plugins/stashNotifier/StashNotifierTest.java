@@ -96,6 +96,7 @@ public class StashNotifierTest {
                 true,
                 disableInprogressNotification,
                 considerUnstableAsSuccess,
+                false,
                 mock(JenkinsLocationConfiguration.class)
         );
         notifier.setHttpNotifierSelector(httpNotifierSelector);
@@ -238,6 +239,7 @@ public class StashNotifierTest {
                 null,
                 true,
                 null,
+                false,
                 false,
                 false,
                 false,
@@ -493,6 +495,7 @@ public class StashNotifierTest {
                 false,
                 false,
                 false,
+                false,
                 mock(JenkinsLocationConfiguration.class));
 
         //when
@@ -518,6 +521,7 @@ public class StashNotifierTest {
                 null,
                 true,
                 null,
+                false,
                 false,
                 false,
                 false,
@@ -587,6 +591,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
+                false,
                 mock(JenkinsLocationConfiguration.class));
 
         //when
@@ -609,6 +614,7 @@ public class StashNotifierTest {
                 true,
                 null,
                 true,
+                false,
                 false,
                 false,
                 mock(JenkinsLocationConfiguration.class));
@@ -638,6 +644,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
+                false,
                 mock(JenkinsLocationConfiguration.class));
 
         //when
@@ -662,6 +669,7 @@ public class StashNotifierTest {
                 true,
                 null,
                 true,
+                false,
                 false,
                 false,
                 mock(JenkinsLocationConfiguration.class));
@@ -694,6 +702,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
+                false,
                 mock(JenkinsLocationConfiguration.class));
 
         //when
@@ -723,6 +732,7 @@ public class StashNotifierTest {
                 true,
                 null,
                 true,
+                false,
                 false,
                 false,
                 mock(JenkinsLocationConfiguration.class));
@@ -757,6 +767,7 @@ public class StashNotifierTest {
                 true,
                 false,
                 false,
+                false,
                 mock(JenkinsLocationConfiguration.class));
 
         //when
@@ -784,6 +795,7 @@ public class StashNotifierTest {
                 true,
                 key,
                 true,
+                false,
                 false,
                 false,
                 mock(JenkinsLocationConfiguration.class));
@@ -816,6 +828,7 @@ public class StashNotifierTest {
                 true,
                 key,
                 true,
+                false,
                 false,
                 false,
                 mock(JenkinsLocationConfiguration.class));

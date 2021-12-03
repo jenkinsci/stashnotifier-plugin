@@ -132,7 +132,7 @@ public class DefaultApacheHttpNotifierTest {
         when(resp.getStatusLine()).thenReturn(sl);
         when(resp.getEntity()).thenReturn(new StringEntity(""));
         when(client.execute(any(HttpPost.class))).thenReturn(resp);
-        return httpNotifier.send(uri, new JSONObject(), new NotificationSettings(false, null), new NotificationContext(logger, "some-build#15"));
+        return httpNotifier.send(uri, new JSONObject(), new NotificationSettings(false, false,null), new NotificationContext(logger, "some-build#15"));
     }
 
     @Test
