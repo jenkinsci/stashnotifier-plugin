@@ -833,8 +833,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         URI uri = BuildStatusUriFactory.create(stashURL, commitSha1);
         NotificationSettings settings = new NotificationSettings(
-                ignoreUnverifiedSSLPeer || getDescriptor().isIgnoreUnverifiedSsl(), 
-                isUseCredentialsAsPersonalAccessToken() || getDescriptor().isUseCredentialsAsPersonalAccessToken(),
+                (ignoreUnverifiedSSLPeer || (getDescriptor() != null && getDescriptor().isIgnoreUnverifiedSsl())), 
+                (isUseCredentialsAsPersonalAccessToken() || (getDescriptor() != null && getDescriptor().isUseCredentialsAsPersonalAccessToken())),
                 usernamePasswordCredentials
         );
         NotificationContext context = new NotificationContext(
