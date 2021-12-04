@@ -66,6 +66,7 @@ import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.SSLContexts;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
+import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.*;
@@ -806,13 +807,15 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         logger.println("Notifying Bitbucket at \"" + stashURL + "\"");
 
-        UsernamePasswordCredentials usernamePasswordCredentials
+        Credentials usernamePasswordCredentials
                 = getCredentials(UsernamePasswordCredentials.class, run.getParent());
+        Credentials stringCredentials
+                = getCredentials(StringCredentials.class, run.getParent());
 
         URI uri = BuildStatusUriFactory.create(stashURL, commitSha1);
         NotificationSettings settings = new NotificationSettings(
                 ignoreUnverifiedSSLPeer || getDescriptor().isIgnoreUnverifiedSsl(),
-                usernamePasswordCredentials
+                stringCredentials != null ? stringCredentials : usernamePasswordCredentials
         );
         NotificationContext context = new NotificationContext(
                 logger,
