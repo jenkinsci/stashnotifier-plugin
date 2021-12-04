@@ -881,7 +881,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * Returns the HTTP POST request ready to be sent to the Bitbucket build API for
      * the given run and change set.
      *
-     * @see DefaultApacheHttpNotifier#createRequest(URI, JSONObject, UsernamePasswordCredentials)
+     * @see DefaultApacheHttpNotifier#createRequest(URI, JSONObject, Credentials, NotificationContext)
      * @deprecated in favor of method overload
      * @param stashBuildNotificationEntity a entity containing the parameters for Bitbucket
      * @param commitSha1                   the SHA1 of the commit that was built
