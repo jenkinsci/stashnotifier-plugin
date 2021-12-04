@@ -33,6 +33,7 @@ import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.util.EntityUtils;
+import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +56,7 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
     public @NonNull NotificationResult send(@NonNull URI uri, @NonNull JSONObject payload, @NonNull NotificationSettings settings, @NonNull NotificationContext context) {
         PrintStream logger = context.getLogger();
         try (CloseableHttpClient client = getHttpClient(logger, uri, settings.isIgnoreUnverifiedSSL())) {
-            HttpPost req = createRequest(uri, payload, settings.getCredentials());
+            HttpPost req = createRequest(uri, payload, settings.getCredentials(), context);
             HttpResponse res = client.execute(req);
             if (res.getStatusLine().getStatusCode() != 204) {
                 return NotificationResult.newFailure(EntityUtils.toString(res.getEntity()));
@@ -72,17 +73,28 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
     HttpPost createRequest(
             final URI uri,
             final JSONObject payload,
-            final UsernamePasswordCredentials credentials) throws AuthenticationException {
-
+            final Credentials credentials,
+            @NonNull NotificationContext context) throws AuthenticationException {
+        PrintStream logger = context.getLogger();
         HttpPost req = new HttpPost(uri.toString());
 
         if (credentials != null) {
-            req.addHeader(new BasicScheme().authenticate(
-                    new org.apache.http.auth.UsernamePasswordCredentials(
-                            credentials.getUsername(),
-                            credentials.getPassword().getPlainText()),
-                    req,
-                    null));
+            if (credentials instanceof UsernamePasswordCredentials) {
+                logger.println("createRequest - UsernamePasswordCredentials");
+                req.addHeader(new BasicScheme().authenticate(
+                        new org.apache.http.auth.UsernamePasswordCredentials(
+                                ((UsernamePasswordCredentials)credentials).getUsername(),
+                                ((UsernamePasswordCredentials)credentials).getPassword().getPlainText()),
+                        req,
+                        null));
+            }
+            else if (credentials instanceof StringCredentials) {
+                logger.println("createRequest - StringCredentials/secret text");
+                req.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + ((StringCredentials)credentials).getSecret().getPlainText());
+            } 
+            else {
+                throw new AuthenticationException("Unsupported credials");
+            }
         }
 
         req.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");

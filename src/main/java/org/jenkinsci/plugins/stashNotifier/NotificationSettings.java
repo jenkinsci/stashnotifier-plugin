@@ -1,6 +1,6 @@
 package org.jenkinsci.plugins.stashNotifier;
 
-import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
+import com.cloudbees.plugins.credentials.Credentials;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 
 /**
@@ -9,9 +9,9 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
  */
 public class NotificationSettings {
     private final boolean ignoreUnverifiedSSL;
-    private final UsernamePasswordCredentials credentials;
+    private final Credentials credentials;
 
-    public NotificationSettings(boolean ignoreUnverifiedSSL, UsernamePasswordCredentials credentials) {
+    public NotificationSettings(boolean ignoreUnverifiedSSL, Credentials credentials) {
         this.ignoreUnverifiedSSL = ignoreUnverifiedSSL;
         this.credentials = credentials;
     }
@@ -21,7 +21,7 @@ public class NotificationSettings {
     }
 
     @CheckForNull
-    public UsernamePasswordCredentials getCredentials() {
+    public Credentials getCredentials() {
         return credentials;
     }
 }
