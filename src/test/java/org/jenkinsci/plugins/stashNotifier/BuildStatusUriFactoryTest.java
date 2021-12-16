@@ -4,8 +4,8 @@ import org.junit.Test;
 
 import java.net.URI;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.Assert.*;
 
 public class BuildStatusUriFactoryTest {
 
