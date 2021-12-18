@@ -8,17 +8,15 @@ import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.acegisecurity.Authentication;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.kohsuke.stapler.*;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
+import org.mockito.MockedStatic;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -28,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -35,24 +34,25 @@ import static org.mockito.Mockito.when;
  * Created by Vlad Medvedev on 27.01.2016.
  * vladislav.medvedev@devfactory.com
  */
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({StashNotifier.DescriptorImpl.class, CredentialsProvider.class, Jenkins.class, TokenList.class})
 public class DescriptorImplTest {
 
     /**
      * Class under test.
      */
-    private StashNotifier.DescriptorImpl desc;
+    private static StashNotifier.DescriptorImpl desc;
 
-    private JSONObject json;
-    private Jenkins jenkins;
+    private static JSONObject json;
+    private static Jenkins jenkins;
+    private static MockedStatic<Jenkins> mockedJenkins;
+    private static MockedStatic<CredentialsProvider> mockedCredentialsProvider;
 
-    @Before
-    public void setUp() {
-        jenkins = PowerMockito.mock(Jenkins.class);
+    @BeforeClass
+    public static void setUp() {
+        mockedJenkins = mockStatic(Jenkins.class);
+        mockedCredentialsProvider = mockStatic(CredentialsProvider.class);
 
-        PowerMockito.mockStatic(Jenkins.class);
-        when(Jenkins.getInstance()).thenReturn(jenkins);
+        jenkins = mock(Jenkins.class);
+        when(Jenkins.get()).thenReturn(jenkins);
 
         json = new JSONObject();
         json.put("considerUnstableAsSuccess", "true");
@@ -65,6 +65,12 @@ public class DescriptorImplTest {
         json.put("stashRootUrl", "https://my.company.intranet/bitbucket");
 
         desc = spy(new StashNotifier.DescriptorImpl(false));
+    }
+
+    @AfterClass
+    public static void close() {
+        mockedJenkins.close();
+        mockedCredentialsProvider.close();
     }
 
     @Test
@@ -128,8 +134,7 @@ public class DescriptorImplTest {
         //given
         Item project = mock(Item.class);
         when(project.hasPermission(Item.CONFIGURE)).thenReturn(true);
-        PowerMockito.mockStatic(CredentialsProvider.class);
-        PowerMockito.when(CredentialsProvider.lookupCredentials(
+        when(CredentialsProvider.lookupCredentials(
                 any(),
                 any(Item.class),
                 any(Authentication.class),
@@ -146,6 +151,7 @@ public class DescriptorImplTest {
     @Test
     public void test_doCheckStashServerBaseUrl_empty() throws Exception {
         //when
+        desc.setStashRootUrl("");
         FormValidation listBoxModel = desc.doCheckStashServerBaseUrl("");
 
         //then

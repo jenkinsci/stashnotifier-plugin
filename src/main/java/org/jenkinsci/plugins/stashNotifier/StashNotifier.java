@@ -295,7 +295,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     HttpNotifierSelector getHttpNotifierSelector() {
         if (httpNotifierSelector == null) {
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.get();
             Injector injector = jenkins.getInjector();
             injector.injectMembers(this);
         }
@@ -362,7 +362,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * @return Root URL contained in the global config
      */
     private String getRootUrl() {
-        Jenkins instance = Jenkins.getInstance();
+        Jenkins instance = Jenkins.get();
 
         return (instance.getRootUrl() != null) ? instance.getRootUrl() : globalConfig.getUrl();
     }
@@ -554,7 +554,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      */
     @Deprecated
     private void configureProxy(HttpClientBuilder builder, URL url) {
-        Jenkins jenkins = Jenkins.getInstance();
+        Jenkins jenkins = Jenkins.get();
         ProxyConfiguration proxyConfig = jenkins.proxy;
         if (proxyConfig == null) {
             return;
@@ -621,7 +621,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item project) {
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.get();
 
             if (project != null && project.hasPermission(Item.CONFIGURE)) {
                 return new StandardListBoxModel()
@@ -854,7 +854,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             }
             if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
                 credentials = CredentialsMatchers.firstOrNull(
-                        CredentialsProvider.lookupCredentials(clazz, Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<>()),
+                        CredentialsProvider.lookupCredentials(clazz, Jenkins.get(), ACL.SYSTEM, new ArrayList<>()),
                         CredentialsMatchers.withId(credentialsId));
             }
         }
