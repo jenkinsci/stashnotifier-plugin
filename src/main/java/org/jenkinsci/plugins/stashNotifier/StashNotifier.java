@@ -297,7 +297,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         if (httpNotifierSelector == null) {
             Jenkins jenkins = Jenkins.get();
             Injector injector = jenkins.getInjector();
-            injector.injectMembers(this);
+            if (injector != null) {
+                injector.injectMembers(this);
+            }
         }
         return httpNotifierSelector;
     }
@@ -1082,10 +1084,12 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             final Run<?, ?> run,
             final StashBuildState state) {
 
-        if (run.getDescription() != null
-                && run.getDescription().trim().length() > 0) {
+        String runDescription = run.getDescription();
 
-            return run.getDescription();
+        if (runDescription != null
+                && runDescription.trim().length() > 0) {
+
+            return runDescription;
         } else {
             switch (state) {
                 case INPROGRESS:
