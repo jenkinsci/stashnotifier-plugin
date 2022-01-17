@@ -23,6 +23,7 @@ import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import com.google.inject.Injector;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -71,7 +72,6 @@ import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.*;
 
-import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
@@ -315,10 +315,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     }
 
     @Override
-    public void perform(@Nonnull Run<?, ?> run,
-                        @Nonnull FilePath workspace,
-                        @Nonnull Launcher launcher,
-                        @Nonnull TaskListener listener) {
+    public void perform(@NonNull Run<?, ?> run,
+                        @NonNull FilePath workspace,
+                        @NonNull Launcher launcher,
+                        @NonNull TaskListener listener) {
         if (!perform(run, workspace, listener, false)) {
             run.setResult(Result.FAILURE);
         }
@@ -744,6 +744,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             return true;
         }
 
+        @NonNull
         @Override
         public String getDisplayName() {
             return "Notify Bitbucket Instance";
