@@ -9,7 +9,7 @@ public class BuildStatusUriFactory {
     }
 
     public static URI create(String baseUri, String commit) {
-        String tidyBase = StringUtils.removeEnd(baseUri.toString(), "/");
+        String tidyBase = StringUtils.removeEnd(baseUri, "/");
         String uri = String.join("/", tidyBase, "rest/build-status/1.0/commits", commit);
         return URI.create(uri);
     }

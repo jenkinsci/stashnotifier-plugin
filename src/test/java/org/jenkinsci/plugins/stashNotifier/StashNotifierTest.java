@@ -396,7 +396,7 @@ public class StashNotifierTest {
         when(buildListener.getLogger()).thenReturn(logger);
         when(build.getResult()).thenReturn(Result.SUCCESS);
         sn = spy(sn);
-        doReturn(new ArrayList<String>()).when(sn).lookupCommitSha1s(eq(build), eq((FilePath) null), eq(buildListener));
+        doReturn(new ArrayList<String>()).when(sn).lookupCommitSha1s(eq(build), eq(null), eq(buildListener));
 
         //when
         boolean perform = sn.perform(build, mock(Launcher.class), buildListener);
@@ -468,7 +468,7 @@ public class StashNotifierTest {
         when(buildListener.getLogger()).thenReturn(logger);
         when(build.getResult()).thenReturn(Result.SUCCESS);
         sn = spy(sn);
-        doReturn(new ArrayList<String>()).when(sn).lookupCommitSha1s(eq(build), eq((FilePath) null), eq(buildListener));
+        doReturn(new ArrayList<String>()).when(sn).lookupCommitSha1s(eq(build), eq(null), eq(buildListener));
 
         //when
         sn.perform(build, workspace, mock(Launcher.class), buildListener);
