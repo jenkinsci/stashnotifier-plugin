@@ -74,11 +74,8 @@ import org.kohsuke.stapler.*;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.SocketAddress;
@@ -321,7 +318,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     public void perform(@Nonnull Run<?, ?> run,
                         @Nonnull FilePath workspace,
                         @Nonnull Launcher launcher,
-                        @Nonnull TaskListener listener) throws InterruptedException, IOException {
+                        @Nonnull TaskListener listener) {
         if (!perform(run, workspace, listener, false)) {
             run.setResult(Result.FAILURE);
         }
@@ -408,12 +405,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                                     + commitSha1
                                     + " (" + result.message + ")");
                 }
-            } catch (SSLPeerUnverifiedException e) {
-                logger.println("SSLPeerUnverifiedException caught while "
-                        + "notifying Bitbucket. Make sure your SSL certificate on "
-                        + "your Bitbucket server is valid or check the "
-                        + " 'Ignore unverifiable SSL certificate' checkbox in the "
-                        + "plugin configuration of this job.");
             } catch (Exception e) {
                 logger.println("Caught exception while notifying Bitbucket with id "
                         + commitSha1);
@@ -713,9 +704,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             this.stashRootUrl = StringUtils.trimToNull(stashRootUrl);
         }
 
-        public FormValidation doCheckCredentialsId(@QueryParameter String value, @AncestorInPath Item project)
-                throws IOException, ServletException {
-
+        public FormValidation doCheckCredentialsId(@QueryParameter String value, @AncestorInPath Item project) {
             if (project != null && StringUtils.isBlank(value) && StringUtils.isBlank(credentialsId)) {
                 return FormValidation.error("Please specify the credentials to use");
             } else {
@@ -724,10 +713,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
 
 
-        public FormValidation doCheckStashServerBaseUrl(
-                @QueryParameter String value)
-                throws IOException, ServletException {
-
+        public FormValidation doCheckStashServerBaseUrl(@QueryParameter String value) {
             // calculate effective url from global and local config
             String url = value;
             if ((url != null) && (!url.trim().isEmpty())) {
@@ -766,7 +752,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         @Override
         public boolean configure(
                 StaplerRequest req,
-                JSONObject formData) throws FormException {
+                JSONObject formData) {
 
             this.considerUnstableAsSuccess = false;
             this.credentialsId = null;
@@ -801,7 +787,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             final Run<?, ?> run,
             final String commitSha1,
             final TaskListener listener,
-            final StashBuildState state) throws Exception {
+            final StashBuildState state) {
         StashBuildState buildStatus = getPushedBuildStatus(state);
         JSONObject payload = createNotificationPayload(run, buildStatus, listener);
 
@@ -956,7 +942,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     private HttpEntity newStashBuildNotificationEntity(
             final Run<?, ?> run,
             final StashBuildState state,
-            TaskListener listener) throws UnsupportedEncodingException {
+            TaskListener listener) {
 
         JSONObject json = createNotificationPayload(run, state, listener);
         return new StringEntity(json.toString(), "UTF-8");
@@ -972,7 +958,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     private JSONObject createNotificationPayload(
             final Run<?, ?> run,
             final StashBuildState state,
-            TaskListener listener) throws UnsupportedEncodingException {
+            TaskListener listener) {
 
         JSONObject json = new JSONObject();
         json.put("state", state.name());

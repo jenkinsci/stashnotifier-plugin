@@ -264,7 +264,7 @@ public class StashNotifierTest {
     private void test_perform_buildstep(Result result,
                                         PrintStream logger,
                                         NotificationResult notificationResult,
-                                        List<String> hashes) throws Exception {
+                                        List<String> hashes) {
         //given
         Launcher launcher = test_perform(result, logger, notificationResult, hashes);
 
@@ -278,7 +278,7 @@ public class StashNotifierTest {
     private void test_perform_simplebuildstep(Result result,
                                               PrintStream logger,
                                               NotificationResult notificationResult,
-                                              List<String> hashes) throws Exception {
+                                              List<String> hashes) {
         //given
         Launcher launcher = test_perform(result, logger, notificationResult, hashes);
 
@@ -289,7 +289,7 @@ public class StashNotifierTest {
         assertThat(build.getResult(), is(result));
     }
 
-    private Launcher test_perform(Result result, PrintStream logger, NotificationResult notificationResult, List<String> hashes) throws Exception {
+    private Launcher test_perform(Result result, PrintStream logger, NotificationResult notificationResult, List<String> hashes) {
         when(buildListener.getLogger()).thenReturn(logger);
         when(build.getResult()).thenReturn(result);
         Launcher launcher = mock(Launcher.class);
@@ -306,7 +306,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_build_step_success() throws Exception {
+    public void test_perform_build_step_success() {
         //given
         ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
@@ -322,7 +322,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_build_step_success_for_unstable_build() throws Exception {
+    public void test_perform_build_step_success_for_unstable_build() {
         //given
         sn = buildStashNotifier("http://localhost", false, true);
         ArrayList<String> hashes = new ArrayList<>();
@@ -341,7 +341,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_build_step_aborted_without_notifying_stash() throws Exception {
+    public void test_perform_build_step_aborted_without_notifying_stash() {
         //given
         sn = buildStashNotifier("http://localhost", true, true);
         ArrayList<String> hashes = new ArrayList<>();
@@ -358,7 +358,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_build_step_failure() throws Exception {
+    public void test_perform_build_step_failure() {
         //given
         ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
@@ -374,7 +374,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_build_step_not_built() throws Exception {
+    public void test_perform_build_step_not_built() {
         //given
         ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
@@ -390,7 +390,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_build_step_empty_hash() throws Exception {
+    public void test_perform_build_step_empty_hash() {
         //given
         PrintStream logger = mock(PrintStream.class);
         when(buildListener.getLogger()).thenReturn(logger);
@@ -414,7 +414,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_simple_build_step_success() throws Exception {
+    public void test_perform_simple_build_step_success() {
         //given
         ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
@@ -430,7 +430,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_simple_build_step_failure() throws Exception {
+    public void test_perform_simple_build_step_failure() {
         //given
         ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
@@ -446,7 +446,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_simple_build_step_not_built() throws Exception {
+    public void test_perform_simple_build_step_not_built() {
         //given
         ArrayList<String> hashes = new ArrayList<>();
         hashes.add(sha1);
@@ -462,7 +462,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_simple_build_step_empty_hash() throws Exception {
+    public void test_perform_simple_build_step_empty_hash() {
         //given
         PrintStream logger = mock(PrintStream.class);
         when(buildListener.getLogger()).thenReturn(logger);
@@ -485,7 +485,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void lookupCommitSha1s() throws Exception {
+    public void lookupCommitSha1s() {
         //given
         try (MockedStatic<TokenMacro> tokenMacroMock = mockStatic(TokenMacro.class)) {
             tokenMacroMock.when(() -> TokenMacro.expandAll(any(), any(), any())).thenReturn(sha1);
@@ -512,7 +512,7 @@ public class StashNotifierTest {
         }
     }
 
-    private void lookupCommitSha1s_Exception(Exception e) throws InterruptedException, MacroEvaluationException, IOException {
+    private void lookupCommitSha1s_Exception(Exception e) {
         //given
         PrintStream logger = mock(PrintStream.class);
         when(buildListener.getLogger()).thenReturn(logger);
@@ -542,17 +542,17 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_lookupCommitSha1s_IOException() throws Exception {
+    public void test_lookupCommitSha1s_IOException() {
         lookupCommitSha1s_Exception(new IOException("BOOM"));
     }
 
     @Test
-    public void test_lookupCommitSha1s_InterruptedException() throws Exception {
+    public void test_lookupCommitSha1s_InterruptedException() {
         lookupCommitSha1s_Exception(new InterruptedException("BOOM"));
     }
 
     @Test
-    public void test_lookupCommitSha1s_MacroEvaluationException() throws Exception {
+    public void test_lookupCommitSha1s_MacroEvaluationException() {
         lookupCommitSha1s_Exception(new MacroEvaluationException("BOOM"));
     }
 
@@ -684,7 +684,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildKey() throws Exception {
+    public void test_getBuildKey() {
         //given
         String key = "someKey";
         PrintStream logger = mock(PrintStream.class);
@@ -779,7 +779,7 @@ public class StashNotifierTest {
         }
     }
 
-    private void getBuildKey_Exception(Exception e) throws InterruptedException, MacroEvaluationException, IOException {
+    private void getBuildKey_Exception(Exception e) {
         //given
         String key = "someKey";
         PrintStream logger = mock(PrintStream.class);
@@ -810,7 +810,7 @@ public class StashNotifierTest {
         }
     }
 
-    private void getRunKey_Exception(Exception e) throws InterruptedException, MacroEvaluationException, IOException {
+    private void getRunKey_Exception(Exception e) throws IOException {
         //given
         String key = "someKey";
         PrintStream logger = mock(PrintStream.class);
@@ -846,17 +846,17 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildKey_IOException() throws Exception {
+    public void test_getBuildKey_IOException() {
         getBuildKey_Exception(new IOException("BOOM"));
     }
 
     @Test
-    public void test_getBuildKey_InterruptedException() throws Exception {
+    public void test_getBuildKey_InterruptedException() {
         getBuildKey_Exception(new InterruptedException("BOOM"));
     }
 
     @Test
-    public void test_getBuildKey_MacroEvaluationException() throws Exception {
+    public void test_getBuildKey_MacroEvaluationException() {
         getBuildKey_Exception(new MacroEvaluationException("BOOM"));
     }
 

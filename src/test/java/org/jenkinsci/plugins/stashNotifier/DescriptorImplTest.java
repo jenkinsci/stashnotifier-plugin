@@ -74,7 +74,7 @@ public class DescriptorImplTest {
     }
 
     @Test
-    public void testConfigure() throws Exception {
+    public void testConfigure() {
         //given
         doNothing().when(desc).save();
 
@@ -149,7 +149,7 @@ public class DescriptorImplTest {
     }
 
     @Test
-    public void test_doCheckStashServerBaseUrl_empty() throws Exception {
+    public void test_doCheckStashServerBaseUrl_empty() {
         //when
         desc.setStashRootUrl("");
         FormValidation listBoxModel = desc.doCheckStashServerBaseUrl("");
@@ -159,7 +159,7 @@ public class DescriptorImplTest {
     }
 
     @Test
-    public void test_doCheckStashServerBaseUrl() throws Exception {
+    public void test_doCheckStashServerBaseUrl() {
         //when
         FormValidation listBoxModel = desc.doCheckStashServerBaseUrl("https://my.company.intranet/bitbucket");
 
