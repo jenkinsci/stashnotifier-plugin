@@ -166,7 +166,7 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
     }
 
     void configureProxy(HttpClientBuilder builder, URL url) {
-        Jenkins jenkins = Jenkins.getInstance();
+        Jenkins jenkins = Jenkins.get();
         ProxyConfiguration proxyConfig = jenkins.proxy;
         if (proxyConfig == null) {
             return;
