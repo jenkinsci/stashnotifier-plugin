@@ -22,6 +22,7 @@ import com.cloudbees.plugins.credentials.common.CertificateCredentials;
 import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
+import com.google.inject.Injector;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -45,7 +46,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
-import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.AuthenticationException;
 import org.apache.http.client.config.RequestConfig;
@@ -64,14 +64,15 @@ import org.apache.http.impl.client.*;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.SSLContexts;
-import org.apache.http.util.EntityUtils;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
+import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.*;
 
 import javax.annotation.Nonnull;
+import javax.inject.Inject;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.servlet.ServletException;
@@ -81,6 +82,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
@@ -162,6 +164,12 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     private boolean considerUnstableAsSuccess;
 
     private JenkinsLocationConfiguration globalConfig;
+
+    /**
+     * gives us the desired {@link HttpNotifier}. Transient because
+     * we resolve this at runtime rather than serializing.
+     */
+    private transient HttpNotifierSelector httpNotifierSelector;
 
 // public members ----------------------------------------------------------
 
@@ -308,6 +316,21 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     @DataBoundSetter
     public void setConsiderUnstableAsSuccess(boolean considerUnstableAsSuccess) {
         this.considerUnstableAsSuccess = considerUnstableAsSuccess;
+
+    @Inject
+    void setHttpNotifierSelector(HttpNotifierSelector httpNotifierSelector) {
+        this.httpNotifierSelector = httpNotifierSelector;
+    }
+
+    HttpNotifierSelector getHttpNotifierSelector() {
+        if (httpNotifierSelector == null) {
+            Jenkins jenkins = Jenkins.get();
+            Injector injector = jenkins.getInjector();
+            if (injector != null) {
+                injector.injectMembers(this);
+            }
+        }
+        return httpNotifierSelector;
     }
 
     @Override
@@ -370,7 +393,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * @return Root URL contained in the global config
      */
     private String getRootUrl() {
-        Jenkins instance = Jenkins.getInstance();
+        Jenkins instance = Jenkins.get();
 
         return (instance.getRootUrl() != null) ? instance.getRootUrl() : globalConfig.getUrl();
     }
@@ -484,11 +507,11 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * Returns the HttpClient through which the REST call is made. Uses an
      * unsafe TrustStrategy in case the user specified a HTTPS URL and
      * set the ignoreUnverifiedSSLPeer flag.
+     * @see DefaultApacheHttpNotifier#getHttpClient(PrintStream, URI, boolean)
      */
+    @Deprecated
     protected CloseableHttpClient getHttpClient(PrintStream logger, Run<?, ?> run, String stashServer) throws Exception {
         DescriptorImpl globalSettings = getDescriptor();
-
-        CertificateCredentials certificateCredentials = getCredentials(CertificateCredentials.class, run.getParent());
 
         final int timeoutInMilliseconds = 60_000;
 
@@ -506,7 +529,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         if (url.getProtocol().equals("https") && ignoreUnverifiedSSL) {
             // add unsafe trust manager to avoid thrown SSLPeerUnverifiedException
             try {
-                SSLContext sslContext = buildSslContext(ignoreUnverifiedSSL, certificateCredentials);
+                SSLContext sslContext = buildSslContext(ignoreUnverifiedSSL, null);
                 SSLConnectionSocketFactory sslConnSocketFactory = new SSLConnectionSocketFactory(
                         sslContext,
                         new String[]{"TLSv1", "TLSv1.1", "TLSv1.2"},
@@ -540,7 +563,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     /**
      * Helper in place to allow us to define out HttpClient SSL context
+     * @see DefaultApacheHttpNotifier#buildSslContext(boolean, Credentials)
      */
+    @Deprecated
     private SSLContext buildSslContext(boolean ignoreUnverifiedSSL, Credentials credentials) throws UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
         SSLContextBuilder contextBuilder = SSLContexts.custom();
         contextBuilder.setProtocol("TLS");
@@ -555,8 +580,12 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         return contextBuilder.build();
     }
 
+    /**
+     * @see DefaultApacheHttpNotifier#configureProxy(HttpClientBuilder, URL)
+     */
+    @Deprecated
     private void configureProxy(HttpClientBuilder builder, URL url) {
-        Jenkins jenkins = Jenkins.getInstance();
+        Jenkins jenkins = Jenkins.get();
         ProxyConfiguration proxyConfig = jenkins.proxy;
         if (proxyConfig == null) {
             return;
@@ -623,7 +652,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item project) {
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.get();
 
             if (project != null && project.hasPermission(Item.CONFIGURE)) {
                 return new StandardListBoxModel()
@@ -803,22 +832,28 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             final TaskListener listener,
             final StashBuildState state) throws Exception {
         StashBuildState buildStatus = getPushedBuildStatus(state);
-        HttpEntity stashBuildNotificationEntity = newStashBuildNotificationEntity(run, buildStatus, listener);
+        JSONObject payload = createNotificationPayload(run, buildStatus, listener);
 
         String stashURL = expandStashURL(run, listener);
 
         logger.println("Notifying Bitbucket at \"" + stashURL + "\"");
 
-        HttpPost req = createRequest(stashBuildNotificationEntity, run.getParent(), commitSha1, stashURL);
-        try (CloseableHttpClient client = getHttpClient(logger, run, stashURL)) {
-            HttpResponse res = client.execute(req);
-            if (res.getStatusLine().getStatusCode() != 204) {
-                return NotificationResult.newFailure(
-                        EntityUtils.toString(res.getEntity()));
-            } else {
-                return NotificationResult.newSuccess();
-            }
-        }
+        Credentials usernamePasswordCredentials
+                = getCredentials(UsernamePasswordCredentials.class, run.getParent());
+        Credentials stringCredentials
+                = getCredentials(StringCredentials.class, run.getParent());
+
+        URI uri = BuildStatusUriFactory.create(stashURL, commitSha1);
+        NotificationSettings settings = new NotificationSettings(
+                ignoreUnverifiedSSLPeer || getDescriptor().isIgnoreUnverifiedSsl(),
+                stringCredentials != null ? stringCredentials : usernamePasswordCredentials
+        );
+        NotificationContext context = new NotificationContext(
+                logger,
+                run.getExternalizableId()
+        );
+        HttpNotifier notifier = getHttpNotifierSelector().select(new SelectionContext(run.getParent().getFullName()));
+        return notifier.send(uri, payload, settings, context);
     }
 
     /**
@@ -850,7 +885,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             }
             if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
                 credentials = CredentialsMatchers.firstOrNull(
-                        CredentialsProvider.lookupCredentials(clazz, Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<>()),
+                        CredentialsProvider.lookupCredentials(clazz, Jenkins.get(), ACL.SYSTEM, new ArrayList<>()),
                         CredentialsMatchers.withId(credentialsId));
             }
         }
@@ -877,6 +912,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * Returns the HTTP POST request ready to be sent to the Bitbucket build API for
      * the given run and change set.
      *
+     * @see DefaultApacheHttpNotifier#createRequest(URI, JSONObject, Credentials, NotificationContext)
+     * @deprecated in favor of method overload
      * @param stashBuildNotificationEntity a entity containing the parameters for Bitbucket
      * @param commitSha1                   the SHA1 of the commit that was built
      * @param url
@@ -939,26 +976,40 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * Returns the HTTP POST entity body with the JSON representation of the
      * run result to be sent to the Bitbucket build API.
      *
+     * @see #createNotificationPayload(Run, StashBuildState, TaskListener)
+     * @deprecated in favor of client-agnostic methods
      * @param run the run to notify Bitbucket of
      * @return HTTP entity body for POST to Bitbucket build API
      */
+    @Deprecated
     private HttpEntity newStashBuildNotificationEntity(
             final Run<?, ?> run,
             final StashBuildState state,
             TaskListener listener) throws UnsupportedEncodingException {
 
+        JSONObject json = createNotificationPayload(run, state, listener);
+        return new StringEntity(json.toString(), "UTF-8");
+    }
+
+    /**
+     * Returns the HTTP POST entity body with the JSON representation of the
+     * run result to be sent to the Bitbucket build API.
+     *
+     * @param run the run to notify Bitbucket of
+     * @return JSON body for POST to Bitbucket build API
+     */
+    private JSONObject createNotificationPayload(
+            final Run<?, ?> run,
+            final StashBuildState state,
+            TaskListener listener) throws UnsupportedEncodingException {
+
         JSONObject json = new JSONObject();
-
         json.put("state", state.name());
-
         json.put("key", abbreviate(getBuildKey(run, listener), MAX_FIELD_LENGTH));
-
         json.put("name", abbreviate(getBuildName(run), MAX_FIELD_LENGTH));
-
         json.put("description", abbreviate(getBuildDescription(run, state), MAX_FIELD_LENGTH));
         json.put("url", abbreviate(DisplayURLProvider.get().getRunURL(run), MAX_URL_FIELD_LENGTH));
-
-        return new StringEntity(json.toString(), "UTF-8");
+        return json;
     }
 
     private static String abbreviate(String text, int maxWidth) {
@@ -1062,10 +1113,12 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             final Run<?, ?> run,
             final StashBuildState state) {
 
-        if (run.getDescription() != null
-                && run.getDescription().trim().length() > 0) {
+        String runDescription = run.getDescription();
 
-            return run.getDescription();
+        if (runDescription != null
+                && runDescription.trim().length() > 0) {
+
+            return runDescription;
         } else {
             switch (state) {
                 case INPROGRESS:

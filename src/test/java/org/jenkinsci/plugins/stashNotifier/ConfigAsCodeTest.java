@@ -1,27 +1,26 @@
 package org.jenkinsci.plugins.stashNotifier;
 
-import io.jenkins.plugins.casc.ConfigurationAsCode;
-import org.apache.commons.io.IOUtils;
+import io.jenkins.plugins.casc.ConfigurationContext;
+import io.jenkins.plugins.casc.ConfiguratorRegistry;
+import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
+import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
+import io.jenkins.plugins.casc.model.CNode;
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.JenkinsRule;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.net.URL;
-
-import static org.hamcrest.Matchers.containsString;
+import static io.jenkins.plugins.casc.misc.Util.getUnclassifiedRoot;
+import static io.jenkins.plugins.casc.misc.Util.toStringFromYamlFile;
+import static io.jenkins.plugins.casc.misc.Util.toYamlString;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.core.Is.is;
 
 public class ConfigAsCodeTest {
-    @Rule
-    public JenkinsRule rule = new JenkinsRule();
+    @Rule public JenkinsConfiguredWithCodeRule rule = new JenkinsConfiguredWithCodeRule();
 
     @Test
+    @ConfiguredWithCode("configuration-as-code.yml")
     public void should_support_jcasc_from_yaml() throws Exception {
-        URL configFileUrl = ConfigAsCodeTest.class.getResource(getClass().getSimpleName() + "/configuration-as-code.yml");
-        ConfigurationAsCode.get().configure(configFileUrl.toString());
         StashNotifier.DescriptorImpl stashNotifierConfig = rule.jenkins.getDescriptorByType(StashNotifier.DescriptorImpl.class);
 
         assertThat(stashNotifierConfig.isConsiderUnstableAsSuccess(), equalTo(true));
@@ -34,26 +33,16 @@ public class ConfigAsCodeTest {
     }
 
     @Test
+    @ConfiguredWithCode("configuration-as-code.yml")
     public void should_support_jcasc_to_yaml() throws Exception {
-        StashNotifier.DescriptorImpl stashNotifierConfig = rule.jenkins.getDescriptorByType(StashNotifier.DescriptorImpl.class);
+        ConfiguratorRegistry registry = ConfiguratorRegistry.get();
+        ConfigurationContext context = new ConfigurationContext(registry);
+        CNode yourAttribute = getUnclassifiedRoot(context).get("notifyBitbucket");
 
-        stashNotifierConfig.setConsiderUnstableAsSuccess(true);
-        stashNotifierConfig.setCredentialsId("bitbucket-credentials");
-        stashNotifierConfig.setDisableInprogressNotification(true);
-        stashNotifierConfig.setIgnoreUnverifiedSsl(true);
-        stashNotifierConfig.setIncludeBuildNumberInKey(true);
-        stashNotifierConfig.setPrependParentProjectKey(true);
-        stashNotifierConfig.setStashRootUrl("https://my.company.intranet/bitbucket");
+        String exported = toYamlString(yourAttribute);
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        ConfigurationAsCode.get().export(outputStream);
-        String exportedYaml = outputStream.toString("UTF-8");
+        String expected = toStringFromYamlFile(this, "configuration-as-code-expected.yml");
 
-        InputStream yamlStream = getClass().getResourceAsStream(getClass().getSimpleName() + "/configuration-as-code.yml");
-        String expectedYaml = IOUtils.toString(yamlStream, "UTF-8")
-                .replaceAll("\r\n?", "\n")
-                .replace("unclassified:\n", "");
-
-        assertThat(exportedYaml, containsString(expectedYaml));
+        assertThat(exported, is(expected));
     }
 }
