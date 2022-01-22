@@ -316,6 +316,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     @DataBoundSetter
     public void setConsiderUnstableAsSuccess(boolean considerUnstableAsSuccess) {
         this.considerUnstableAsSuccess = considerUnstableAsSuccess;
+    }
 
     @Inject
     void setHttpNotifierSelector(HttpNotifierSelector httpNotifierSelector) {
