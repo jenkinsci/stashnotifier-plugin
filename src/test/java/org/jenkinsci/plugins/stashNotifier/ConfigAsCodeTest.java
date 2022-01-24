@@ -20,7 +20,7 @@ public class ConfigAsCodeTest {
 
     @Test
     @ConfiguredWithCode("configuration-as-code.yml")
-    public void should_support_jcasc_from_yaml() throws Exception {
+    public void should_support_jcasc_from_yaml() {
         StashNotifier.DescriptorImpl stashNotifierConfig = rule.jenkins.getDescriptorByType(StashNotifier.DescriptorImpl.class);
 
         assertThat(stashNotifierConfig.isConsiderUnstableAsSuccess(), equalTo(true));
