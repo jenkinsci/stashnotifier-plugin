@@ -48,6 +48,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -904,5 +905,41 @@ public class StashNotifierTest {
         NotificationResult notificationResult = notifyStash(204);
         verify(httpNotifier).send(any(), any(), any(), any());
         assertThat(notificationResult, equalTo(result));
+    }
+
+    @Test
+    public void setBuildStatus_string() {
+      sn.setBuildStatus("SUCCESSFUL");
+      assertThat(sn.getBuildStatus(), equalTo(StashBuildState.SUCCESSFUL));
+
+      sn.setBuildStatus("FAILED");
+      assertThat(sn.getBuildStatus(), equalTo(StashBuildState.FAILED));
+
+      sn.setBuildStatus("INPROGRESS");
+      assertThat(sn.getBuildStatus(), equalTo(StashBuildState.INPROGRESS));
+    }
+
+    @Test
+    public void setBuildStatus_stashBuildState() {
+      sn.setBuildStatus(StashBuildState.SUCCESSFUL);
+      assertThat(sn.getBuildStatus(), equalTo(StashBuildState.SUCCESSFUL));
+
+      sn.setBuildStatus(StashBuildState.FAILED);
+      assertThat(sn.getBuildStatus(), equalTo(StashBuildState.FAILED));
+
+      sn.setBuildStatus(StashBuildState.INPROGRESS);
+      assertThat(sn.getBuildStatus(), equalTo(StashBuildState.INPROGRESS));
+    }
+
+    @Test
+    public void setBuildStatus_null() {
+      sn.setBuildStatus(null);
+      assertThat(sn.getBuildStatus(), nullValue());
+
+      sn.setBuildStatus(StashBuildState.SUCCESSFUL);
+      assertThat(sn.getBuildStatus(), equalTo(StashBuildState.SUCCESSFUL));
+
+      sn.setBuildStatus(null);
+      assertThat(sn.getBuildStatus(), equalTo(StashBuildState.SUCCESSFUL));
     }
 }
