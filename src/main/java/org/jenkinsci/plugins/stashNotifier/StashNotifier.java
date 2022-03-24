@@ -248,15 +248,17 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         return buildStatus;
     }
 
-    public void setBuildStatus(StashBuildState buildStatus) {
-        this.buildStatus = buildStatus;
-    }
-
     @DataBoundSetter
-    public void setBuildStatus(String buildStatus) {
-        try {
-            this.buildStatus = StashBuildState.valueOf(buildStatus);
-        } catch (Exception e) {
+    public void setBuildStatus(Object buildStatus) {
+        if (buildStatus instanceof StashBuildState) {
+            this.buildStatus = (StashBuildState) buildStatus;
+        } else if (buildStatus instanceof String) {
+            try {
+                this.buildStatus = StashBuildState.valueOf((String) buildStatus);
+            } catch (Exception e) {
+                // ignore unknown or null values
+            }
+        } else {
             // ignore unknown or null values
         }
     }
