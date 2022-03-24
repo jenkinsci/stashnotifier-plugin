@@ -75,7 +75,7 @@ node {
 
         currentBuild.result = 'SUCCESS'     // Set result of currentBuild !Important!
     } catch(err) {
-        currentBuild.result = 'FAILED'      // Set result of currentBuild !Important!
+        currentBuild.result = 'FAILURE'     // Set result of currentBuild !Important!
     }
 
     notifyBitbucket()                       // Notifies the Bitbucket instance of the build result
