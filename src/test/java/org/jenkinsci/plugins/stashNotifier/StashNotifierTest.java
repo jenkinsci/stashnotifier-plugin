@@ -72,11 +72,13 @@ public class StashNotifierTest {
     private static Jenkins jenkins;
     private static final HttpNotifierSelector httpNotifierSelector = mock(HttpNotifierSelector.class);
     private static final HttpNotifier httpNotifier = mock(HttpNotifier.class);
+    private static final DisplayURLProvider displayURLProvider = mock(DisplayURLProvider.class);
 
     private static MockedStatic<Jenkins> mockedJenkins;
     private static MockedStatic<com.cloudbees.plugins.credentials.CredentialsProvider> mockedCredentialsProvider;
     private static MockedStatic<Secret> mockedSecret;
     private static MockedStatic<HttpClientBuilder> mockedHttpClientBuilder;
+    private static MockedStatic<DisplayURLProvider> mockedDisplayURLProvider;
 
     private static StashNotifier buildStashNotifier(String stashBaseUrl) {
         return buildStashNotifier(stashBaseUrl, false, false);
@@ -89,6 +91,7 @@ public class StashNotifierTest {
                 stashBaseUrl,
                 "scot",
                 true,
+                null,
                 null,
                 null,
                 null,
@@ -116,6 +119,7 @@ public class StashNotifierTest {
         mockedHttpClientBuilder = mockStatic(HttpClientBuilder.class);
         mockedCredentialsProvider = mockStatic(
                 com.cloudbees.plugins.credentials.CredentialsProvider.class);
+        mockedDisplayURLProvider = mockStatic(DisplayURLProvider.class);
 
         buildListener = mock(BuildListener.class);
         jenkins = mock(Jenkins.class);
@@ -141,6 +145,8 @@ public class StashNotifierTest {
         List<BuildData> actions = Collections.singletonList(action);
 
         when(Jenkins.get()).thenReturn(jenkins);
+        when(displayURLProvider.getRunURL(run)).thenReturn("http://localhost");
+        mockedDisplayURLProvider.when(DisplayURLProvider::get).thenReturn(displayURLProvider);
         when(jenkins.getRootUrl()).thenReturn("http://localhost/");
         when(build.getEnvironment(buildListener)).thenReturn(environment);
         when(action.getLastBuiltRevision()).thenReturn(revision);
@@ -242,6 +248,7 @@ public class StashNotifierTest {
                 "https://localhost",
                 "scot",
                 true,
+                null,
                 null,
                 null,
                 null,
@@ -497,6 +504,7 @@ public class StashNotifierTest {
                     sha1,
                     null,
                     null,
+                    null,
                     true,
                     null,
                     false,
@@ -524,6 +532,7 @@ public class StashNotifierTest {
                     "scot",
                     true,
                     sha1,
+                    null,
                     null,
                     null,
                     true,
@@ -593,6 +602,7 @@ public class StashNotifierTest {
                 null,
                 state.name(),
                 null,
+                null,
                 true,
                 null,
                 true,
@@ -614,6 +624,7 @@ public class StashNotifierTest {
                 "",
                 "scot",
                 true,
+                null,
                 null,
                 null,
                 null,
@@ -644,6 +655,7 @@ public class StashNotifierTest {
                 null,
                 null,
                 name,
+                null,
                 true,
                 null,
                 true,
@@ -670,6 +682,7 @@ public class StashNotifierTest {
                 null,
                 null,
                 null,
+                null,
                 true,
                 null,
                 true,
@@ -682,6 +695,61 @@ public class StashNotifierTest {
 
         //then
         assertThat(buildName, is("default-name"));
+    }
+
+    @Test
+    public void test_getBuildUrl_overwritten() {
+        //given
+        when(displayURLProvider.getRunURL(run)).thenReturn("http://default-url");
+        String url = "http://custom-url";
+
+        sn = new StashNotifier(
+            "",
+            "scot",
+            true,
+            null,
+            null,
+            null,
+            url,
+            true,
+            null,
+            true,
+            false,
+            false,
+            mock(JenkinsLocationConfiguration.class));
+
+        //when
+        String buildUrl = sn.getBuildUrl(run);
+
+        //then
+        assertThat(buildUrl, is(url));
+    }
+
+    @Test
+    public void test_getBuildUrl_not_overwritten() {
+        //given
+        when(displayURLProvider.getRunURL(run)).thenReturn("http://default-url");
+
+        sn = new StashNotifier(
+            "",
+            "scot",
+            true,
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            true,
+            false,
+            false,
+            mock(JenkinsLocationConfiguration.class));
+
+        //when
+        String buildUrl = sn.getBuildUrl(run);
+
+        //then
+        assertThat(buildUrl, is("http://default-url"));
     }
 
     @Test
@@ -700,6 +768,7 @@ public class StashNotifierTest {
                     null,
                     null,
                     "build-name",
+                    null,
                     true,
                     key,
                     true,
@@ -732,6 +801,7 @@ public class StashNotifierTest {
                 null,
                 null,
                 buildName,
+                null,
                 true,
                 null,
                 true,
@@ -765,6 +835,7 @@ public class StashNotifierTest {
                     null,
                     null,
                     null,
+                    null,
                     true,
                     key,
                     true,
@@ -792,6 +863,7 @@ public class StashNotifierTest {
                     "",
                     "scot",
                     true,
+                    null,
                     null,
                     null,
                     null,
@@ -826,6 +898,7 @@ public class StashNotifierTest {
                     "",
                     "scot",
                     true,
+                    null,
                     null,
                     null,
                     null,
@@ -879,8 +952,6 @@ public class StashNotifierTest {
     private NotificationResult notifyStash(int statusCode) throws Exception {
         sn = spy(this.sn);
         PrintStream logger = mock(PrintStream.class);
-        DisplayURLProvider displayURLProvider = mock(DisplayURLProvider.class);
-        when(displayURLProvider.getRunURL(run)).thenReturn("http://localhost");
         when(buildListener.getLogger()).thenReturn(logger);
         doReturn("someKey1").when(sn).getBuildKey(eq(build), eq(buildListener));
         HttpPost httpPost = mock(HttpPost.class);
@@ -890,8 +961,7 @@ public class StashNotifierTest {
         when(resp.getStatusLine()).thenReturn(sl);
         when(resp.getEntity()).thenReturn(new StringEntity(""));
         when(client.execute(eq(httpPost))).thenReturn(resp);
-        try (MockedStatic<TokenMacro> tokenMacroMock = mockStatic(TokenMacro.class); MockedStatic<DisplayURLProvider> displayURLProviderMock = mockStatic(DisplayURLProvider.class)) {
-            displayURLProviderMock.when(DisplayURLProvider::get).thenReturn(displayURLProvider);
+        try (MockedStatic<TokenMacro> tokenMacroMock = mockStatic(TokenMacro.class); ) {
             tokenMacroMock.when(() -> TokenMacro.expandAll(any(), any(), any())).thenReturn("http://localhost");
             doReturn(client).when(sn).getHttpClient(any(PrintStream.class), any(AbstractBuild.class), anyString());
             return sn.notifyStash(logger, build, sha1, buildListener, StashBuildState.FAILED);
