@@ -122,6 +122,7 @@ def notifyBitbucket(String state) {
             ignoreUnverifiedSSLPeer: true,
             buildStatus: state,
             buildName: 'Performance Testing',
+            buildUrl: 'https://my.company.intranet/bitbucket/custom-build-url',
             includeBuildNumberInKey: false,
             prependParentProjectKey: false,
             projectKey: '',

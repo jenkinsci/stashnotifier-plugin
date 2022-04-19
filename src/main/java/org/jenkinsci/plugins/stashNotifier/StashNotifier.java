@@ -136,6 +136,12 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     private String buildName;
 
     /**
+     * specify a build url to be included in the Bitbucket notification.
+     * If null, the usual url of the build will be used.
+     */
+    private String buildUrl;
+
+    /**
      * if true, the build number is included in the Bitbucket notification.
      */
     private boolean includeBuildNumberInKey;
@@ -182,6 +188,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             String commitSha1,
             String buildStatus,
             String buildName,
+            String buildUrl,
             boolean includeBuildNumberInKey,
             String projectKey,
             boolean prependParentProjectKey,
@@ -196,6 +203,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         setCommitSha1(commitSha1);
         setBuildStatus(buildStatus);
         setBuildName(buildName);
+        setBuildUrl(buildUrl);
         setIncludeBuildNumberInKey(includeBuildNumberInKey);
         setProjectKey(projectKey);
         setPrependParentProjectKey(prependParentProjectKey);
@@ -270,6 +278,15 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     @DataBoundSetter
     public void setBuildName(String buildName) {
         this.buildName = buildName;
+    }
+
+    public String getBuildUrl() {
+        return buildUrl;
+    }
+
+    @DataBoundSetter
+    public void setBuildUrl(String buildUrl) {
+        this.buildUrl = buildUrl;
     }
 
     public boolean isIncludeBuildNumberInKey() {
@@ -888,7 +905,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * or the current build state else.
      *
      * @param currentBuildStatus the state of the current build
-     * @return the selected build state
+     * @return the current build status
      */
     protected StashBuildState getPushedBuildStatus(StashBuildState currentBuildStatus) {
         if (buildStatus != null) {
@@ -998,7 +1015,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         json.put("key", abbreviate(getBuildKey(run, listener), MAX_FIELD_LENGTH));
         json.put("name", abbreviate(getBuildName(run), MAX_FIELD_LENGTH));
         json.put("description", abbreviate(getBuildDescription(run, state), MAX_FIELD_LENGTH));
-        json.put("url", abbreviate(DisplayURLProvider.get().getRunURL(run), MAX_URL_FIELD_LENGTH));
+        json.put("url", abbreviate(getBuildUrl(run), MAX_URL_FIELD_LENGTH));
         return json;
     }
 
@@ -1081,13 +1098,28 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * or get the build name from the {@link Run}.
      *
      * @param run the run to notify Bitbucket of
-     * @return the selected build state
+     * @return the name of the run
      */
     protected String getBuildName(final Run<?, ?> run) {
         if (buildName != null && buildName.trim().length() > 0) {
             return buildName;
         } else {
             return run.getFullDisplayName();
+        }
+    }
+
+    /**
+     * Returns the build url to be pushed. This will select the specifically overwritten build url
+     * or get the build url from the {@link DisplayURLProvider}.
+     *
+     * @param run the run to notify Bitbucket of
+     * @return the url of the run
+     */
+    protected String getBuildUrl(final Run<?, ?> run) {
+        if (buildUrl != null && !buildUrl.trim().isEmpty()) {
+            return buildUrl;
+        } else {
+            return DisplayURLProvider.get().getRunURL(run);
         }
     }
 
