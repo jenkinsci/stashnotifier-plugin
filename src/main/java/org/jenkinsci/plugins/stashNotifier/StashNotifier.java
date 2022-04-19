@@ -1116,7 +1116,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * @return the url of the run
      */
     protected String getBuildUrl(final Run<?, ?> run) {
-        if (buildUrl != null && buildUrl.trim().length() > 0) {
+        if (buildUrl != null && !buildUrl.trim().isEmpty()) {
             return buildUrl;
         } else {
             return DisplayURLProvider.get().getRunURL(run);
