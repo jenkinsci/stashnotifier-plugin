@@ -11,12 +11,15 @@ import org.acegisecurity.Authentication;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.kohsuke.stapler.*;
+import org.kohsuke.stapler.RequestImpl;
+import org.kohsuke.stapler.Stapler;
+import org.kohsuke.stapler.TokenList;
+import org.kohsuke.stapler.WebApp;
+import org.mockito.MockedStatic;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
-import org.mockito.MockedStatic;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -109,7 +112,7 @@ public class DescriptorImplTest {
         when(jenkins.hasPermission(Item.CONFIGURE)).thenReturn(false);
 
         //when
-        ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(null);
+        ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(null, "dummyId");
 
         //then
         assertThat(listBoxModel, is(not(nullValue())));
@@ -123,7 +126,7 @@ public class DescriptorImplTest {
         when(jenkins.hasPermission(Item.CONFIGURE)).thenReturn(false);
 
         //when
-        ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(project);
+        ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(project, "dummyId");
 
         //then
         assertThat(listBoxModel, is(not(nullValue())));
@@ -134,15 +137,16 @@ public class DescriptorImplTest {
         //given
         Item project = mock(Item.class);
         when(project.hasPermission(Item.CONFIGURE)).thenReturn(true);
-        when(CredentialsProvider.lookupCredentials(
+        when(CredentialsProvider.listCredentials(
                 any(),
                 any(Item.class),
                 any(Authentication.class),
-                anyList()
-        )).thenReturn(new ArrayList<>());
+                anyList(),
+                any()
+        )).thenReturn(new ListBoxModel());
 
         //when
-        ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(project);
+        ListBoxModel listBoxModel = desc.doFillCredentialsIdItems(project, "dummyId");
 
         //then
         assertThat(listBoxModel, is(not(nullValue())));
