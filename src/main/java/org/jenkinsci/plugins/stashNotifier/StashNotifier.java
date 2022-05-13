@@ -476,7 +476,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
             try {
                 if (run instanceof AbstractBuild) {
-                    return Collections.singletonList(TokenMacro.expandAll((AbstractBuild) run, listener, commitSha1));
+                    return Collections.singletonList(TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, commitSha1));
                 } else {
                     return Collections.singletonList(TokenMacro.expandAll(run, workspace, listener, commitSha1));
                 }
@@ -608,7 +608,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
 
         SocketAddress addr = proxy.address();
-        if (addr == null || !(addr instanceof InetSocketAddress)) {
+        if (!(addr instanceof InetSocketAddress)) {
             return;
         }
 
@@ -923,7 +923,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * @deprecated in favor of method overload
      * @param stashBuildNotificationEntity a entity containing the parameters for Bitbucket
      * @param commitSha1                   the SHA1 of the commit that was built
-     * @param url
+     * @param url                           Bitbucket URL
      * @return the HTTP POST request to the Bitbucket build API
      */
     protected HttpPost createRequest(
