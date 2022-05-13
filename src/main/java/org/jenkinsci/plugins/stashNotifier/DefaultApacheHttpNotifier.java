@@ -178,7 +178,7 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
         }
 
         SocketAddress addr = proxy.address();
-        if (addr == null || !(addr instanceof InetSocketAddress)) {
+        if (!(addr instanceof InetSocketAddress)) {
             return;
         }
 
