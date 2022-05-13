@@ -476,7 +476,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
             try {
                 if (run instanceof AbstractBuild) {
-                    return Collections.singletonList(TokenMacro.expandAll((AbstractBuild) run, listener, commitSha1));
+                    return Collections.singletonList(TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, commitSha1));
                 } else {
                     return Collections.singletonList(TokenMacro.expandAll(run, workspace, listener, commitSha1));
                 }

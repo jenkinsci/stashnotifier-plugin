@@ -125,7 +125,7 @@ public class StashNotifierTest {
         jenkins = mock(Jenkins.class);
         build = mock(AbstractBuild.class);
         run = mock(Run.class);
-        AbstractProject project = mock(FreeStyleProject.class);
+        AbstractProject<?, ?> project = mock(FreeStyleProject.class);
         File file = mock(File.class);
         when(file.getPath()).thenReturn("/tmp/fake/path");
         FilePath filePath = new FilePath(file);
@@ -569,7 +569,7 @@ public class StashNotifierTest {
     @Test
     public void test_getBuildDescription() {
         //given
-        AbstractBuild build = mock(AbstractBuild.class);
+        AbstractBuild<?, ?> build = mock(AbstractBuild.class);
         when(build.getDescription()).thenReturn("some description");
 
         //when
@@ -961,7 +961,7 @@ public class StashNotifierTest {
         when(resp.getStatusLine()).thenReturn(sl);
         when(resp.getEntity()).thenReturn(new StringEntity(""));
         when(client.execute(eq(httpPost))).thenReturn(resp);
-        try (MockedStatic<TokenMacro> tokenMacroMock = mockStatic(TokenMacro.class); ) {
+        try (MockedStatic<TokenMacro> tokenMacroMock = mockStatic(TokenMacro.class) ) {
             tokenMacroMock.when(() -> TokenMacro.expandAll(any(), any(), any())).thenReturn("http://localhost");
             doReturn(client).when(sn).getHttpClient(any(PrintStream.class), any(AbstractBuild.class), anyString());
             return sn.notifyStash(logger, build, sha1, buildListener, StashBuildState.FAILED);
