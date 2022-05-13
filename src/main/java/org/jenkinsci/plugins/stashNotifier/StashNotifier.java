@@ -923,7 +923,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * @deprecated in favor of method overload
      * @param stashBuildNotificationEntity a entity containing the parameters for Bitbucket
      * @param commitSha1                   the SHA1 of the commit that was built
-     * @param url
+     * @param url                           Bitbucket URL
      * @return the HTTP POST request to the Bitbucket build API
      */
     protected HttpPost createRequest(
