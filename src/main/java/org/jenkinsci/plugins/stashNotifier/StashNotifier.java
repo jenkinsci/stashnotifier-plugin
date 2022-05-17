@@ -32,6 +32,7 @@ import hudson.model.*;
 import hudson.plugins.git.Revision;
 import hudson.plugins.git.util.BuildData;
 import hudson.security.ACL;
+import hudson.security.AccessControlled;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
@@ -662,32 +663,33 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             if (load) load();
         }
 
-        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item project) {
-            Jenkins jenkins = Jenkins.get();
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item project, @QueryParameter String credentialsId) {
+            final StandardListBoxModel result = new StandardListBoxModel();
+            final AccessControlled accessControlled = (project == null ? Jenkins.get() : project);
 
-            if (project != null && project.hasPermission(Item.CONFIGURE)) {
-                return new StandardListBoxModel()
-                        .withEmptySelection()
-                        .withMatching(
-                                new StashCredentialMatcher(),
-                                CredentialsProvider.lookupCredentials(
-                                        StandardCredentials.class,
-                                        project,
-                                        ACL.SYSTEM,
-                                        new ArrayList<>()));
-            } else if (jenkins != null && jenkins.hasPermission(Item.CONFIGURE)) {
-                return new StandardListBoxModel()
-                        .withEmptySelection()
-                        .withMatching(
-                                new StashCredentialMatcher(),
-                                CredentialsProvider.lookupCredentials(
-                                        StandardCredentials.class,
-                                        jenkins,
-                                        ACL.SYSTEM,
-                                        new ArrayList<>()));
+            if (!accessControlled.hasPermission(Item.CONFIGURE)) {
+                return result.includeCurrentValue(credentialsId);
             }
 
-            return new StandardListBoxModel();
+            if (project != null) {
+                return new StandardListBoxModel()
+                        .includeEmptyValue()
+                        .includeMatchingAs(ACL.SYSTEM,
+                                project,
+                                StandardCredentials.class,
+                                Collections.emptyList(),
+                                new StashCredentialMatcher())
+                        .includeCurrentValue(credentialsId);
+            } else {
+                return result.includeEmptyValue()
+                        .includeEmptyValue()
+                        .includeMatchingAs(ACL.SYSTEM,
+                                Jenkins.get(),
+                                StandardCredentials.class,
+                                Collections.emptyList(),
+                                new StashCredentialMatcher())
+                        .includeCurrentValue(credentialsId);
+            }
         }
 
         public boolean isConsiderUnstableAsSuccess() {
