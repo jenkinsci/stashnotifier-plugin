@@ -75,12 +75,11 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
             final JSONObject payload,
             final Credentials credentials,
             @NonNull NotificationContext context) throws AuthenticationException {
-        PrintStream logger = context.getLogger();
         HttpPost req = new HttpPost(uri.toString());
 
         if (credentials != null) {
             if (credentials instanceof UsernamePasswordCredentials) {
-                logger.println("createRequest - UsernamePasswordCredentials");
+                LOGGER.debug("createRequest - UsernamePasswordCredentials");
                 req.addHeader(new BasicScheme().authenticate(
                         new org.apache.http.auth.UsernamePasswordCredentials(
                                 ((UsernamePasswordCredentials)credentials).getUsername(),
@@ -89,7 +88,7 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
                         null));
             }
             else if (credentials instanceof StringCredentials) {
-                logger.println("createRequest - StringCredentials/secret text");
+                LOGGER.debug("createRequest - StringCredentials/secret text");
                 req.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + ((StringCredentials)credentials).getSecret().getPlainText());
             } 
             else {
