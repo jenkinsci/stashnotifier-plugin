@@ -49,7 +49,7 @@ public class StashNotifierModule extends AbstractModule {
                 .orElse(fallback);
         Class<? extends HttpNotifierSelector> selectedClass = selector.getClass();
         if (selectedClass.getName().equals(preferredHttpNotifierSelector)) {
-            LOGGER.info("Using {}", selectedClass.getName());
+            LOGGER.debug("Using {}", selectedClass.getName());
         } else {
             LOGGER.warn("{} not found - using {}", preferredHttpNotifierSelector, selectedClass.getName());
         }
