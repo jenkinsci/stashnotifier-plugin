@@ -50,6 +50,7 @@ import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.AuthenticationException;
+import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.config.Registry;
@@ -534,7 +535,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         RequestConfig.Builder requestBuilder = RequestConfig.custom()
                                             .setSocketTimeout(timeoutInMilliseconds)
                                             .setConnectTimeout(timeoutInMilliseconds)
-                                            .setConnectionRequestTimeout(timeoutInMilliseconds);
+                                            .setConnectionRequestTimeout(timeoutInMilliseconds)
+                                            .setCookieSpec(CookieSpecs.STANDARD);
 
         HttpClientBuilder clientBuilder = HttpClients.custom();
         clientBuilder.setDefaultRequestConfig(requestBuilder.build());
