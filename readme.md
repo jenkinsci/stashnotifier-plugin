@@ -9,7 +9,6 @@ Requirements
 ============
 
 * **[Stash][] 2.1** or newer / **[Bitbucket Server][] 4.0** or newer
-* **Jenkins 2.60.3** or newer
 
 This plugin uses the Atlassian Stash / Bitbucket Server [Build REST API][].
 
