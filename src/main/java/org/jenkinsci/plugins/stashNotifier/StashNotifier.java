@@ -462,7 +462,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             } catch (Exception e) {
                 logger.println("Caught exception while notifying Bitbucket with id "
                         + commitSha1);
-                LOGGER.error("Exception", e);
+                LOGGER.error("{} failed to notify Bitbucket for {}", idOf(run), commitSha1, e);
             }
         }
         if (commitSha1s.isEmpty()) {
@@ -487,7 +487,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 }
             } catch (IOException | InterruptedException | MacroEvaluationException e) {
                 logger.println("Unable to expand commit SHA value");
-                LOGGER.error("Exception", e);
+                LOGGER.error("{} unable to expand commit SHA value", idOf(run), e);
                 return Collections.emptyList();
             }
         }
@@ -562,11 +562,11 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 HttpClientConnectionManager connectionManager = new BasicHttpClientConnectionManager(registry);
                 clientBuilder.setConnectionManager(connectionManager);
             } catch (NoSuchAlgorithmException nsae) {
-                logger.println("Couldn't establish SSL context:");
-                LOGGER.error("Exception", nsae);
+                logger.println("Could not establish SSL context");
+                LOGGER.error("{} could not establish SSL context", idOf(run), nsae);
             } catch (KeyManagementException | KeyStoreException e) {
-                logger.println("Couldn't initialize SSL context:");
-                LOGGER.error("Exception", e);
+                logger.println("Could not initialize SSL context");
+                LOGGER.error("{} could not initialize SSL context", idOf(run), e);
             }
         }
 
@@ -979,8 +979,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         } catch (IOException | InterruptedException | MacroEvaluationException ex) {
             PrintStream logger = listener.getLogger();
-            logger.println("Unable to expand Bitbucker server URL");
-            LOGGER.error("Exception", ex);
+            logger.println("Unable to expand Bitbucket server URL");
+            LOGGER.error("{} unable to expand Bitbucket server URL", idOf(run), ex);
         }
         return url;
     }
@@ -1089,7 +1089,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
                 }
             } catch (IOException | InterruptedException | MacroEvaluationException ioe) {
                 logger.println("Cannot expand build key from parameter. Processing with default build key");
-                LOGGER.error("Exception", ioe);
+                LOGGER.error("{} cannot expand build key from parameter - using default", idOf(run), ioe);
                 key.append(getDefaultBuildKey(run));
             }
         } else {
@@ -1097,6 +1097,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
 
         return StringEscapeUtils.escapeJavaScript(key.toString());
+    }
+
+    private static String idOf(Run<?, ?> run) {
+        return run != null ? run.getExternalizableId() : "(absent run)";
     }
 
     /**
