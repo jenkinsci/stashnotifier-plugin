@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.51</version>
+        <version>4.72</version>
         <relativePath />
     </parent>
     <packaging>hpi</packaging>
@@ -11,7 +11,7 @@
         <revision>1</revision>
         <changelist>999999-SNAPSHOT</changelist>
         <!-- Baseline Jenkins version you use to build the plugin. Users must have this version or newer to run. -->
-        <jenkins.version>2.346.3</jenkins.version>
+        <jenkins.version>2.387.3</jenkins.version>
         <hpi.compatibleSinceVersion>1.9</hpi.compatibleSinceVersion>
     </properties>
     <artifactId>stashNotifier</artifactId>
@@ -80,8 +80,8 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.346.x</artifactId>
-                <version>1763.v092b_8980a_f5e</version>
+                <artifactId>bom-2.387.x</artifactId>
+                <version>2329.v078520e55c19</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -119,7 +119,7 @@
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-inline</artifactId>
+            <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

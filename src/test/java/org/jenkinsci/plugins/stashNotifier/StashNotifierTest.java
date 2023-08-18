@@ -31,6 +31,7 @@ import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -80,11 +81,11 @@ public class StashNotifierTest {
     private static MockedStatic<HttpClientBuilder> mockedHttpClientBuilder;
     private static MockedStatic<DisplayURLProvider> mockedDisplayURLProvider;
 
-    private static StashNotifier buildStashNotifier(String stashBaseUrl) {
+    private StashNotifier buildStashNotifier(String stashBaseUrl) {
         return buildStashNotifier(stashBaseUrl, false, false);
     }
 
-    private static StashNotifier buildStashNotifier(String stashBaseUrl,
+    private StashNotifier buildStashNotifier(String stashBaseUrl,
                                             boolean disableInprogressNotification,
                                             boolean considerUnstableAsSuccess) {
         StashNotifier notifier = new StashNotifier(
@@ -106,7 +107,7 @@ public class StashNotifierTest {
         return notifier;
     }
 
-    private static StashNotifier sn;
+    private StashNotifier sn;
     private static BuildListener buildListener;
     private static AbstractBuild<?, ?> build;
     private static Run<?, ?> run;
@@ -177,7 +178,10 @@ public class StashNotifierTest {
                 anyList()
         )).thenReturn(new ArrayList<>());
         when(httpNotifierSelector.select(any())).thenReturn(httpNotifier);
+    }
 
+    @Before
+    public void setup() {
         sn = buildStashNotifier("http://localhost");
     }
 
