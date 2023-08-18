@@ -135,11 +135,11 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
                 HttpClientConnectionManager connectionManager = new BasicHttpClientConnectionManager(registry);
                 clientBuilder.setConnectionManager(connectionManager);
             } catch (NoSuchAlgorithmException nsae) {
-                logger.println("Couldn't establish SSL context:");
-                nsae.printStackTrace(logger);
+                logger.println("Could not establish SSL context");
+                LOGGER.error("Could not establish SSL context", nsae);
             } catch (KeyManagementException | KeyStoreException e) {
-                logger.println("Couldn't initialize SSL context:");
-                e.printStackTrace(logger);
+                logger.println("Could not initialize SSL context");
+                LOGGER.error("Could not initialize SSL context", e);
             }
         }
 
