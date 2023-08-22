@@ -16,6 +16,8 @@ import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.acegisecurity.Authentication;
 import org.apache.http.StatusLine;
+import org.apache.http.client.config.CookieSpecs;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -24,6 +26,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -33,6 +36,8 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -43,6 +48,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class DefaultApacheHttpNotifierTest {
@@ -52,17 +58,18 @@ public class DefaultApacheHttpNotifierTest {
     private static MockedStatic<Jenkins> mockedJenkins;
     private static MockedStatic<CredentialsProvider> mockedCredentialsProvider;
     private static MockedStatic<Secret> mockedSecret;
-    private static MockedStatic<HttpClientBuilder> mockedHttpClientBuilder;
+    private static MockedStatic<HttpClientBuilder> mockedStaticHttpClientBuilder;
     private static MockedStatic<TokenMacro> mockedTokenMacro;
     private final HttpNotifier httpNotifier = new DefaultApacheHttpNotifier();
 
     private static BuildListener buildListener;
+    private HttpClientBuilder httpClientBuilder;
 
     @BeforeClass
     public static void setUp() throws Exception {
         mockedSecret = mockStatic(Secret.class);
         mockedJenkins = mockStatic(Jenkins.class);
-        mockedHttpClientBuilder = mockStatic(HttpClientBuilder.class);
+        mockedStaticHttpClientBuilder = mockStatic(HttpClientBuilder.class);
         mockedTokenMacro = mockStatic(TokenMacro.class);
         mockedCredentialsProvider = mockStatic(com.cloudbees.plugins.credentials.CredentialsProvider.class);
 
@@ -80,7 +87,7 @@ public class DefaultApacheHttpNotifierTest {
         EnvVars environment = mock(EnvVars.class);
         PrintStream logger = System.out;
         Secret secret = mock(Secret.class);
-        HttpClientBuilder httpClientBuilder = mock(HttpClientBuilder.class);
+
         client = mock(CloseableHttpClient.class);
         CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
         StatusLine statusLine = mock(StatusLine.class);
@@ -104,8 +111,6 @@ public class DefaultApacheHttpNotifierTest {
         when(Secret.fromString("tiger")).thenReturn(secret);
         when(Secret.toString(secret)).thenReturn("tiger");
         when(secret.getPlainText()).thenReturn("tiger");
-        when(HttpClientBuilder.create()).thenReturn(httpClientBuilder);
-        when(httpClientBuilder.build()).thenReturn(client);
         when(client.execute(any(HttpUriRequest.class))).thenReturn(resp);
         when(resp.getStatusLine()).thenReturn(statusLine);
         when(statusLine.getStatusCode()).thenReturn(204);
@@ -126,8 +131,15 @@ public class DefaultApacheHttpNotifierTest {
         mockedJenkins.close();
         mockedCredentialsProvider.close();
         mockedSecret.close();
-        mockedHttpClientBuilder.close();
+        mockedStaticHttpClientBuilder.close();
         mockedTokenMacro.close();
+    }
+
+    @Before
+    public void before() {
+        httpClientBuilder = mock(HttpClientBuilder.class);
+        when(HttpClientBuilder.create()).thenReturn(httpClientBuilder);
+        when(httpClientBuilder.build()).thenReturn(client);
     }
 
     private NotificationResult notifyStash(int statusCode) throws Exception {
@@ -153,5 +165,19 @@ public class DefaultApacheHttpNotifierTest {
     public void notifyStash_fail() throws Exception {
         NotificationResult notificationResult = notifyStash(400);
         assertThat(notificationResult.indicatesSuccess, is(false));
+    }
+
+    @Test
+    public void notifyStashUsesRequestParameters() throws Exception {
+        notifyStash(204);
+
+        final ArgumentCaptor<RequestConfig> captor = ArgumentCaptor.forClass(RequestConfig.class);
+        verify(httpClientBuilder).setDefaultRequestConfig(captor.capture());
+
+        final RequestConfig config = captor.getValue();
+        assertThat(config.getSocketTimeout(), is(60_000));
+        assertThat(config.getConnectTimeout(), is(60_000));
+        assertThat(config.getConnectionRequestTimeout(), is(60_000));
+        assertThat(config.getCookieSpec(), is(CookieSpecs.STANDARD));
     }
 }
