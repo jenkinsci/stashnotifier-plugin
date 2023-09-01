@@ -5,6 +5,7 @@ import com.cloudbees.plugins.credentials.common.CertificateCredentials;
 import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ProxyConfiguration;
+import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.apache.http.HttpHeaders;
@@ -189,7 +190,7 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
 
         String proxyUser = proxyConfig.getUserName();
         if (proxyUser != null) {
-            String proxyPass = proxyConfig.getPassword();
+            String proxyPass = Secret.toString(proxyConfig.getSecretPassword());
             BasicCredentialsProvider cred = new BasicCredentialsProvider();
             cred.setCredentials(new AuthScope(proxyHost),
                     new org.apache.http.auth.UsernamePasswordCredentials(proxyUser, proxyPass));
