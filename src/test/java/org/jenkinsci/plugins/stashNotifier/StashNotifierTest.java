@@ -91,6 +91,8 @@ public class StashNotifierTest {
         StashNotifier notifier = new StashNotifier(
                 stashBaseUrl,
                 "scot",
+                "",
+                "",
                 true,
                 null,
                 null,
@@ -251,6 +253,8 @@ public class StashNotifierTest {
         sn = new StashNotifier(
                 "https://localhost",
                 "scot",
+                "",
+                "",
                 true,
                 null,
                 null,
@@ -504,6 +508,8 @@ public class StashNotifierTest {
             sn = new StashNotifier(
                     "https://localhost",
                     "scot",
+                    "",
+                    "",
                     true,
                     sha1,
                     null,
@@ -534,6 +540,8 @@ public class StashNotifierTest {
             sn = new StashNotifier(
                     "http://localhost",
                     "scot",
+                    "",
+                    "",
                     true,
                     sha1,
                     null,
@@ -602,6 +610,8 @@ public class StashNotifierTest {
         sn = new StashNotifier(
                 "",
                 "scot",
+                "",
+                "",
                 true,
                 null,
                 state.name(),
@@ -627,6 +637,8 @@ public class StashNotifierTest {
         sn = new StashNotifier(
                 "",
                 "scot",
+                "",
+                "",
                 true,
                 null,
                 null,
@@ -655,6 +667,8 @@ public class StashNotifierTest {
         sn = new StashNotifier(
                 "",
                 "scot",
+                "",
+                "",
                 true,
                 null,
                 null,
@@ -682,6 +696,8 @@ public class StashNotifierTest {
         sn = new StashNotifier(
                 "",
                 "scot",
+                "",
+                "",
                 true,
                 null,
                 null,
@@ -710,6 +726,8 @@ public class StashNotifierTest {
         sn = new StashNotifier(
             "",
             "scot",
+            "",
+            "",
             true,
             null,
             null,
@@ -737,6 +755,8 @@ public class StashNotifierTest {
         sn = new StashNotifier(
             "",
             "scot",
+            "",
+            "",
             true,
             null,
             null,
@@ -768,6 +788,8 @@ public class StashNotifierTest {
             sn = new StashNotifier(
                     "",
                     "scot",
+                    "",
+                    "",
                     true,
                     null,
                     null,
@@ -801,6 +823,8 @@ public class StashNotifierTest {
         sn = new StashNotifier(
                 "",
                 "scot",
+                "",
+                "",
                 true,
                 null,
                 null,
@@ -835,6 +859,8 @@ public class StashNotifierTest {
             sn = new StashNotifier(
                     "",
                     "scot",
+                    "",
+                    "",
                     true,
                     null,
                     null,
@@ -866,6 +892,8 @@ public class StashNotifierTest {
             sn = new StashNotifier(
                     "",
                     "scot",
+                    "",
+                    "",
                     true,
                     null,
                     null,
@@ -901,6 +929,8 @@ public class StashNotifierTest {
             sn = new StashNotifier(
                     "",
                     "scot",
+                    "",
+                    "",
                     true,
                     null,
                     null,

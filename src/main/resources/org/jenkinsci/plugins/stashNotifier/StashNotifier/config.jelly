@@ -7,6 +7,12 @@
     <f:entry title="${%Credentials}" field="credentialsId">
       <c:select/>
     </f:entry>
+    <f:entry title="Bitbucket project key" field="bbProjectKey">
+      <f:textbox />
+    </f:entry>
+    <f:entry title="Bitbucket Repository Slug" field="repositorySlug">
+      <f:textbox />
+    </f:entry>
     <f:entry title="Commit SHA-1" field="commitSha1">
       <f:textbox />
     </f:entry>
@@ -22,10 +28,10 @@
     <f:entry title="Keep repeated builds in Bitbucket" field="includeBuildNumberInKey">
       <f:checkbox />
     </f:entry>
-    <f:entry title="Override project key" field="projectKey">
+    <f:entry title="Override Jenkins project key" field="projectKey">
       <f:textbox />
     </f:entry>
-    <f:entry title="Prepend parent project name to key" field="prependParentProjectKey">
+    <f:entry title="Prepend parent Jenkins project name to key" field="prependParentProjectKey">
       <f:checkbox />
     </f:entry>
     <f:entry title="Disable INPROGRESS notification" field="disableInprogressNotification">

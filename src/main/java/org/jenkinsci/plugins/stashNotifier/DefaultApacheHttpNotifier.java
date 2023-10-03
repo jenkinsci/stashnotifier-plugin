@@ -60,6 +60,7 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
         try (CloseableHttpClient client = getHttpClient(logger, uri, settings.isIgnoreUnverifiedSSL())) {
             HttpPost req = createRequest(uri, payload, settings.getCredentials(), context);
             HttpResponse res = client.execute(req);
+
             if (res.getStatusLine().getStatusCode() != 204) {
                 return NotificationResult.newFailure(EntityUtils.toString(res.getEntity()));
             } else {
