@@ -1065,7 +1065,11 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         StringBuilder key = new StringBuilder();
 
         if (prependParentProjectKey || getDescriptor().isPrependParentProjectKey()) {
-            key.append(run.getParent().getParent().getFullName()).append('-');
+            ItemGroup parent = run.getParent().getParent();
+            if(parent != null)
+            {
+                key.append(parent.getFullName()).append('-');
+            }
         }
 
         if (projectKey != null && projectKey.trim().length() > 0) {
