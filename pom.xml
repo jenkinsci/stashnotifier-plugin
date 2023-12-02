@@ -11,7 +11,7 @@
         <revision>1</revision>
         <changelist>999999-SNAPSHOT</changelist>
         <!-- Baseline Jenkins version you use to build the plugin. Users must have this version or newer to run. -->
-        <jenkins.version>2.387.3</jenkins.version>
+        <jenkins.version>2.401.3</jenkins.version>
         <hpi.compatibleSinceVersion>1.9</hpi.compatibleSinceVersion>
     </properties>
     <artifactId>stashNotifier</artifactId>
