@@ -137,10 +137,10 @@ public class DescriptorImplTest {
         //given
         Item project = mock(Item.class);
         when(project.hasPermission(Item.CONFIGURE)).thenReturn(true);
-        when(CredentialsProvider.listCredentials(
+        when(CredentialsProvider.listCredentialsInItem(
                 any(),
                 any(Item.class),
-                any(Authentication.class),
+                any(org.springframework.security.core.Authentication.class),
                 anyList(),
                 any()
         )).thenReturn(new ListBoxModel());

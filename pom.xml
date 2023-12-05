@@ -11,7 +11,7 @@
         <revision>1</revision>
         <changelist>999999-SNAPSHOT</changelist>
         <!-- Baseline Jenkins version you use to build the plugin. Users must have this version or newer to run. -->
-        <jenkins.version>2.387.3</jenkins.version>
+        <jenkins.version>2.401.3</jenkins.version>
         <hpi.compatibleSinceVersion>1.9</hpi.compatibleSinceVersion>
     </properties>
     <artifactId>stashNotifier</artifactId>
@@ -80,8 +80,8 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.387.x</artifactId>
-                <version>2516.v113cb_3d00317</version>
+                <artifactId>bom-2.401.x</artifactId>
+                <version>2612.v3d6a_2128c0ef</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
