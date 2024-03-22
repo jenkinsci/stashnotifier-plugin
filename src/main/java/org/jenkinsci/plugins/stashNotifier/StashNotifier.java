@@ -153,12 +153,22 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     private boolean includeBuildNumberInKey;
 
     /**
-     * specify project key manually
+     * specify Bitbucket project key
+     */
+    private String bbProjectKey;
+
+    /**
+     * specify Bitbucket repository slug
+     */
+    private String repositorySlug;
+
+    /**
+     * specify Jenkins project key manually
      */
     private String projectKey;
 
     /**
-     * append parent project key to key formation
+     * append parent Jenkins project key to key formation
      */
     private boolean prependParentProjectKey;
 
@@ -172,7 +182,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      */
     private boolean considerUnstableAsSuccess;
 
-    private JenkinsLocationConfiguration globalConfig;
+    private final JenkinsLocationConfiguration globalConfig;
 
     /**
      * gives us the desired {@link HttpNotifier}. Transient because
@@ -190,6 +200,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     StashNotifier(
             String stashServerBaseUrl,
             String credentialsId,
+            String bbProjectKey,
+            String repositorySlug,
             boolean ignoreUnverifiedSSLPeer,
             String commitSha1,
             String buildStatus,
@@ -205,6 +217,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         this.globalConfig = globalConfig;
         setStashServerBaseUrl(stashServerBaseUrl);
         setCredentialsId(credentialsId);
+        setBbProjectKey(bbProjectKey);
+        setRepositorySlug(repositorySlug);
         setIgnoreUnverifiedSSLPeer(ignoreUnverifiedSSLPeer);
         setCommitSha1(commitSha1);
         setBuildStatus(buildStatus);
@@ -304,6 +318,15 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         this.includeBuildNumberInKey = includeBuildNumberInKey;
     }
 
+    public String getBbProjectKey() { return bbProjectKey; }
+
+    @DataBoundSetter
+    public void setBbProjectKey(String bbProjectKey) { this.bbProjectKey = bbProjectKey; }
+
+    public String getRepositorySlug() { return repositorySlug; }
+
+    @DataBoundSetter
+    public void setRepositorySlug(String repositorySlug) { this.repositorySlug = repositorySlug; }
     public String getProjectKey() {
         return projectKey;
     }
@@ -452,6 +475,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             try {
                 NotificationResult result
                         = notifyStash(logger, run, commitSha1, listener, state);
+
                 if (result.indicatesSuccess) {
                     logger.println("Notified Bitbucket for commit with id " + commitSha1);
                 } else {
@@ -851,14 +875,15 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         String stashURL = expandStashURL(run, listener);
 
-        logger.println("Notifying Bitbucket at \"" + stashURL + "\"");
-
         Credentials usernamePasswordCredentials
                 = getCredentials(UsernamePasswordCredentials.class, run.getParent());
         Credentials stringCredentials
                 = getCredentials(StringCredentials.class, run.getParent());
 
-        URI uri = BuildStatusUriFactory.create(stashURL, commitSha1);
+        URI uri = BuildStatusUriFactory.create(stashURL, bbProjectKey, repositorySlug, commitSha1);
+
+        logger.println("Sending notification to \"" + uri + "?key=" + abbreviate(getBuildKey(run, listener), MAX_FIELD_LENGTH) + "\"");
+
         NotificationSettings settings = new NotificationSettings(
                 ignoreUnverifiedSSLPeer || getDescriptor().isIgnoreUnverifiedSsl(),
                 stringCredentials != null ? stringCredentials : usernamePasswordCredentials
@@ -923,48 +948,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
     }
 
-    /**
-     * Returns the HTTP POST request ready to be sent to the Bitbucket build API for
-     * the given run and change set.
-     *
-     * @see DefaultApacheHttpNotifier#createRequest(URI, JSONObject, Credentials, NotificationContext)
-     * @deprecated in favor of method overload
-     * @param stashBuildNotificationEntity a entity containing the parameters for Bitbucket
-     * @param commitSha1                   the SHA1 of the commit that was built
-     * @param url                           Bitbucket URL
-     * @return the HTTP POST request to the Bitbucket build API
-     */
-    protected HttpPost createRequest(
-            final HttpEntity stashBuildNotificationEntity,
-            final Item project,
-            final String commitSha1,
-            final String url) throws AuthenticationException {
-
-        HttpPost req = new HttpPost(
-                url
-                        + "/rest/build-status/1.0/commits/"
-                        + commitSha1);
-
-        // If we have a credential defined then we need to determine if it
-        // is a basic auth
-        UsernamePasswordCredentials usernamePasswordCredentials
-                = getCredentials(UsernamePasswordCredentials.class, project);
-
-        if (usernamePasswordCredentials != null) {
-            req.addHeader(new BasicScheme().authenticate(
-                    new org.apache.http.auth.UsernamePasswordCredentials(
-                            usernamePasswordCredentials.getUsername(),
-                            usernamePasswordCredentials.getPassword().getPlainText()),
-                    req,
-                    null));
-        }
-
-        req.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-        req.setEntity(stashBuildNotificationEntity);
-
-        return req;
-    }
-
     private String expandStashURL(Run<?, ?> run, final TaskListener listener) {
         String url = stashServerBaseUrl;
         DescriptorImpl descriptor = getDescriptor();
@@ -1018,12 +1001,18 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             final StashBuildState state,
             TaskListener listener) {
 
+        String buildId = abbreviate(getBuildKey(run, listener), MAX_FIELD_LENGTH);
+
         JSONObject json = new JSONObject();
+        json.put("key", buildId);
+        json.put("parent", buildId);
         json.put("state", state.name());
-        json.put("key", abbreviate(getBuildKey(run, listener), MAX_FIELD_LENGTH));
+        json.put("url", abbreviate(getBuildUrl(run), MAX_URL_FIELD_LENGTH));
         json.put("name", abbreviate(getBuildName(run), MAX_FIELD_LENGTH));
         json.put("description", abbreviate(getBuildDescription(run, state), MAX_FIELD_LENGTH));
-        json.put("url", abbreviate(getBuildUrl(run), MAX_URL_FIELD_LENGTH));
+        json.put("buildNumber", run.getNumber());
+        json.put("duration", run.getDuration());
+
         return json;
     }
 
@@ -1076,8 +1065,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         StringBuilder key = new StringBuilder();
 
         if (prependParentProjectKey || getDescriptor().isPrependParentProjectKey()) {
-            if (null != run.getParent().getParent()) {
-                key.append(run.getParent().getParent().getFullName()).append('-');
+            ItemGroup parent = run.getParent().getParent();
+            if(parent != null)
+            {
+                key.append(parent.getFullName()).append('-');
             }
         }
 

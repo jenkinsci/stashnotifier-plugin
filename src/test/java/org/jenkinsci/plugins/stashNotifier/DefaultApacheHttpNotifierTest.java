@@ -144,7 +144,7 @@ public class DefaultApacheHttpNotifierTest {
 
     private NotificationResult notifyStash(int statusCode) throws Exception {
         PrintStream logger = mock(PrintStream.class);
-        URI uri = BuildStatusUriFactory.create("http://localhost", "df02f57eea1cda72fa2412102f061dd7f6188e98");
+        URI uri = BuildStatusUriFactory.create("http://localhost", "","", "df02f57eea1cda72fa2412102f061dd7f6188e98");
         when(buildListener.getLogger()).thenReturn(logger);
         CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
         StatusLine sl = mock(StatusLine.class);
