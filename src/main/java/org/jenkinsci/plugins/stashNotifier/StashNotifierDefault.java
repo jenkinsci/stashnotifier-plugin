@@ -1,6 +1,9 @@
 package org.jenkinsci.plugins.stashNotifier;
 
 import jakarta.inject.Qualifier;
+import org.jenkinsci.plugins.stashNotifier.NotifierSelectors.HttpNotifierSelector;
+import org.jenkinsci.plugins.stashNotifier.Notifiers.HttpNotifier;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 

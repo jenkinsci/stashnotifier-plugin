@@ -10,10 +10,12 @@ import java.io.PrintStream;
 public class NotificationContext {
     private final PrintStream logger;
     private final String runId;
+    private final BuildInformation buildInformation;
 
-    public NotificationContext(PrintStream logger, String runId) {
+    public NotificationContext(PrintStream logger, String runId, BuildInformation buildInformation) {
         this.logger = logger;
         this.runId = runId;
+        this.buildInformation = buildInformation;
     }
 
     /**
@@ -34,4 +36,6 @@ public class NotificationContext {
     public String getRunId() {
         return runId;
     }
+
+    public BuildInformation getBuildInformation() { return buildInformation; }
 }

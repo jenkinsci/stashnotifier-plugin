@@ -1,4 +1,4 @@
-package org.jenkinsci.plugins.stashNotifier;
+package org.jenkinsci.plugins.stashNotifier.NotifierSelectors;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.FilePath;
@@ -7,6 +7,9 @@ import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import org.jenkinsci.plugins.stashNotifier.Notifiers.HttpNotifier;
+import org.jenkinsci.plugins.stashNotifier.SelectionContext;
+import org.jenkinsci.plugins.stashNotifier.StashNotifier;
 
 /**
  * Implement this interface to have more control over which {@link HttpNotifier}
@@ -21,10 +24,10 @@ public interface HttpNotifierSelector {
      * this method useful for performing migrations on a running system without
      * restarts.
      *
-     * @see StashNotifier#prebuild(AbstractBuild, BuildListener)
-     * @see StashNotifier#perform(Run, FilePath, Launcher, TaskListener)
      * @param context parameters useful for selecting a notifier
      * @return selected notifier
+     * @see StashNotifier#prebuild(AbstractBuild, BuildListener)
+     * @see StashNotifier#perform(Run, FilePath, Launcher, TaskListener)
      */
-    @NonNull HttpNotifier select(@NonNull SelectionContext context);
+    HttpNotifier select(@NonNull SelectionContext context);
 }

@@ -27,7 +27,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.ProxyConfiguration;
 import hudson.model.*;
 import hudson.plugins.git.Revision;
 import hudson.plugins.git.util.BuildData;
@@ -45,31 +44,11 @@ import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpHeaders;
-import org.apache.http.HttpHost;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.AuthenticationException;
-import org.apache.http.client.config.CookieSpecs;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.config.Registry;
-import org.apache.http.config.RegistryBuilder;
-import org.apache.http.conn.HttpClientConnectionManager;
-import org.apache.http.conn.socket.ConnectionSocketFactory;
-import org.apache.http.conn.socket.PlainConnectionSocketFactory;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.conn.ssl.TrustAllStrategy;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.auth.BasicScheme;
-import org.apache.http.impl.client.*;
-import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
-import org.apache.http.ssl.SSLContextBuilder;
-import org.apache.http.ssl.SSLContexts;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
 import org.jenkinsci.plugins.plaincredentials.StringCredentials;
+import org.jenkinsci.plugins.stashNotifier.NotifierSelectors.HttpNotifierSelector;
+import org.jenkinsci.plugins.stashNotifier.Notifiers.HttpNotifier;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.*;
@@ -77,22 +56,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.inject.Inject;
-import javax.net.ssl.SSLContext;
+
 import java.io.IOException;
 import java.io.PrintStream;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URL;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.*;
 
 /**
  * Notifies a configured Atlassian Bitbucket server instance of build results
@@ -103,9 +72,6 @@ import java.util.HashSet;
 public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StashNotifier.class);
-
-    public static final int MAX_FIELD_LENGTH = 255;
-    public static final int MAX_URL_FIELD_LENGTH = 450;
 
     // attributes --------------------------------------------------------------
 
@@ -135,6 +101,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      */
     private StashBuildState buildStatus;
 
+    private String buildStatusString;
+
     /**
      * specify a build name to be included in the Bitbucket notification.
      * If null, the usual full project name will be used.
@@ -153,12 +121,22 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     private boolean includeBuildNumberInKey;
 
     /**
-     * specify project key manually
+     * specify Bitbucket project key
+     */
+    private String bbProjectKey;
+
+    /**
+     * specify Bitbucket repository slug
+     */
+    private String repositorySlug;
+
+    /**
+     * specify Jenkins project key manually
      */
     private String projectKey;
 
     /**
-     * append parent project key to key formation
+     * append parent Jenkins project key to key formation
      */
     private boolean prependParentProjectKey;
 
@@ -172,7 +150,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      */
     private boolean considerUnstableAsSuccess;
 
-    private JenkinsLocationConfiguration globalConfig;
+    private final JenkinsLocationConfiguration globalConfig;
 
     /**
      * gives us the desired {@link HttpNotifier}. Transient because
@@ -190,6 +168,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     StashNotifier(
             String stashServerBaseUrl,
             String credentialsId,
+            String bbProjectKey,
+            String repositorySlug,
             boolean ignoreUnverifiedSSLPeer,
             String commitSha1,
             String buildStatus,
@@ -205,6 +185,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         this.globalConfig = globalConfig;
         setStashServerBaseUrl(stashServerBaseUrl);
         setCredentialsId(credentialsId);
+        setBbProjectKey(bbProjectKey);
+        setRepositorySlug(repositorySlug);
         setIgnoreUnverifiedSSLPeer(ignoreUnverifiedSSLPeer);
         setCommitSha1(commitSha1);
         setBuildStatus(buildStatus);
@@ -266,15 +248,25 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     public void setBuildStatus(Object buildStatus) {
         if (buildStatus instanceof StashBuildState) {
             this.buildStatus = (StashBuildState) buildStatus;
+            setBuildStatusString((StashBuildState) buildStatus);
         } else if (buildStatus instanceof String) {
             try {
                 this.buildStatus = StashBuildState.valueOf((String) buildStatus);
+                setBuildStatusString((String) buildStatus);
             } catch (Exception e) {
                 // ignore unknown or null values
             }
         } else {
             // ignore unknown or null values
         }
+    }
+
+    protected void setBuildStatusString(String buildStatusString) {
+        this.buildStatusString = buildStatusString;
+    }
+
+    protected void setBuildStatusString(StashBuildState buildStatus) {
+        this.buildStatusString = buildStatus.toString();
     }
 
     public String getBuildName() {
@@ -304,6 +296,15 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         this.includeBuildNumberInKey = includeBuildNumberInKey;
     }
 
+    public String getBbProjectKey() { return bbProjectKey; }
+
+    @DataBoundSetter
+    public void setBbProjectKey(String bbProjectKey) { this.bbProjectKey = bbProjectKey; }
+
+    public String getRepositorySlug() { return repositorySlug; }
+
+    @DataBoundSetter
+    public void setRepositorySlug(String repositorySlug) { this.repositorySlug = repositorySlug; }
     public String getProjectKey() {
         return projectKey;
     }
@@ -379,9 +380,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
     }
 
-    private boolean perform(Run<?, ?> run,
+    private boolean perform(@NonNull Run<?, ?> run,
                             FilePath workspace,
-                            TaskListener listener,
+                            @NonNull TaskListener listener,
                             boolean disableInProgress) {
         StashBuildState state;
 
@@ -432,12 +433,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * @return always true in order not to abort the Job in case of
      * notification failures
      */
-    private boolean processJenkinsEvent(
-            final Run<?, ?> run,
-            final FilePath workspace,
-            final TaskListener listener,
-            final StashBuildState state) {
-
+    private boolean processJenkinsEvent(final Run<?, ?> run, final FilePath workspace, @NonNull final TaskListener listener, final StashBuildState state) {
         PrintStream logger = listener.getLogger();
 
         // Exit if Jenkins root URL is not configured. Bitbucket run API
@@ -452,6 +448,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             try {
                 NotificationResult result
                         = notifyStash(logger, run, commitSha1, listener, state);
+
                 if (result.indicatesSuccess) {
                     logger.println("Notified Bitbucket for commit with id " + commitSha1);
                 } else {
@@ -472,12 +469,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         return true;
     }
 
-    protected Collection<String> lookupCommitSha1s(
-            @SuppressWarnings("rawtypes") Run run,
-            FilePath workspace,
-            TaskListener listener) {
-
-        if (commitSha1 != null && commitSha1.trim().length() > 0) {
+    protected Collection<String> lookupCommitSha1s(@SuppressWarnings("rawtypes") Run run, FilePath workspace, TaskListener listener) {
+        if (commitSha1 != null && !commitSha1.trim().isEmpty()) {
             PrintStream logger = listener.getLogger();
 
             try {
@@ -520,120 +513,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         return sha1s;
     }
 
-    /**
-     * Returns the HttpClient through which the REST call is made. Uses an
-     * unsafe TrustStrategy in case the user specified a HTTPS URL and
-     * set the ignoreUnverifiedSSLPeer flag.
-     * @see DefaultApacheHttpNotifier#getHttpClient(PrintStream, URI, boolean)
-     */
-    @Deprecated
-    protected CloseableHttpClient getHttpClient(PrintStream logger, Run<?, ?> run, String stashServer) throws Exception {
-        DescriptorImpl globalSettings = getDescriptor();
-
-        final int timeoutInMilliseconds = 60_000;
-
-        RequestConfig.Builder requestBuilder = RequestConfig.custom()
-                                            .setSocketTimeout(timeoutInMilliseconds)
-                                            .setConnectTimeout(timeoutInMilliseconds)
-                                            .setConnectionRequestTimeout(timeoutInMilliseconds)
-                                            .setCookieSpec(CookieSpecs.STANDARD);
-
-        HttpClientBuilder clientBuilder = HttpClients.custom();
-        clientBuilder.setDefaultRequestConfig(requestBuilder.build());
-
-        URL url = new URL(stashServer);
-        boolean ignoreUnverifiedSSL = ignoreUnverifiedSSLPeer || globalSettings.isIgnoreUnverifiedSsl();
-
-        if (url.getProtocol().equals("https") && ignoreUnverifiedSSL) {
-            // add unsafe trust manager to avoid thrown SSLPeerUnverifiedException
-            try {
-                SSLContext sslContext = buildSslContext(ignoreUnverifiedSSL, null);
-                SSLConnectionSocketFactory sslConnSocketFactory = new SSLConnectionSocketFactory(
-                        sslContext,
-                        new String[]{"TLSv1", "TLSv1.1", "TLSv1.2"},
-                        null,
-                        NoopHostnameVerifier.INSTANCE
-                );
-                clientBuilder.setSSLSocketFactory(sslConnSocketFactory);
-
-                Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
-                        .register("https", sslConnSocketFactory)
-                        .register("http", PlainConnectionSocketFactory.INSTANCE)
-                        .build();
-
-                HttpClientConnectionManager connectionManager = new BasicHttpClientConnectionManager(registry);
-                clientBuilder.setConnectionManager(connectionManager);
-            } catch (NoSuchAlgorithmException nsae) {
-                logger.println("Could not establish SSL context");
-                LOGGER.error("{} could not establish SSL context", idOf(run), nsae);
-            } catch (KeyManagementException | KeyStoreException e) {
-                logger.println("Could not initialize SSL context");
-                LOGGER.error("{} could not initialize SSL context", idOf(run), e);
-            }
-        }
-
-        // Configure the proxy, if needed
-        // Using the Jenkins methods handles the noProxyHost settings
-        configureProxy(clientBuilder, url);
-
-        return clientBuilder.build();
-    }
-
-    /**
-     * Helper in place to allow us to define out HttpClient SSL context
-     * @see DefaultApacheHttpNotifier#buildSslContext(boolean, Credentials)
-     */
-    @Deprecated
-    private SSLContext buildSslContext(boolean ignoreUnverifiedSSL, Credentials credentials) throws UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
-        SSLContextBuilder contextBuilder = SSLContexts.custom();
-        contextBuilder.setProtocol("TLS");
-        if (credentials instanceof CertificateCredentials) {
-            contextBuilder.loadKeyMaterial(
-                    ((CertificateCredentials) credentials).getKeyStore(),
-                    ((CertificateCredentials) credentials).getPassword().getPlainText().toCharArray());
-        }
-        if (ignoreUnverifiedSSL) {
-            contextBuilder.loadTrustMaterial(null, TrustAllStrategy.INSTANCE);
-        }
-        return contextBuilder.build();
-    }
-
-    /**
-     * @see DefaultApacheHttpNotifier#configureProxy(HttpClientBuilder, URL)
-     */
-    @Deprecated
-    private void configureProxy(HttpClientBuilder builder, URL url) {
-        Jenkins jenkins = Jenkins.get();
-        ProxyConfiguration proxyConfig = jenkins.proxy;
-        if (proxyConfig == null) {
-            return;
-        }
-
-        Proxy proxy = proxyConfig.createProxy(url.getHost());
-        if (proxy == null || proxy.type() != Proxy.Type.HTTP) {
-            return;
-        }
-
-        SocketAddress addr = proxy.address();
-        if (!(addr instanceof InetSocketAddress)) {
-            return;
-        }
-
-        InetSocketAddress proxyAddr = (InetSocketAddress) addr;
-        HttpHost proxyHost = new HttpHost(proxyAddr.getAddress().getHostAddress(), proxyAddr.getPort());
-        builder.setProxy(proxyHost);
-
-        String proxyUser = proxyConfig.getUserName();
-        if (proxyUser != null) {
-            String proxyPass = proxyConfig.getPassword();
-            BasicCredentialsProvider cred = new BasicCredentialsProvider();
-            cred.setCredentials(new AuthScope(proxyHost),
-                    new org.apache.http.auth.UsernamePasswordCredentials(proxyUser, proxyPass));
-            builder.setDefaultCredentialsProvider(cred)
-                    .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
-        }
-    }
-
     @Override
     public DescriptorImpl getDescriptor() {
         // see Descriptor javadoc for more about what a descriptor is.
@@ -642,8 +521,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     @Symbol({"notifyBitbucket", "notifyStash"})
     @Extension
-    public static final class DescriptorImpl
-            extends BuildStepDescriptor<Publisher> {
+    public static final class DescriptorImpl extends BuildStepDescriptor<Publisher> {
 
         /**
          * To persist global configuration information,
@@ -665,7 +543,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             this(true);
         }
 
-        protected DescriptorImpl(boolean load) {
+        DescriptorImpl(boolean load) {
             if (load) load();
         }
 
@@ -808,10 +686,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
 
         @Override
-        public boolean configure(
-                StaplerRequest req,
-                JSONObject formData) {
-
+        public boolean configure(StaplerRequest req, JSONObject formData) {
             this.considerUnstableAsSuccess = false;
             this.credentialsId = null;
             this.disableInprogressNotification = false;
@@ -840,35 +715,30 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * @param listener   the run listener for logging
      * @param state      the state of the build as defined by the Bitbucket API.
      */
-    protected NotificationResult notifyStash(
-            final PrintStream logger,
-            final Run<?, ?> run,
-            final String commitSha1,
-            final TaskListener listener,
-            final StashBuildState state) {
-        StashBuildState buildStatus = getPushedBuildStatus(state);
-        JSONObject payload = createNotificationPayload(run, buildStatus, listener);
+    protected NotificationResult notifyStash(final PrintStream logger, final Run<?, ?> run, final String commitSha1,
+            final TaskListener listener, final StashBuildState state) {
 
         String stashURL = expandStashURL(run, listener);
 
-        logger.println("Notifying Bitbucket at \"" + stashURL + "\"");
+        Credentials usernamePasswordCredentials = getCredentials(UsernamePasswordCredentials.class, run.getParent());
+        Credentials stringCredentials = getCredentials(StringCredentials.class, run.getParent());
 
-        Credentials usernamePasswordCredentials
-                = getCredentials(UsernamePasswordCredentials.class, run.getParent());
-        Credentials stringCredentials
-                = getCredentials(StringCredentials.class, run.getParent());
+        URI uri = BuildStatusUriFactory.create(stashURL, bbProjectKey, repositorySlug, commitSha1);
 
-        URI uri = BuildStatusUriFactory.create(stashURL, commitSha1);
+        BuildInformation buildInformation = new BuildInformation(run.getId(), run.getDuration(),
+                                                getPushedBuildStatus(state), getBuildKey(run, listener), getBuildUrl(run),
+                                                getBuildName(run), getBuildDescription(run, state));
+
         NotificationSettings settings = new NotificationSettings(
                 ignoreUnverifiedSSLPeer || getDescriptor().isIgnoreUnverifiedSsl(),
                 stringCredentials != null ? stringCredentials : usernamePasswordCredentials
         );
-        NotificationContext context = new NotificationContext(
-                logger,
-                run.getExternalizableId()
-        );
-        HttpNotifier notifier = getHttpNotifierSelector().select(new SelectionContext(run.getParent().getFullName()));
-        return notifier.send(uri, payload, settings, context);
+
+        NotificationContext context = new NotificationContext(logger, run.getExternalizableId(), buildInformation);
+
+        HttpNotifier notifier = getHttpNotifierSelector().select(new SelectionContext(run.getParent().getFullName(), bbProjectKey, repositorySlug));
+
+        return notifier.send(uri, settings, context);
     }
 
     /**
@@ -909,6 +779,123 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     }
 
     /**
+     * Return the old-fashion build key
+     *
+     * @param run the run to notify Bitbucket of
+     * @return default build key
+     */
+    private String getDefaultBuildKey(final Run<?, ?> run) {
+        StringBuilder key = new StringBuilder();
+
+        key.append(run.getParent().getName());
+        if (includeBuildNumberInKey || getDescriptor().isIncludeBuildNumberInKey()) {
+            key.append('-').append(run.getNumber());
+        }
+        key.append('-').append(getRootUrl());
+
+        if (buildName != null && buildName.trim().length() > 0) {
+            key.append('-').append(buildName);
+        }
+
+        return key.toString();
+    }
+
+    /**
+     * Returns the run key used in the Bitbucket notification. Includes the
+     * run number depending on the user setting.
+     *
+     * @param run the run to notify Bitbucket of
+     * @return the run key for the Bitbucket notification
+     */
+    protected String getBuildKey(final Run<?, ?> run, TaskListener listener) {
+
+        StringBuilder key = new StringBuilder();
+
+        if (prependParentProjectKey || getDescriptor().isPrependParentProjectKey()) {
+            ItemGroup parent = run.getParent().getParent();
+            if(parent != null)
+            {
+                key.append(parent.getFullName()).append('-');
+            }
+        }
+
+        if (projectKey != null && !projectKey.trim().isEmpty()) {
+            PrintStream logger = listener.getLogger();
+            try {
+                if (!(run instanceof AbstractBuild<?, ?>)) {
+                    key.append(TokenMacro.expandAll(run, new FilePath(run.getRootDir()), listener, projectKey));
+                } else {
+                    key.append(TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, projectKey));
+                }
+            } catch (IOException | InterruptedException | MacroEvaluationException ioe) {
+                logger.println("Cannot expand build key from parameter. Processing with default build key");
+                LOGGER.error("{} cannot expand build key from parameter - using default", idOf(run), ioe);
+                key.append(getDefaultBuildKey(run));
+            }
+        } else {
+            key.append(getDefaultBuildKey(run));
+        }
+
+        return StringEscapeUtils.escapeJavaScript(key.toString());
+    }
+
+    /**
+     * Returns the description of the run used for the Bitbucket notification.
+     * Uses the run description provided by the Jenkins job, if available.
+     *
+     * @param run   the run to be described
+     * @param state the state of the run
+     * @return the description of the run
+     */
+    protected String getBuildDescription(final Run<?, ?> run, final StashBuildState state) {
+
+        String runDescription = run.getDescription();
+
+        if (runDescription != null
+                && !runDescription.trim().isEmpty()) {
+
+            return runDescription;
+        } else {
+            switch (state) {
+                case INPROGRESS:
+                    return "building on Jenkins @ " + getRootUrl();
+                default:
+                    return "built by Jenkins @ " + getRootUrl();
+            }
+        }
+    }
+
+    /**
+     * Returns the build url to be pushed. This will select the specifically overwritten build url
+     * or get the build url from the {@link DisplayURLProvider}.
+     *
+     * @param run the run to notify Bitbucket of
+     * @return the url of the run
+     */
+    protected String getBuildUrl(final Run<?, ?> run) {
+        if (buildUrl != null && !buildUrl.trim().isEmpty()) {
+            return buildUrl;
+        } else {
+            return DisplayURLProvider.get().getRunURL(run);
+        }
+    }
+
+    /**
+     * Returns the build name to be pushed. This will select the specifically overwritten build name
+     * or get the build name from the {@link Run}.
+     *
+     * @param run the run to notify Bitbucket of
+     * @return the name of the run
+     */
+    protected String getBuildName(final Run<?, ?> run) {
+        if (buildName != null && !buildName.trim().isEmpty()) {
+            return buildName;
+        } else {
+            return run.getFullDisplayName();
+        }
+    }
+
+    /**
      * Returns the build state to be pushed. This will select the specifically overwritten build state
      * or the current build state else.
      *
@@ -921,48 +908,6 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         } else {
             return currentBuildStatus;
         }
-    }
-
-    /**
-     * Returns the HTTP POST request ready to be sent to the Bitbucket build API for
-     * the given run and change set.
-     *
-     * @see DefaultApacheHttpNotifier#createRequest(URI, JSONObject, Credentials, NotificationContext)
-     * @deprecated in favor of method overload
-     * @param stashBuildNotificationEntity a entity containing the parameters for Bitbucket
-     * @param commitSha1                   the SHA1 of the commit that was built
-     * @param url                           Bitbucket URL
-     * @return the HTTP POST request to the Bitbucket build API
-     */
-    protected HttpPost createRequest(
-            final HttpEntity stashBuildNotificationEntity,
-            final Item project,
-            final String commitSha1,
-            final String url) throws AuthenticationException {
-
-        HttpPost req = new HttpPost(
-                url
-                        + "/rest/build-status/1.0/commits/"
-                        + commitSha1);
-
-        // If we have a credential defined then we need to determine if it
-        // is a basic auth
-        UsernamePasswordCredentials usernamePasswordCredentials
-                = getCredentials(UsernamePasswordCredentials.class, project);
-
-        if (usernamePasswordCredentials != null) {
-            req.addHeader(new BasicScheme().authenticate(
-                    new org.apache.http.auth.UsernamePasswordCredentials(
-                            usernamePasswordCredentials.getUsername(),
-                            usernamePasswordCredentials.getPassword().getPlainText()),
-                    req,
-                    null));
-        }
-
-        req.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-        req.setEntity(stashBuildNotificationEntity);
-
-        return req;
     }
 
     private String expandStashURL(Run<?, ?> run, final TaskListener listener) {
@@ -987,181 +932,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         return url;
     }
 
-    /**
-     * Returns the HTTP POST entity body with the JSON representation of the
-     * run result to be sent to the Bitbucket build API.
-     *
-     * @see #createNotificationPayload(Run, StashBuildState, TaskListener)
-     * @deprecated in favor of client-agnostic methods
-     * @param run the run to notify Bitbucket of
-     * @return HTTP entity body for POST to Bitbucket build API
-     */
-    @Deprecated
-    private HttpEntity newStashBuildNotificationEntity(
-            final Run<?, ?> run,
-            final StashBuildState state,
-            TaskListener listener) {
-
-        JSONObject json = createNotificationPayload(run, state, listener);
-        return new StringEntity(json.toString(), "UTF-8");
-    }
-
-    /**
-     * Returns the HTTP POST entity body with the JSON representation of the
-     * run result to be sent to the Bitbucket build API.
-     *
-     * @param run the run to notify Bitbucket of
-     * @return JSON body for POST to Bitbucket build API
-     */
-    private JSONObject createNotificationPayload(
-            final Run<?, ?> run,
-            final StashBuildState state,
-            TaskListener listener) {
-
-        JSONObject json = new JSONObject();
-        json.put("state", state.name());
-        json.put("key", abbreviate(getBuildKey(run, listener), MAX_FIELD_LENGTH));
-        json.put("name", abbreviate(getBuildName(run), MAX_FIELD_LENGTH));
-        json.put("description", abbreviate(getBuildDescription(run, state), MAX_FIELD_LENGTH));
-        json.put("url", abbreviate(getBuildUrl(run), MAX_URL_FIELD_LENGTH));
-        return json;
-    }
-
-    private static String abbreviate(String text, int maxWidth) {
-        if (text == null) {
-            return null;
-        }
-        if (maxWidth < 4) {
-            throw new IllegalArgumentException("Minimum abbreviation width is 4");
-        }
-        if (text.length() <= maxWidth) {
-            return text;
-        }
-        return text.substring(0, maxWidth - 3) + "...";
-    }
-
-    /**
-     * Return the old-fashion build key
-     *
-     * @param run the run to notify Bitbucket of
-     * @return default build key
-     */
-    private String getDefaultBuildKey(final Run<?, ?> run) {
-        StringBuilder key = new StringBuilder();
-
-        key.append(run.getParent().getName());
-        if (includeBuildNumberInKey
-                || getDescriptor().isIncludeBuildNumberInKey()) {
-            key.append('-').append(run.getNumber());
-        }
-        key.append('-').append(getRootUrl());
-
-        if (buildName != null && buildName.trim().length() > 0) {
-            key.append('-').append(buildName);
-        }
-
-        return key.toString();
-    }
-
-    /**
-     * Returns the run key used in the Bitbucket notification. Includes the
-     * run number depending on the user setting.
-     *
-     * @param run the run to notify Bitbucket of
-     * @return the run key for the Bitbucket notification
-     */
-    protected String getBuildKey(final Run<?, ?> run,
-                                 TaskListener listener) {
-
-        StringBuilder key = new StringBuilder();
-
-        if (prependParentProjectKey || getDescriptor().isPrependParentProjectKey()) {
-            if (null != run.getParent().getParent()) {
-                key.append(run.getParent().getParent().getFullName()).append('-');
-            }
-        }
-
-        if (projectKey != null && projectKey.trim().length() > 0) {
-            PrintStream logger = listener.getLogger();
-            try {
-                if (!(run instanceof AbstractBuild<?, ?>)) {
-                    key.append(TokenMacro.expandAll(run, new FilePath(run.getRootDir()), listener, projectKey));
-                } else {
-                    key.append(TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, projectKey));
-                }
-            } catch (IOException | InterruptedException | MacroEvaluationException ioe) {
-                logger.println("Cannot expand build key from parameter. Processing with default build key");
-                LOGGER.error("{} cannot expand build key from parameter - using default", idOf(run), ioe);
-                key.append(getDefaultBuildKey(run));
-            }
-        } else {
-            key.append(getDefaultBuildKey(run));
-        }
-
-        return StringEscapeUtils.escapeJavaScript(key.toString());
-    }
-
     private static String idOf(Run<?, ?> run) {
         return run != null ? run.getExternalizableId() : "(absent run)";
-    }
-
-    /**
-     * Returns the build name to be pushed. This will select the specifically overwritten build name
-     * or get the build name from the {@link Run}.
-     *
-     * @param run the run to notify Bitbucket of
-     * @return the name of the run
-     */
-    protected String getBuildName(final Run<?, ?> run) {
-        if (buildName != null && buildName.trim().length() > 0) {
-            return buildName;
-        } else {
-            return run.getFullDisplayName();
-        }
-    }
-
-    /**
-     * Returns the build url to be pushed. This will select the specifically overwritten build url
-     * or get the build url from the {@link DisplayURLProvider}.
-     *
-     * @param run the run to notify Bitbucket of
-     * @return the url of the run
-     */
-    protected String getBuildUrl(final Run<?, ?> run) {
-        if (buildUrl != null && !buildUrl.trim().isEmpty()) {
-            return buildUrl;
-        } else {
-            return DisplayURLProvider.get().getRunURL(run);
-        }
-    }
-
-    /**
-     * Returns the description of the run used for the Bitbucket notification.
-     * Uses the run description provided by the Jenkins job, if available.
-     *
-     * @param run   the run to be described
-     * @param state the state of the run
-     * @return the description of the run
-     */
-    protected String getBuildDescription(
-            final Run<?, ?> run,
-            final StashBuildState state) {
-
-        String runDescription = run.getDescription();
-
-        if (runDescription != null
-                && runDescription.trim().length() > 0) {
-
-            return runDescription;
-        } else {
-            switch (state) {
-                case INPROGRESS:
-                    return "building on Jenkins @ "
-                            + getRootUrl();
-                default:
-                    return "built by Jenkins @ "
-                            + getRootUrl();
-            }
-        }
     }
 }

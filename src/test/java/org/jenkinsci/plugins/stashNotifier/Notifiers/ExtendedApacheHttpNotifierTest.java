@@ -1,6 +1,7 @@
-package org.jenkinsci.plugins.stashNotifier;
+package org.jenkinsci.plugins.stashNotifier.Notifiers;
 
 import com.cloudbees.plugins.credentials.CredentialsProvider;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.AbstractBuild;
@@ -13,7 +14,6 @@ import hudson.plugins.git.util.Build;
 import hudson.plugins.git.util.BuildData;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
-import net.sf.json.JSONObject;
 import org.acegisecurity.Authentication;
 import org.apache.http.StatusLine;
 import org.apache.http.client.config.CookieSpecs;
@@ -24,6 +24,7 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.jenkinsci.plugins.stashNotifier.*;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -51,7 +52,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class DefaultApacheHttpNotifierTest {
+public class ExtendedApacheHttpNotifierTest {
 
     final static String sha1 = "1234567890123456789012345678901234567890";
     private static CloseableHttpClient client;
@@ -60,7 +61,7 @@ public class DefaultApacheHttpNotifierTest {
     private static MockedStatic<Secret> mockedSecret;
     private static MockedStatic<HttpClientBuilder> mockedStaticHttpClientBuilder;
     private static MockedStatic<TokenMacro> mockedTokenMacro;
-    private final HttpNotifier httpNotifier = new DefaultApacheHttpNotifier();
+    private final HttpNotifier httpNotifier = new ExtendedApacheHttpNotifier();
 
     private static BuildListener buildListener;
     private HttpClientBuilder httpClientBuilder;
@@ -142,34 +143,32 @@ public class DefaultApacheHttpNotifierTest {
         when(httpClientBuilder.build()).thenReturn(client);
     }
 
-    private NotificationResult notifyStash(int statusCode) throws Exception {
-        PrintStream logger = mock(PrintStream.class);
-        URI uri = BuildStatusUriFactory.create("http://localhost", "df02f57eea1cda72fa2412102f061dd7f6188e98");
-        when(buildListener.getLogger()).thenReturn(logger);
-        CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
-        StatusLine sl = mock(StatusLine.class);
-        when(sl.getStatusCode()).thenReturn(statusCode);
-        when(resp.getStatusLine()).thenReturn(sl);
-        when(resp.getEntity()).thenReturn(new StringEntity(""));
-        when(client.execute(any(HttpPost.class))).thenReturn(resp);
-        return httpNotifier.send(uri, new JSONObject(), new NotificationSettings(false, null), new NotificationContext(logger, "some-build#15"));
-    }
-
     @Test
-    public void notifyStash_success() throws Exception {
-        NotificationResult notificationResult = notifyStash(204);
+    public void notifyStash_noSlug_success() throws Exception {
+        NotificationResult notificationResult = notifyStash(204, "", "");
         assertThat(notificationResult.indicatesSuccess, is(true));
     }
 
     @Test
-    public void notifyStash_fail() throws Exception {
-        NotificationResult notificationResult = notifyStash(400);
+    public void notifyStash_noSlug_fail() throws Exception {
+        NotificationResult notificationResult = notifyStash(400, "", "");
+        assertThat(notificationResult.indicatesSuccess, is(false));
+    }
+    @Test
+    public void notifyStash_Slug_success() throws Exception {
+        NotificationResult notificationResult = notifyStash(204, "testProject", "someslug");
+        assertThat(notificationResult.indicatesSuccess, is(true));
+    }
+
+    @Test
+    public void notifyStash_Slug_fail() throws Exception {
+        NotificationResult notificationResult = notifyStash(400, "testProject", "someslug");
         assertThat(notificationResult.indicatesSuccess, is(false));
     }
 
     @Test
-    public void notifyStashUsesRequestParameters() throws Exception {
-        notifyStash(204);
+    public void notifyStashUsesRequestParametersNoSlug() throws Exception {
+        notifyStash(204, "", "");
 
         final ArgumentCaptor<RequestConfig> captor = ArgumentCaptor.forClass(RequestConfig.class);
         verify(httpClientBuilder).setDefaultRequestConfig(captor.capture());
@@ -179,5 +178,34 @@ public class DefaultApacheHttpNotifierTest {
         assertThat(config.getConnectTimeout(), is(60_000));
         assertThat(config.getConnectionRequestTimeout(), is(60_000));
         assertThat(config.getCookieSpec(), is(CookieSpecs.STANDARD));
+    }
+
+    @Test
+    public void notifyStashUsesRequestParametersSlug() throws Exception {
+        notifyStash(204, "testProject", "someslug");
+
+        final ArgumentCaptor<RequestConfig> captor = ArgumentCaptor.forClass(RequestConfig.class);
+        verify(httpClientBuilder).setDefaultRequestConfig(captor.capture());
+
+        final RequestConfig config = captor.getValue();
+        assertThat(config.getSocketTimeout(), is(60_000));
+        assertThat(config.getConnectTimeout(), is(60_000));
+        assertThat(config.getConnectionRequestTimeout(), is(60_000));
+        assertThat(config.getCookieSpec(), is(CookieSpecs.STANDARD));
+    }
+
+    @NonNull
+    private NotificationResult notifyStash(int statusCode, String projectKey, String slug) throws Exception {
+        PrintStream logger = mock(PrintStream.class);
+        URI uri = BuildStatusUriFactory.create("http://localhost", projectKey, slug, "df02f57eea1cda72fa2412102f061dd7f6188e98");
+        when(buildListener.getLogger()).thenReturn(logger);
+        CloseableHttpResponse resp = mock(CloseableHttpResponse.class);
+        StatusLine sl = mock(StatusLine.class);
+        when(sl.getStatusCode()).thenReturn(statusCode);
+        when(resp.getStatusLine()).thenReturn(sl);
+        when(resp.getEntity()).thenReturn(new StringEntity(""));
+        when(client.execute(any(HttpPost.class))).thenReturn(resp);
+        BuildInformation information = new BuildInformation("1", 30000, StashBuildState.SUCCESSFUL, "ci-testbuild", uri.toString(), "ci-testbuild", "A Testbuild for Stash/Bitbucket");
+        return httpNotifier.send(uri, new NotificationSettings(false, null), new NotificationContext(logger, "some-build#15", information));
     }
 }

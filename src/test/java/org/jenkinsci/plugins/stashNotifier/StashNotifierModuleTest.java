@@ -2,7 +2,8 @@ package org.jenkinsci.plugins.stashNotifier;
 
 import com.google.common.collect.Lists;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import net.sf.json.JSONObject;
+import org.jenkinsci.plugins.stashNotifier.NotifierSelectors.HttpNotifierSelector;
+import org.jenkinsci.plugins.stashNotifier.Notifiers.HttpNotifier;
 import org.junit.Test;
 
 import java.net.URI;
@@ -68,7 +69,7 @@ public class StashNotifierModuleTest {
 
     private static class AlwaysSucceedsHttpNotifier implements HttpNotifier {
         @Override
-        public @NonNull NotificationResult send(@NonNull URI uri, @NonNull JSONObject payload, @NonNull NotificationSettings settings, @NonNull NotificationContext context) {
+        public @NonNull NotificationResult send(@NonNull URI uri, @NonNull NotificationSettings settings, @NonNull NotificationContext context) {
             return NotificationResult.newSuccess();
         }
     }

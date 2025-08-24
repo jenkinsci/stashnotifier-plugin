@@ -1,4 +1,4 @@
-package org.jenkinsci.plugins.stashNotifier;
+package org.jenkinsci.plugins.stashNotifier.Notifiers;
 
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.common.CertificateCredentials;
@@ -36,6 +36,7 @@ import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.util.EntityUtils;
 import org.jenkinsci.plugins.plaincredentials.StringCredentials;
+import org.jenkinsci.plugins.stashNotifier.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,32 +52,34 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 
-class DefaultApacheHttpNotifier implements HttpNotifier {
+public class DefaultApacheHttpNotifier implements HttpNotifier {
+    protected static final int MAX_FIELD_LENGTH = 255;
+    protected static final int MAX_URL_FIELD_LENGTH = 450;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultApacheHttpNotifier.class);
 
     @Override
-    public @NonNull NotificationResult send(@NonNull URI uri, @NonNull JSONObject payload, @NonNull NotificationSettings settings, @NonNull NotificationContext context) {
+    public @NonNull NotificationResult send(@NonNull URI uri, @NonNull NotificationSettings settings, @NonNull NotificationContext context) {
         PrintStream logger = context.getLogger();
+        JSONObject payload = createNotificationPayload(context);
         try (CloseableHttpClient client = getHttpClient(logger, uri, settings.isIgnoreUnverifiedSSL())) {
             HttpPost req = createRequest(uri, payload, settings.getCredentials(), context);
             HttpResponse res = client.execute(req);
+
             if (res.getStatusLine().getStatusCode() != 204) {
                 return NotificationResult.newFailure(EntityUtils.toString(res.getEntity()));
             } else {
                 return NotificationResult.newSuccess();
             }
         } catch (Exception e) {
-            LOGGER.warn("{} failed to send {} to Bitbucket Server at {}", context.getRunId(), payload, uri, e);
+            LOGGER.warn("{} failed to send {} to Bitbucket Server at {}", context.getRunId(), payload, uri);
             logger.println("Failed to notify Bitbucket Server");
             return NotificationResult.newFailure(e.getMessage());
         }
     }
 
-    HttpPost createRequest(
-            final URI uri,
-            final JSONObject payload,
-            final Credentials credentials,
-            @NonNull NotificationContext context) throws AuthenticationException {
+    protected HttpPost createRequest(@NonNull final URI uri, final JSONObject payload, final Credentials credentials,
+                           @NonNull NotificationContext context) throws AuthenticationException {
         HttpPost req = new HttpPost(uri.toString());
 
         if (credentials != null) {
@@ -94,7 +97,7 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
                 req.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + ((StringCredentials)credentials).getSecret().getPlainText());
             } 
             else {
-                throw new AuthenticationException("Unsupported credials");
+                throw new AuthenticationException("Unsupported credentials");
             }
         }
 
@@ -104,7 +107,28 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
         return req;
     }
 
-    CloseableHttpClient getHttpClient(PrintStream logger, URI stashServer, boolean ignoreUnverifiedSSL) throws Exception {
+    /**
+     * Returns the HTTP POST entity body with the JSON representation of the
+     * run result to be sent to the Bitbucket build API.
+     *
+     * @param context the NotificationContext for the current build
+     * @return JSON body for POST to Bitbucket build API
+     */
+    public JSONObject createNotificationPayload(NotificationContext context) {
+
+        BuildInformation information = context.getBuildInformation();
+        String buildId = abbreviate(information.getBuildKey(), MAX_FIELD_LENGTH);
+
+        JSONObject json = new JSONObject();
+        json.put("state", information.getBuildState().name());
+        json.put("key", buildId);
+        json.put("name", abbreviate(information.getBuildName(), MAX_FIELD_LENGTH));
+        json.put("description", abbreviate(information.getBuildDescription(), MAX_FIELD_LENGTH));
+        json.put("url", abbreviate(information.getBuildUrl(), MAX_URL_FIELD_LENGTH));
+        return json;
+    }
+
+    protected CloseableHttpClient getHttpClient(PrintStream logger, @NonNull URI stashServer, boolean ignoreUnverifiedSSL) throws Exception {
         final int timeoutInMilliseconds = 60_000;
 
         RequestConfig.Builder requestBuilder = RequestConfig.custom()
@@ -153,7 +177,7 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
         return clientBuilder.build();
     }
 
-    SSLContext buildSslContext(boolean ignoreUnverifiedSSL, Credentials credentials) throws UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+    protected SSLContext buildSslContext(boolean ignoreUnverifiedSSL, Credentials credentials) throws UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
         SSLContextBuilder contextBuilder = SSLContexts.custom();
         contextBuilder.setProtocol("TLS");
         if (credentials instanceof CertificateCredentials) {
@@ -179,13 +203,13 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
             return;
         }
 
-        SocketAddress addr = proxy.address();
-        if (!(addr instanceof InetSocketAddress)) {
+        SocketAddress address = proxy.address();
+        if (!(address instanceof InetSocketAddress)) {
             return;
         }
 
-        InetSocketAddress proxyAddr = (InetSocketAddress) addr;
-        HttpHost proxyHost = new HttpHost(proxyAddr.getAddress().getHostAddress(), proxyAddr.getPort());
+        InetSocketAddress proxyAddress = (InetSocketAddress) address;
+        HttpHost proxyHost = new HttpHost(proxyAddress.getAddress().getHostAddress(), proxyAddress.getPort());
         builder.setProxy(proxyHost);
 
         String proxyUser = proxyConfig.getUserName();
@@ -197,5 +221,18 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
             builder.setDefaultCredentialsProvider(cred)
                     .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
         }
+    }
+
+    protected static String abbreviate(String text, int maxWidth) {
+        if (text == null) {
+            return null;
+        }
+        if (maxWidth < 4) {
+            throw new IllegalArgumentException("Minimum abbreviation width is 4");
+        }
+        if (text.length() <= maxWidth) {
+            return text;
+        }
+        return text.substring(0, maxWidth - 3) + "...";
     }
 }

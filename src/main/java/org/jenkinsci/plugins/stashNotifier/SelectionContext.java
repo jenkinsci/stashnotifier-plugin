@@ -1,6 +1,8 @@
 package org.jenkinsci.plugins.stashNotifier;
 
 import hudson.model.AbstractItem;
+import org.jenkinsci.plugins.stashNotifier.NotifierSelectors.HttpNotifierSelector;
+import org.jenkinsci.plugins.stashNotifier.Notifiers.HttpNotifier;
 
 import java.util.Objects;
 import java.util.StringJoiner;
@@ -12,9 +14,13 @@ import java.util.StringJoiner;
  */
 public class SelectionContext {
     private final String jobFullName;
+    private final String bitBucketProjectKey;
+    private final String bitBucketProjectSlug;
 
-    public SelectionContext(String jobFullName) {
+    public SelectionContext(String jobFullName, String projectKey, String projectSlug) {
         this.jobFullName = jobFullName;
+        this.bitBucketProjectKey = projectKey;
+        this.bitBucketProjectSlug = projectSlug;
     }
 
     /**
@@ -24,6 +30,14 @@ public class SelectionContext {
      */
     public String getJobFullName() {
         return jobFullName;
+    }
+
+    public String getBitBucketProjectKey() {
+        return bitBucketProjectKey;
+    }
+
+    public String getBitBucketProjectSlug() {
+        return bitBucketProjectSlug;
     }
 
     @Override
