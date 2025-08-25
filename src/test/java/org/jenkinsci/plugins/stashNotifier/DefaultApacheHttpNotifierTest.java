@@ -14,7 +14,6 @@ import hudson.plugins.git.util.BuildData;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
-import org.acegisecurity.Authentication;
 import org.apache.http.StatusLine;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
@@ -25,10 +24,10 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.PrintStream;
@@ -39,6 +38,7 @@ import java.util.List;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
+import org.springframework.security.core.Authentication;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -51,9 +51,9 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class DefaultApacheHttpNotifierTest {
+class DefaultApacheHttpNotifierTest {
 
-    final static String sha1 = "1234567890123456789012345678901234567890";
+    private static final String SHA_1 = "1234567890123456789012345678901234567890";
     private static CloseableHttpClient client;
     private static MockedStatic<Jenkins> mockedJenkins;
     private static MockedStatic<CredentialsProvider> mockedCredentialsProvider;
@@ -65,8 +65,8 @@ public class DefaultApacheHttpNotifierTest {
     private static BuildListener buildListener;
     private HttpClientBuilder httpClientBuilder;
 
-    @BeforeClass
-    public static void setUp() throws Exception {
+    @BeforeAll
+    static void beforeAll() throws Exception {
         mockedSecret = mockStatic(Secret.class);
         mockedJenkins = mockStatic(Jenkins.class);
         mockedStaticHttpClientBuilder = mockStatic(HttpClientBuilder.class);
@@ -100,13 +100,13 @@ public class DefaultApacheHttpNotifierTest {
         when(jenkins.getRootUrl()).thenReturn("http://localhost/");
         when(build.getEnvironment(buildListener)).thenReturn(environment);
         when(action.getLastBuiltRevision()).thenReturn(revision);
-        when(revision.getSha1String()).thenReturn(sha1);
+        when(revision.getSha1String()).thenReturn(SHA_1);
         doReturn(project).when(build).getProject();
         doReturn(project).when(run).getParent();
         when(build.getFullDisplayName()).thenReturn("foo");
         when(build.getUrl()).thenReturn("foo");
         when(build.getActions(BuildData.class)).thenReturn(actions);
-        when(environment.expand(anyString())).thenReturn(sha1);
+        when(environment.expand(anyString())).thenReturn(SHA_1);
         when(buildListener.getLogger()).thenReturn(logger);
         when(Secret.fromString("tiger")).thenReturn(secret);
         when(Secret.toString(secret)).thenReturn("tiger");
@@ -118,7 +118,7 @@ public class DefaultApacheHttpNotifierTest {
         when(lastBuild.getMarked()).thenReturn(revision);
 
         when(TokenMacro.expandAll(build, buildListener, "test-project")).thenReturn("prepend-key");
-        when(CredentialsProvider.lookupCredentials(
+        when(CredentialsProvider.lookupCredentialsInItemGroup(
                 any(),
                 any(ItemGroup.class),
                 any(Authentication.class),
@@ -126,8 +126,8 @@ public class DefaultApacheHttpNotifierTest {
         )).thenReturn(new ArrayList<>());
     }
 
-    @AfterClass
-    public static void close() {
+    @AfterAll
+    static void afterAll() {
         mockedJenkins.close();
         mockedCredentialsProvider.close();
         mockedSecret.close();
@@ -135,8 +135,8 @@ public class DefaultApacheHttpNotifierTest {
         mockedTokenMacro.close();
     }
 
-    @Before
-    public void before() {
+    @BeforeEach
+    void beforeEach() {
         httpClientBuilder = mock(HttpClientBuilder.class);
         when(HttpClientBuilder.create()).thenReturn(httpClientBuilder);
         when(httpClientBuilder.build()).thenReturn(client);
@@ -156,19 +156,19 @@ public class DefaultApacheHttpNotifierTest {
     }
 
     @Test
-    public void notifyStash_success() throws Exception {
+    void notifyStash_success() throws Exception {
         NotificationResult notificationResult = notifyStash(204);
         assertThat(notificationResult.indicatesSuccess, is(true));
     }
 
     @Test
-    public void notifyStash_fail() throws Exception {
+    void notifyStash_fail() throws Exception {
         NotificationResult notificationResult = notifyStash(400);
         assertThat(notificationResult.indicatesSuccess, is(false));
     }
 
     @Test
-    public void notifyStashUsesRequestParameters() throws Exception {
+    void notifyStashUsesRequestParameters() throws Exception {
         notifyStash(204);
 
         final ArgumentCaptor<RequestConfig> captor = ArgumentCaptor.forClass(RequestConfig.class);

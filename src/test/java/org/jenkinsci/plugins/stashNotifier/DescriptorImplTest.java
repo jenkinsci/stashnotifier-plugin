@@ -7,9 +7,9 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.kohsuke.stapler.RequestImpl;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.TokenList;
@@ -36,7 +36,7 @@ import static org.mockito.Mockito.when;
  * Created by Vlad Medvedev on 27.01.2016.
  * vladislav.medvedev@devfactory.com
  */
-public class DescriptorImplTest {
+class DescriptorImplTest {
 
     /**
      * Class under test.
@@ -48,8 +48,8 @@ public class DescriptorImplTest {
     private static MockedStatic<Jenkins> mockedJenkins;
     private static MockedStatic<CredentialsProvider> mockedCredentialsProvider;
 
-    @BeforeClass
-    public static void setUp() {
+    @BeforeAll
+    static void beforeAll() {
         mockedJenkins = mockStatic(Jenkins.class);
         mockedCredentialsProvider = mockStatic(CredentialsProvider.class);
 
@@ -69,14 +69,14 @@ public class DescriptorImplTest {
         desc = spy(new StashNotifier.DescriptorImpl(false));
     }
 
-    @AfterClass
-    public static void close() {
+    @AfterAll
+    static void afterAll() {
         mockedJenkins.close();
         mockedCredentialsProvider.close();
     }
 
     @Test
-    public void testConfigure() {
+    void testConfigure() {
         //given
         doNothing().when(desc).save();
 
@@ -106,7 +106,7 @@ public class DescriptorImplTest {
     }
 
     @Test
-    public void test_doFillCredentialsIdItems_project_null() {
+    void test_doFillCredentialsIdItems_project_null() {
         //given
         when(jenkins.hasPermission(Item.CONFIGURE)).thenReturn(false);
 
@@ -118,7 +118,7 @@ public class DescriptorImplTest {
     }
 
     @Test
-    public void test_doFillCredentialsIdItems_no_permission() {
+    void test_doFillCredentialsIdItems_no_permission() {
         //given
         Item project = mock(Item.class);
         when(project.hasPermission(Item.CONFIGURE)).thenReturn(false);
@@ -132,7 +132,7 @@ public class DescriptorImplTest {
     }
 
     @Test
-    public void test_doFillCredentialsIdItems_has_permission() {
+    void test_doFillCredentialsIdItems_has_permission() {
         //given
         Item project = mock(Item.class);
         when(project.hasPermission(Item.CONFIGURE)).thenReturn(true);
@@ -152,7 +152,7 @@ public class DescriptorImplTest {
     }
 
     @Test
-    public void test_doCheckStashServerBaseUrl_empty() {
+    void test_doCheckStashServerBaseUrl_empty() {
         //when
         desc.setStashRootUrl("");
         FormValidation listBoxModel = desc.doCheckStashServerBaseUrl("");
@@ -162,7 +162,7 @@ public class DescriptorImplTest {
     }
 
     @Test
-    public void test_doCheckStashServerBaseUrl() {
+    void test_doCheckStashServerBaseUrl() {
         //when
         FormValidation listBoxModel = desc.doCheckStashServerBaseUrl("https://my.company.intranet/bitbucket");
 
