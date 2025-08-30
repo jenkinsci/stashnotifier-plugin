@@ -111,7 +111,6 @@ public class StashNotifierTest {
     private static BuildListener buildListener;
     private static AbstractBuild<?, ?> build;
     private static Run<?, ?> run;
-    private static FilePath workspace;
 
     @BeforeClass
     public static void setUp() throws Exception {
@@ -131,7 +130,6 @@ public class StashNotifierTest {
         when(file.getPath()).thenReturn("/tmp/fake/path");
         FilePath filePath = new FilePath(file);
         when(project.getSomeWorkspace()).thenReturn(filePath);
-        workspace = project.getSomeWorkspace();
         EnvVars environment = mock(EnvVars.class);
         PrintStream logger = System.out;
         Secret secret = mock(Secret.class);
@@ -295,7 +293,7 @@ public class StashNotifierTest {
         Launcher launcher = test_perform(result, logger, notificationResult, hashes);
 
         //when
-        sn.perform(build, workspace, launcher, buildListener);
+        sn.perform(build, launcher, buildListener);
 
         //then
         assertThat(build.getResult(), is(result));
@@ -483,7 +481,7 @@ public class StashNotifierTest {
         doReturn(new ArrayList<String>()).when(sn).lookupCommitSha1s(eq(build), eq(null), eq(buildListener));
 
         //when
-        sn.perform(build, workspace, mock(Launcher.class), buildListener);
+        sn.perform(build, mock(Launcher.class), buildListener);
 
         //then
         verify(sn, never()).notifyStash(
