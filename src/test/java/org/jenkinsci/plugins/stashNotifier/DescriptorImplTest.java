@@ -3,6 +3,7 @@ package org.jenkinsci.plugins.stashNotifier;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import hudson.model.AbstractProject;
 import hudson.model.Item;
+import hudson.model.Descriptor.FormException;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
@@ -16,8 +17,8 @@ import org.kohsuke.stapler.TokenList;
 import org.kohsuke.stapler.WebApp;
 import org.mockito.MockedStatic;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -76,7 +77,7 @@ class DescriptorImplTest {
     }
 
     @Test
-    void testConfigure() {
+    void testConfigure() throws FormException {
         //given
         doNothing().when(desc).save();
 

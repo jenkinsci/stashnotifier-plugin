@@ -26,6 +26,7 @@ import com.google.inject.Injector;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.FilePath;
+import hudson.EnvVars;
 import hudson.Launcher;
 import hudson.ProxyConfiguration;
 import hudson.model.*;
@@ -362,25 +363,28 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
     }
 
     @Override
+    public boolean requiresWorkspace() {
+        return false;
+    }
+
+    @Override
     public boolean perform(
             AbstractBuild<?, ?> build,
             Launcher launcher,
             BuildListener listener) {
-        return perform(build, null, listener, disableInprogressNotification);
+        return perform(build, listener, disableInprogressNotification);
     }
 
     @Override
     public void perform(@NonNull Run<?, ?> run,
-                        @NonNull FilePath workspace,
-                        @NonNull Launcher launcher,
+                        @NonNull EnvVars env,
                         @NonNull TaskListener listener) {
-        if (!perform(run, workspace, listener, false)) {
+        if (!perform(run, listener, false)) {
             run.setResult(Result.FAILURE);
         }
     }
 
     private boolean perform(Run<?, ?> run,
-                            FilePath workspace,
                             TaskListener listener,
                             boolean disableInProgress) {
         StashBuildState state;
