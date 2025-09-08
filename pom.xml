@@ -13,6 +13,7 @@
         <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
         <jenkins.baseline>2.479</jenkins.baseline>
         <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+        <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
         <hpi.compatibleSinceVersion>1.9</hpi.compatibleSinceVersion>
     </properties>
     <artifactId>stashNotifier</artifactId>
@@ -140,3 +141,4 @@
         </dependency>
     </dependencies>
 </project>
+
