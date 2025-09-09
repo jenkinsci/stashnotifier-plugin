@@ -3,7 +3,7 @@ package org.jenkinsci.plugins.stashNotifier;
 import com.google.common.collect.Lists;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import net.sf.json.JSONObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.List;
@@ -11,14 +11,15 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsSame.sameInstance;
 
-public class StashNotifierModuleTest {
+class StashNotifierModuleTest {
+
     private final StashNotifierModule module = new StashNotifierModule();
     private final HttpNotifierSelector fallback = new Fallback();
     private final HttpNotifierSelector preferred = new Preferred();
     private final List<HttpNotifierSelector> selectors = Lists.newArrayList(preferred, fallback);
 
     @Test
-    public void shouldProvideDefaultApacheHttpNotifierSelectorIfPreferredNotFound() {
+    void shouldProvideDefaultApacheHttpNotifierSelectorIfPreferredNotFound() {
         HttpNotifierSelector actual = module.providesHttpNotifierSelector(
                 fallback,
                 "my.absent.plugin.MyHttpNotifierSelector",
@@ -29,7 +30,7 @@ public class StashNotifierModuleTest {
     }
 
     @Test
-    public void shouldProvideDefaultApacheHttpNotifierSelectorIfPreferredNotSet() {
+    void shouldProvideDefaultApacheHttpNotifierSelectorIfPreferredNotSet() {
         HttpNotifierSelector actual = module.providesHttpNotifierSelector(
                 fallback,
                 "",
@@ -40,7 +41,7 @@ public class StashNotifierModuleTest {
     }
 
     @Test
-    public void shouldProvidePreferredHttpNotifierSelectorIfSet() {
+    void shouldProvidePreferredHttpNotifierSelectorIfSet() {
         HttpNotifierSelector actual = module.providesHttpNotifierSelector(
                 fallback,
                 Preferred.class.getName(),

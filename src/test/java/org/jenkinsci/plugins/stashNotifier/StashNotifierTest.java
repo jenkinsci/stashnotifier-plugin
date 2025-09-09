@@ -11,7 +11,6 @@ import hudson.plugins.git.util.BuildData;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
-import org.acegisecurity.Authentication;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.StatusLine;
@@ -30,10 +29,10 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.io.File;
@@ -44,13 +43,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import org.mockito.MockedStatic;
+import org.springframework.security.core.Authentication;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -65,9 +65,9 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class StashNotifierTest {
+class StashNotifierTest {
 
-    final static String sha1 = "1234567890123456789012345678901234567890";
+    private static final String SHA_1 = "1234567890123456789012345678901234567890";
     private static HttpClientBuilder httpClientBuilder;
     private static CloseableHttpClient client;
     private static Jenkins jenkins;
@@ -111,10 +111,9 @@ public class StashNotifierTest {
     private static BuildListener buildListener;
     private static AbstractBuild<?, ?> build;
     private static Run<?, ?> run;
-    private static FilePath workspace;
 
-    @BeforeClass
-    public static void setUp() throws Exception {
+    @BeforeAll
+    static void beforeAll() throws Exception {
         mockedJenkins = mockStatic(Jenkins.class);
         mockedSecret = mockStatic(Secret.class);
         mockedHttpClientBuilder = mockStatic(HttpClientBuilder.class);
@@ -131,7 +130,6 @@ public class StashNotifierTest {
         when(file.getPath()).thenReturn("/tmp/fake/path");
         FilePath filePath = new FilePath(file);
         when(project.getSomeWorkspace()).thenReturn(filePath);
-        workspace = project.getSomeWorkspace();
         EnvVars environment = mock(EnvVars.class);
         PrintStream logger = System.out;
         Secret secret = mock(Secret.class);
@@ -151,14 +149,14 @@ public class StashNotifierTest {
         when(jenkins.getRootUrl()).thenReturn("http://localhost/");
         when(build.getEnvironment(buildListener)).thenReturn(environment);
         when(action.getLastBuiltRevision()).thenReturn(revision);
-        when(revision.getSha1String()).thenReturn(sha1);
+        when(revision.getSha1String()).thenReturn(SHA_1);
         doReturn(project).when(build).getProject();
         doReturn(project).when(build).getParent();
         doReturn(project).when(run).getParent();
         when(build.getFullDisplayName()).thenReturn("foo");
         when(build.getUrl()).thenReturn("foo");
         when(build.getActions(BuildData.class)).thenReturn(actions);
-        when(environment.expand(anyString())).thenReturn(sha1);
+        when(environment.expand(anyString())).thenReturn(SHA_1);
         when(buildListener.getLogger()).thenReturn(logger);
         when(Secret.fromString("tiger")).thenReturn(secret);
         when(Secret.toString(secret)).thenReturn("tiger");
@@ -171,7 +169,7 @@ public class StashNotifierTest {
         action.lastBuild = lastBuild;
         when(lastBuild.getMarked()).thenReturn(revision);
 
-        when(com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+        when(com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentialsInItemGroup(
                 any(),
                 any(ItemGroup.class),
                 any(Authentication.class),
@@ -180,13 +178,13 @@ public class StashNotifierTest {
         when(httpNotifierSelector.select(any())).thenReturn(httpNotifier);
     }
 
-    @Before
-    public void setup() {
+    @BeforeEach
+    void beforeEach() {
         sn = buildStashNotifier("http://localhost");
     }
 
-    @AfterClass
-    public static void close() {
+    @AfterAll
+    static void afterAll() {
         mockedJenkins.close();
         mockedCredentialsProvider.close();
         mockedSecret.close();
@@ -194,18 +192,18 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_prebuild_normal() {
+    void test_prebuild_normal() {
         assertTrue(sn.prebuild(build, buildListener));
     }
 
     @Test
-    public void test_prebuild_null_revision() {
+    void test_prebuild_null_revision() {
         when(build.getActions(BuildData.class)).thenReturn(Collections.singletonList(mock(BuildData.class)));
         assertTrue(sn.prebuild(build, buildListener));
     }
 
     @Test
-    public void test_build_http_client_with_proxy() throws Exception {
+    void test_build_http_client_with_proxy() throws Exception {
         //given
         String address = "192.168.1.1";
         int port = 8080;
@@ -246,7 +244,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_build_http_client_https() throws Exception {
+    void test_build_http_client_https() throws Exception {
         //given
         sn = new StashNotifier(
                 "https://localhost",
@@ -295,7 +293,7 @@ public class StashNotifierTest {
         Launcher launcher = test_perform(result, logger, notificationResult, hashes);
 
         //when
-        sn.perform(build, workspace, launcher, buildListener);
+        sn.perform(build, launcher, buildListener);
 
         //then
         assertThat(build.getResult(), is(result));
@@ -310,7 +308,7 @@ public class StashNotifierTest {
         doReturn(notificationResult).when(sn).notifyStash(
                 any(PrintStream.class),
                 any(AbstractBuild.class),
-                eq(sha1),
+                eq(SHA_1),
                 eq(buildListener),
                 any(StashBuildState.class)
         );
@@ -318,10 +316,10 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_build_step_success() {
+    void test_perform_build_step_success() {
         //given
         ArrayList<String> hashes = new ArrayList<>();
-        hashes.add(sha1);
+        hashes.add(SHA_1);
         PrintStream logger = mock(PrintStream.class);
 
         //when
@@ -334,11 +332,11 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_build_step_success_for_unstable_build() {
+    void test_perform_build_step_success_for_unstable_build() {
         //given
         sn = buildStashNotifier("http://localhost", false, true);
         ArrayList<String> hashes = new ArrayList<>();
-        hashes.add(sha1);
+        hashes.add(SHA_1);
         PrintStream logger = mock(PrintStream.class);
 
         //when
@@ -353,11 +351,11 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_build_step_aborted_without_notifying_stash() {
+    void test_perform_build_step_aborted_without_notifying_stash() {
         //given
         sn = buildStashNotifier("http://localhost", true, true);
         ArrayList<String> hashes = new ArrayList<>();
-        hashes.add(sha1);
+        hashes.add(SHA_1);
         PrintStream logger = mock(PrintStream.class);
 
         //when
@@ -370,10 +368,10 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_build_step_failure() {
+    void test_perform_build_step_failure() {
         //given
         ArrayList<String> hashes = new ArrayList<>();
-        hashes.add(sha1);
+        hashes.add(SHA_1);
         PrintStream logger = mock(PrintStream.class);
 
         //when
@@ -386,10 +384,10 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_build_step_not_built() {
+    void test_perform_build_step_not_built() {
         //given
         ArrayList<String> hashes = new ArrayList<>();
-        hashes.add(sha1);
+        hashes.add(SHA_1);
         PrintStream logger = mock(PrintStream.class);
 
         //when
@@ -402,7 +400,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_build_step_empty_hash() {
+    void test_perform_build_step_empty_hash() {
         //given
         PrintStream logger = mock(PrintStream.class);
         when(buildListener.getLogger()).thenReturn(logger);
@@ -426,10 +424,10 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_simple_build_step_success() {
+    void test_perform_simple_build_step_success() {
         //given
         ArrayList<String> hashes = new ArrayList<>();
-        hashes.add(sha1);
+        hashes.add(SHA_1);
         PrintStream logger = mock(PrintStream.class);
 
         //when
@@ -442,10 +440,10 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_simple_build_step_failure() {
+    void test_perform_simple_build_step_failure() {
         //given
         ArrayList<String> hashes = new ArrayList<>();
-        hashes.add(sha1);
+        hashes.add(SHA_1);
         PrintStream logger = mock(PrintStream.class);
 
         //when
@@ -458,10 +456,10 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_simple_build_step_not_built() {
+    void test_perform_simple_build_step_not_built() {
         //given
         ArrayList<String> hashes = new ArrayList<>();
-        hashes.add(sha1);
+        hashes.add(SHA_1);
         PrintStream logger = mock(PrintStream.class);
 
         //when
@@ -474,7 +472,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_perform_simple_build_step_empty_hash() {
+    void test_perform_simple_build_step_empty_hash() {
         //given
         PrintStream logger = mock(PrintStream.class);
         when(buildListener.getLogger()).thenReturn(logger);
@@ -483,7 +481,7 @@ public class StashNotifierTest {
         doReturn(new ArrayList<String>()).when(sn).lookupCommitSha1s(eq(build), eq(null), eq(buildListener));
 
         //when
-        sn.perform(build, workspace, mock(Launcher.class), buildListener);
+        sn.perform(build, mock(Launcher.class), buildListener);
 
         //then
         verify(sn, never()).notifyStash(
@@ -497,15 +495,15 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void lookupCommitSha1s() {
+    void lookupCommitSha1s() {
         //given
         try (MockedStatic<TokenMacro> tokenMacroMock = mockStatic(TokenMacro.class)) {
-            tokenMacroMock.when(() -> TokenMacro.expandAll(any(), any(), any())).thenReturn(sha1);
+            tokenMacroMock.when(() -> TokenMacro.expandAll(any(), any(), any())).thenReturn(SHA_1);
             sn = new StashNotifier(
                     "https://localhost",
                     "scot",
                     true,
-                    sha1,
+                    SHA_1,
                     null,
                     null,
                     null,
@@ -521,7 +519,7 @@ public class StashNotifierTest {
 
             //then
             assertThat(hashes.size(), is(1));
-            assertThat(hashes.iterator().next(), is(sha1));
+            assertThat(hashes.iterator().next(), is(SHA_1));
         }
     }
 
@@ -535,7 +533,7 @@ public class StashNotifierTest {
                     "http://localhost",
                     "scot",
                     true,
-                    sha1,
+                    SHA_1,
                     null,
                     null,
                     null,
@@ -556,22 +554,22 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_lookupCommitSha1s_IOException() {
+    void test_lookupCommitSha1s_IOException() {
         lookupCommitSha1s_Exception(new IOException("BOOM"));
     }
 
     @Test
-    public void test_lookupCommitSha1s_InterruptedException() {
+    void test_lookupCommitSha1s_InterruptedException() {
         lookupCommitSha1s_Exception(new InterruptedException("BOOM"));
     }
 
     @Test
-    public void test_lookupCommitSha1s_MacroEvaluationException() {
+    void test_lookupCommitSha1s_MacroEvaluationException() {
         lookupCommitSha1s_Exception(new MacroEvaluationException("BOOM"));
     }
 
     @Test
-    public void test_getBuildDescription() {
+    void test_getBuildDescription() {
         //given
         AbstractBuild<?, ?> build = mock(AbstractBuild.class);
         when(build.getDescription()).thenReturn("some description");
@@ -588,14 +586,14 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildDescription_state() {
+    void test_getBuildDescription_state() {
         assertThat(getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState.SUCCESSFUL), is("built by Jenkins @ http://localhost/"));
         assertThat(getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState.FAILED), is("built by Jenkins @ http://localhost/"));
         assertThat(getBuildDescriptionWhenBuildDescriptionIsNull(StashBuildState.INPROGRESS), is("building on Jenkins @ http://localhost/"));
     }
 
     @Test
-    public void test_getPushedBuildState_overwritten() {
+    void test_getPushedBuildState_overwritten() {
         //given
         StashBuildState state = StashBuildState.SUCCESSFUL;
 
@@ -622,7 +620,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getPushedBuildState_not_overwritten() {
+    void test_getPushedBuildState_not_overwritten() {
         //given
         sn = new StashNotifier(
                 "",
@@ -647,7 +645,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildName_overwritten() {
+    void test_getBuildName_overwritten() {
         //given
         when(run.getFullDisplayName()).thenReturn("default-name");
         String name = "custom-name";
@@ -675,7 +673,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildName_not_overwritten() {
+    void test_getBuildName_not_overwritten() {
         //given
         when(run.getFullDisplayName()).thenReturn("default-name");
 
@@ -702,7 +700,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildUrl_overwritten() {
+    void test_getBuildUrl_overwritten() {
         //given
         when(displayURLProvider.getRunURL(run)).thenReturn("http://default-url");
         String url = "http://custom-url";
@@ -730,7 +728,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildUrl_not_overwritten() {
+    void test_getBuildUrl_not_overwritten() {
         //given
         when(displayURLProvider.getRunURL(run)).thenReturn("http://default-url");
 
@@ -757,7 +755,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildKey() {
+    void test_getBuildKey() {
         //given
         String key = "someKey";
         PrintStream logger = mock(PrintStream.class);
@@ -789,7 +787,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildKey_withBuildName() {
+    void test_getBuildKey_withBuildName() {
         //given
         String parentName = "someKey";
         int number = 11;
@@ -821,7 +819,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getRunKey() throws Exception {
+    void test_getRunKey() throws Exception {
         //given
         String key = "someKey";
         PrintStream logger = mock(PrintStream.class);
@@ -924,32 +922,32 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void test_getBuildKey_IOException() {
+    void test_getBuildKey_IOException() {
         getBuildKey_Exception(new IOException("BOOM"));
     }
 
     @Test
-    public void test_getBuildKey_InterruptedException() {
+    void test_getBuildKey_InterruptedException() {
         getBuildKey_Exception(new InterruptedException("BOOM"));
     }
 
     @Test
-    public void test_getBuildKey_MacroEvaluationException() {
+    void test_getBuildKey_MacroEvaluationException() {
         getBuildKey_Exception(new MacroEvaluationException("BOOM"));
     }
 
     @Test
-    public void test_getRunKey_IOException() throws Exception {
+    void test_getRunKey_IOException() throws Exception {
         getRunKey_Exception(new IOException("BOOM"));
     }
 
     @Test
-    public void test_getRunKey_InterruptedException() throws Exception {
+    void test_getRunKey_InterruptedException() throws Exception {
         getRunKey_Exception(new InterruptedException("BOOM"));
     }
 
     @Test
-    public void test_getRunKey_MacroEvaluationException() throws Exception {
+    void test_getRunKey_MacroEvaluationException() throws Exception {
         getRunKey_Exception(new MacroEvaluationException("BOOM"));
     }
 
@@ -968,12 +966,12 @@ public class StashNotifierTest {
         try (MockedStatic<TokenMacro> tokenMacroMock = mockStatic(TokenMacro.class) ) {
             tokenMacroMock.when(() -> TokenMacro.expandAll(any(), any(), any())).thenReturn("http://localhost");
             doReturn(client).when(sn).getHttpClient(any(PrintStream.class), any(AbstractBuild.class), anyString());
-            return sn.notifyStash(logger, build, sha1, buildListener, StashBuildState.FAILED);
+            return sn.notifyStash(logger, build, SHA_1, buildListener, StashBuildState.FAILED);
         }
     }
 
     @Test
-    public void notifyStashDelegatesToHttpNotifier() throws Exception {
+    void notifyStashDelegatesToHttpNotifier() throws Exception {
         NotificationResult result = NotificationResult.newFailure("some value for test");
         when(httpNotifier.send(any(), any(), any(), any())).thenReturn(result);
         NotificationResult notificationResult = notifyStash(204);
@@ -982,7 +980,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void setBuildStatus_string() {
+    void setBuildStatus_string() {
       sn.setBuildStatus("SUCCESSFUL");
       assertThat(sn.getBuildStatus(), equalTo(StashBuildState.SUCCESSFUL));
 
@@ -994,7 +992,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void setBuildStatus_stashBuildState() {
+    void setBuildStatus_stashBuildState() {
       sn.setBuildStatus(StashBuildState.SUCCESSFUL);
       assertThat(sn.getBuildStatus(), equalTo(StashBuildState.SUCCESSFUL));
 
@@ -1006,7 +1004,7 @@ public class StashNotifierTest {
     }
 
     @Test
-    public void setBuildStatus_null() {
+    void setBuildStatus_null() {
       sn.setBuildStatus(null);
       assertThat(sn.getBuildStatus(), nullValue());
 
