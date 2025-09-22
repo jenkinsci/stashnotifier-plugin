@@ -1,0 +1,19 @@
+{
+	"name": "Stash Notifier Jenkins Plugin",
+	"image": "mcr.microsoft.com/devcontainers/java:17",
+	"postCreateCommand": ".devcontainer/post-create.sh",
+	"features": {
+		"ghcr.io/devcontainers/features/java:1": {
+			"version": "none",
+			"installMaven": true
+		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"redhat.vscode-xml",
+				"vscjava.vscode-java-pack"
+			]
+		}
+	}
+}
