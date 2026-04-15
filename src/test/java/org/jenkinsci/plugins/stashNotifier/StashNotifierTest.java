@@ -1014,4 +1014,49 @@ class StashNotifierTest {
       sn.setBuildStatus(null);
       assertThat(sn.getBuildStatus(), equalTo(StashBuildState.SUCCESSFUL));
     }
+
+    @Test
+    void parseBitbucketRemoteUrl_https_with_scm() {
+        String[] result = StashNotifier.parseBitbucketRemoteUrl("https://bitbucket.example.com/scm/PROJ/my-repo.git");
+        assertThat(result[0], equalTo("PROJ"));
+        assertThat(result[1], equalTo("my-repo"));
+    }
+
+    @Test
+    void parseBitbucketRemoteUrl_ssh() {
+        String[] result = StashNotifier.parseBitbucketRemoteUrl("ssh://git@bitbucket.example.com:7999/PROJ/my-repo.git");
+        assertThat(result[0], equalTo("PROJ"));
+        assertThat(result[1], equalTo("my-repo"));
+    }
+
+    @Test
+    void parseBitbucketRemoteUrl_scp_style() {
+        String[] result = StashNotifier.parseBitbucketRemoteUrl("git@bitbucket.example.com:PROJ/my-repo.git");
+        assertThat(result[0], equalTo("PROJ"));
+        assertThat(result[1], equalTo("my-repo"));
+    }
+
+    @Test
+    void parseBitbucketRemoteUrl_personal_repo() {
+        String[] result = StashNotifier.parseBitbucketRemoteUrl("https://bitbucket.example.com/scm/~username/my-repo.git");
+        assertThat(result[0], equalTo("~username"));
+        assertThat(result[1], equalTo("my-repo"));
+    }
+
+    @Test
+    void parseBitbucketRemoteUrl_no_dotgit_suffix() {
+        String[] result = StashNotifier.parseBitbucketRemoteUrl("https://bitbucket.example.com/scm/PROJ/repo");
+        assertThat(result[0], equalTo("PROJ"));
+        assertThat(result[1], equalTo("repo"));
+    }
+
+    @Test
+    void parseBitbucketRemoteUrl_null() {
+        assertThat(StashNotifier.parseBitbucketRemoteUrl(null), nullValue());
+    }
+
+    @Test
+    void parseBitbucketRemoteUrl_empty() {
+        assertThat(StashNotifier.parseBitbucketRemoteUrl(""), nullValue());
+    }
 }
