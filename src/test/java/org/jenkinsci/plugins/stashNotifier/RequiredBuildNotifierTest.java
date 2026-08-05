@@ -1,8 +1,10 @@
 package org.jenkinsci.plugins.stashNotifier;
 
+import hudson.FilePath;
 import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
-import hudson.model.ItemGroup;
+import hudson.model.FreeStyleProject;
 import hudson.model.Job;
 import hudson.model.Run;
 import jenkins.branch.MultiBranchProject;
@@ -19,7 +21,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -93,10 +94,9 @@ class RequiredBuildNotifierTest {
     void shouldUseMultibranchProjectFullNameAsParent() {
         RequiredBuildNotifier notifier = newNotifier("PROJ", "repo");
         Run<?, ?> run = mock(Run.class);
-        Job<?, ?> branchJob = mock(Job.class);
         MultiBranchProject<?, ?> multibranchProject = mock(MultiBranchProject.class);
+        FreeStyleProject branchJob = new FreeStyleProject(multibranchProject, "branch");
         doReturn(branchJob).when(run).getParent();
-        doReturn(multibranchProject).when(branchJob).getParent();
         when(multibranchProject.getFullName()).thenReturn("folder/application");
 
         assertThat(notifier.getBuildParent(run), is("folder/application"));
@@ -123,8 +123,8 @@ class RequiredBuildNotifierTest {
     @Test
     void shouldSendRequiredBuildNotification() throws Exception {
         RequiredBuildNotifier notifier = newNotifier("PROJ", "repo");
-        Run<?, ?> run = mock(Run.class);
-        Job<?, ?> job = mock(Job.class);
+        AbstractBuild<?, ?> run = mock(AbstractBuild.class);
+        AbstractProject<?, ?> job = mock(AbstractProject.class);
         BuildListener listener = mock(BuildListener.class);
         HttpNotifier httpNotifier = mock(HttpNotifier.class);
         HttpNotifierSelector selector = mock(HttpNotifierSelector.class);
@@ -134,6 +134,7 @@ class RequiredBuildNotifierTest {
         doReturn(job).when(run).getParent();
         when(job.getFullName()).thenReturn("folder/application/branch");
         when(run.getExternalizableId()).thenReturn("folder/application/branch#1");
+        when(run.getWorkspace()).thenReturn(mock(FilePath.class));
         when(listener.getLogger()).thenReturn(System.out);
         when(httpNotifier.send(any(), any(), any(), any())).thenReturn(expectedResult);
         when(selector.select(any())).thenReturn(httpNotifier);
