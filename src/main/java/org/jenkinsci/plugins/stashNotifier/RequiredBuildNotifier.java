@@ -115,5 +115,10 @@ public class RequiredBuildNotifier extends StashNotifier {
         public String getDisplayName() {
             return "Notify Bitbucket Required Build";
         }
+
+        @Override
+        public String getGlobalConfigPage() {
+            return null;
+        }
     }
 }
