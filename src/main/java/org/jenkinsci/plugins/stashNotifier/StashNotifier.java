@@ -532,7 +532,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      */
     @Deprecated
     protected CloseableHttpClient getHttpClient(PrintStream logger, Run<?, ?> run, String stashServer) throws Exception {
-        DescriptorImpl globalSettings = getDescriptor();
+        DescriptorImpl globalSettings = getGlobalDescriptor();
 
         final int timeoutInMilliseconds = 60_000;
 
@@ -638,10 +638,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
     }
 
-    @Override
-    public DescriptorImpl getDescriptor() {
-        // see Descriptor javadoc for more about what a descriptor is.
-        return (DescriptorImpl) super.getDescriptor();
+    protected DescriptorImpl getGlobalDescriptor() {
+        return Jenkins.get().getDescriptorByType(DescriptorImpl.class);
     }
 
     @Symbol({"notifyBitbucket", "notifyStash"})
@@ -862,9 +860,16 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         Credentials stringCredentials
                 = getCredentials(StringCredentials.class, run.getParent());
 
-        URI uri = BuildStatusUriFactory.create(stashURL, commitSha1);
+        URI uri;
+        try {
+            uri = createBuildStatusUri(stashURL, commitSha1, run, listener);
+        } catch (RuntimeException e) {
+            logger.println("Unable to create Bitbucket build status URL: " + e.getMessage());
+            LOGGER.error("{} unable to create Bitbucket build status URL", idOf(run), e);
+            return NotificationResult.newFailure(e.getMessage());
+        }
         NotificationSettings settings = new NotificationSettings(
-                ignoreUnverifiedSSLPeer || getDescriptor().isIgnoreUnverifiedSsl(),
+                ignoreUnverifiedSSLPeer || getGlobalDescriptor().isIgnoreUnverifiedSsl(),
                 stringCredentials != null ? stringCredentials : usernamePasswordCredentials
         );
         NotificationContext context = new NotificationContext(
@@ -873,6 +878,14 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         );
         HttpNotifier notifier = getHttpNotifierSelector().select(new SelectionContext(run.getParent().getFullName()));
         return notifier.send(uri, payload, settings, context);
+    }
+
+    protected URI createBuildStatusUri(
+            String stashURL,
+            String commitSha1,
+            Run<?, ?> run,
+            TaskListener listener) {
+        return BuildStatusUriFactory.create(stashURL, commitSha1);
     }
 
     /**
@@ -898,7 +911,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
 
         if (credentials == null) {
-            DescriptorImpl descriptor = getDescriptor();
+            DescriptorImpl descriptor = getGlobalDescriptor();
             if (StringUtils.isBlank(credentialsId) && descriptor != null) {
                 credentialsId = descriptor.getCredentialsId();
             }
@@ -971,7 +984,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     private String expandStashURL(Run<?, ?> run, final TaskListener listener) {
         String url = stashServerBaseUrl;
-        DescriptorImpl descriptor = getDescriptor();
+        DescriptorImpl descriptor = getGlobalDescriptor();
         if (url == null || url.isEmpty()) {
             url = descriptor.getStashRootUrl();
         }
@@ -989,6 +1002,14 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             LOGGER.error("{} unable to expand Bitbucket server URL", idOf(run), ex);
         }
         return url;
+    }
+
+    protected String expandValue(Run<?, ?> run, TaskListener listener, String value)
+            throws IOException, InterruptedException, MacroEvaluationException {
+        if (run instanceof AbstractBuild<?, ?>) {
+            return TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, value);
+        }
+        return TokenMacro.expandAll(run, new FilePath(run.getRootDir()), listener, value);
     }
 
     /**
@@ -1017,7 +1038,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * @param run the run to notify Bitbucket of
      * @return JSON body for POST to Bitbucket build API
      */
-    private JSONObject createNotificationPayload(
+    protected JSONObject createNotificationPayload(
             final Run<?, ?> run,
             final StashBuildState state,
             TaskListener listener) {
@@ -1031,7 +1052,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         return json;
     }
 
-    private static String abbreviate(String text, int maxWidth) {
+    protected static String abbreviate(String text, int maxWidth) {
         if (text == null) {
             return null;
         }
@@ -1055,7 +1076,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         key.append(run.getParent().getName());
         if (includeBuildNumberInKey
-                || getDescriptor().isIncludeBuildNumberInKey()) {
+                || getGlobalDescriptor().isIncludeBuildNumberInKey()) {
             key.append('-').append(run.getNumber());
         }
         key.append('-').append(getRootUrl());
@@ -1079,7 +1100,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         StringBuilder key = new StringBuilder();
 
-        if (prependParentProjectKey || getDescriptor().isPrependParentProjectKey()) {
+        if (prependParentProjectKey || getGlobalDescriptor().isPrependParentProjectKey()) {
             if (null != run.getParent().getParent()) {
                 key.append(run.getParent().getParent().getFullName()).append('-');
             }

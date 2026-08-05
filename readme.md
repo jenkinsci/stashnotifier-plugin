@@ -130,6 +130,27 @@ def notifyBitbucket(String state) {
 }
 ```
 
+### Bitbucket Required Builds
+
+Bitbucket Data Center 7.4 and newer provides a repository build status API used by
+the Required Builds merge check. Use `notifyBitbucketRequiredBuild` to send the
+additional build parent required by that check:
+
+```groovy
+notifyBitbucketRequiredBuild(
+        bitbucketProjectKey: 'PROJ',
+        repositorySlug: 'my-repository',
+        credentialsId: '00000000-1111-2222-3333-123456789abc',
+        stashServerBaseUrl: 'https://my.company.intranet/bitbucket')
+```
+
+`bitbucketProjectKey` and `repositorySlug` identify the repository in Bitbucket
+and are required. Both support token macros. All optional settings available on
+`notifyBitbucket` are also available on this step. The build key override is named
+`buildKey` on this step; it is equivalent to the legacy step's `projectKey`
+setting. For a multibranch Pipeline, the build parent is the full Jenkins path of
+the multibranch project without the branch name.
+
 In [Declarative Pipelines](https://jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline), where Jenkins sets `currentBuild.result = null` for `SUCCESS` builds, the current value can be modified via a `script` step, e.g.:
 
 ```groovy

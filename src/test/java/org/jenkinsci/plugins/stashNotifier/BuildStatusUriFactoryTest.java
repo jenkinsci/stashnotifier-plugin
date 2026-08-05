@@ -40,4 +40,26 @@ class BuildStatusUriFactoryTest {
         URI actual = BuildStatusUriFactory.create(baseUri, "25a4b3c9b494fc7ac65b80e3b0ecce63f235f20d");
         assertThat(actual, equalTo(expected));
     }
+
+    @Test
+    void shouldCreateRequiredBuildUri() {
+        URI expected = URI.create("http://localhost:12345/bitbucket/rest/api/latest/projects/PROJ/repos/my-repo/commits/25a4b3c9/builds");
+        URI actual = BuildStatusUriFactory.createRequiredBuild(
+                "http://localhost:12345/bitbucket/",
+                "PROJ",
+                "my-repo",
+                "25a4b3c9");
+        assertThat(actual, equalTo(expected));
+    }
+
+    @Test
+    void shouldEncodeRequiredBuildUriSegments() {
+        URI expected = URI.create("http://localhost:12345/rest/api/latest/projects/my%20project/repos/my%20repo/commits/a%2Fb/builds");
+        URI actual = BuildStatusUriFactory.createRequiredBuild(
+                "http://localhost:12345",
+                "my project",
+                "my repo",
+                "a/b");
+        assertThat(actual, equalTo(expected));
+    }
 }
