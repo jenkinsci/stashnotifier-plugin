@@ -60,6 +60,7 @@ class DescriptorImplTest {
         json = new JSONObject();
         json.put("considerUnstableAsSuccess", "true");
         json.put("credentialsId", "bitbucket-credentials");
+        json.put("defaultUseBuildsApi", "true");
         json.put("disableInprogressNotification", "true");
         json.put("ignoreUnverifiedSsl", "true");
         json.put("includeBuildNumberInKey", "true");
@@ -98,12 +99,20 @@ class DescriptorImplTest {
         //then
         assertThat(desc.isApplicable(AbstractProject.class), is(true));
         assertThat(desc.getCredentialsId(), is("bitbucket-credentials"));
+        assertThat(desc.isDefaultUseBuildsApi(), is(true));
         assertThat(desc.isDisableInprogressNotification(), is(true));
         assertThat(desc.getDisplayName(), is("Notify Bitbucket Instance"));
         assertThat(desc.isIncludeBuildNumberInKey(), is(true));
         assertThat(desc.isIgnoreUnverifiedSsl(), is(true));
         assertThat(desc.isPrependParentProjectKey(), is(true));
         assertThat(desc.getStashRootUrl(), is("https://my.company.intranet/bitbucket"));
+    }
+
+    @Test
+    void defaultsToLegacyBuildStatusApi() {
+        StashNotifier.DescriptorImpl descriptor = new StashNotifier.DescriptorImpl(false);
+
+        assertThat(descriptor.isDefaultUseBuildsApi(), is(false));
     }
 
     @Test
