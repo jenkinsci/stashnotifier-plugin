@@ -1,6 +1,6 @@
 package org.jenkinsci.plugins.stashNotifier;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
 
 import java.net.URI;

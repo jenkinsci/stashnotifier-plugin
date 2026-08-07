@@ -45,8 +45,8 @@ import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
@@ -1258,7 +1258,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             key.append(getDefaultBuildKey(run));
         }
 
-        return StringEscapeUtils.escapeJavaScript(key.toString());
+        return StringEscapeUtils.escapeEcmaScript(key.toString());
     }
 
     private static String idOf(Run<?, ?> run) {
