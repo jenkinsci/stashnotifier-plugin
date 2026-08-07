@@ -11,7 +11,7 @@ import hudson.plugins.git.util.BuildData;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.StatusLine;
 import org.apache.http.auth.AuthScope;
@@ -815,7 +815,7 @@ class StashNotifierTest {
         String buildKey = sn.getBuildKey(build, buildListener);
 
         //then
-        assertThat(buildKey, is(StringEscapeUtils.escapeJavaScript(parentName + "-" + number + "-" + jenkins.getRootUrl() + "-" + buildName)));
+        assertThat(buildKey, is(StringEscapeUtils.escapeEcmaScript(parentName + "-" + number + "-" + jenkins.getRootUrl() + "-" + buildName)));
     }
 
     @Test
