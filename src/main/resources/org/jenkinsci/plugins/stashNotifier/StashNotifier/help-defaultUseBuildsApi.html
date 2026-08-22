@@ -1,0 +1,31 @@
+<div>
+  <p>
+    Defines the API used by <code>notifyBitbucket</code> when
+    <code>useBuildsApi</code> is not specified.
+  </p>
+  <p>
+    <strong>Legacy</strong> uses the commit-scoped build status endpoint:
+    <code>/rest/build-status/1.0/commits/{commitId}</code>.
+  </p>
+  <p>
+    <strong>Builds API</strong> is available in Bitbucket Server and Data Center 7.4 or newer and uses
+    the repository-scoped builds endpoint:
+    <code>/rest/api/latest/projects/{projectKey}/repos/{repositorySlug}/commits/{commitId}/builds</code>.
+  </p>
+  <p>
+    The Builds API requires <code>bitbucketProjectKey</code> and <code>repositorySlug</code>.
+    It supports additional build information and compatibility with the Required Builds merge check.
+  </p>
+  <p>
+    A Pipeline can override this default by setting <code>useBuildsApi: true</code> or
+    <code>useBuildsApi: false</code>.
+  </p>
+  <p>
+    See the
+    <a href="https://developer.atlassian.com/server/bitbucket/how-tos/updating-build-status-for-commits/"
+       target="_blank" rel="noopener noreferrer">Bitbucket Builds API documentation</a>
+    and the
+    <a href="https://developer.atlassian.com/server/bitbucket/reference/api-changelog/#new-rich-build-status"
+       target="_blank" rel="noopener noreferrer">Bitbucket API changelog</a>.
+  </p>
+</div>
