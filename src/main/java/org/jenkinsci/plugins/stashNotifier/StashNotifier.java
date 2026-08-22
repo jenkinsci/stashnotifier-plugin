@@ -862,7 +862,15 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         Credentials stringCredentials
                 = getCredentials(StringCredentials.class, run.getParent());
 
-        URI uri = BuildStatusUriFactory.create(stashURL, commitSha1);
+        String[] repoInfo = resolveBitbucketRepo(run, logger);
+        URI uri;
+        if (repoInfo != null) {
+            uri = BuildStatusUriFactory.create(stashURL, repoInfo[0], repoInfo[1], commitSha1);
+            logger.println("Using repo-scoped builds API: " + uri);
+        } else {
+            uri = BuildStatusUriFactory.create(stashURL, commitSha1);
+            logger.println("Using legacy build-status API: " + uri);
+        }
         NotificationSettings settings = new NotificationSettings(
                 ignoreUnverifiedSSLPeer || getDescriptor().isIgnoreUnverifiedSsl(),
                 stringCredentials != null ? stringCredentials : usernamePasswordCredentials
@@ -1023,11 +1031,13 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             TaskListener listener) {
 
         JSONObject json = new JSONObject();
+        String buildKey = abbreviate(getBuildKey(run, listener), MAX_FIELD_LENGTH);
         json.put("state", state.name());
-        json.put("key", abbreviate(getBuildKey(run, listener), MAX_FIELD_LENGTH));
+        json.put("key", buildKey);
         json.put("name", abbreviate(getBuildName(run), MAX_FIELD_LENGTH));
         json.put("description", abbreviate(getBuildDescription(run, state), MAX_FIELD_LENGTH));
         json.put("url", abbreviate(getBuildUrl(run), MAX_URL_FIELD_LENGTH));
+        json.put("parent", buildKey);
         return json;
     }
 
@@ -1107,6 +1117,87 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     private static String idOf(Run<?, ?> run) {
         return run != null ? run.getExternalizableId() : "(absent run)";
+    }
+
+    /**
+     * Extracts the Bitbucket project key and repository slug from a Git remote URL.
+     * Supports common Bitbucket Server URL formats:
+     * <ul>
+     *   <li>HTTPS: {@code https://host/scm/PROJECT/repo.git}</li>
+     *   <li>SSH: {@code ssh://git@host:7999/PROJECT/repo.git}</li>
+     *   <li>SCP-style: {@code git@host:PROJECT/repo.git}</li>
+     *   <li>Personal repos: {@code https://host/scm/~user/repo.git}</li>
+     * </ul>
+     *
+     * @param remoteUrl the Git remote URL
+     * @return a two-element array [projectKey, repoSlug], or null if parsing fails
+     */
+    static String[] parseBitbucketRemoteUrl(String remoteUrl) {
+        if (remoteUrl == null || remoteUrl.isEmpty()) {
+            return null;
+        }
+
+        // Remove trailing .git
+        String url = remoteUrl.replaceAll("\\.git$", "");
+
+        // Handle SCP-style: git@host:PROJECT/repo
+        if (url.matches("^[^/]+@[^:]+:.+/.+$") && !url.startsWith("ssh://")) {
+            String path = url.substring(url.indexOf(':') + 1);
+            String[] parts = path.split("/");
+            if (parts.length >= 2) {
+                return new String[]{parts[parts.length - 2], parts[parts.length - 1]};
+            }
+            return null;
+        }
+
+        // Handle URL-style (https://, ssh://)
+        // Extract path and get last two segments
+        String path;
+        try {
+            URI uri = URI.create(url);
+            path = uri.getPath();
+        } catch (Exception e) {
+            return null;
+        }
+
+        if (path == null || path.isEmpty()) {
+            return null;
+        }
+
+        // Remove /scm/ prefix if present (Bitbucket Server HTTPS clone URLs use /scm/)
+        path = path.replaceFirst("^/scm/", "/");
+
+        // Remove leading slash and split
+        path = path.replaceFirst("^/", "");
+        String[] segments = path.split("/");
+        if (segments.length >= 2) {
+            return new String[]{segments[segments.length - 2], segments[segments.length - 1]};
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolves the Bitbucket project key and repository slug for the current build.
+     * Uses manually configured values if available, otherwise auto-detects from Git remote URL.
+     *
+     * @param run the current build run
+     * @param logger the logger for output
+     * @return a two-element array [projectKey, repoSlug], or null if not resolvable
+     */
+    private String[] resolveBitbucketRepo(Run<?, ?> run, PrintStream logger) {
+        for (BuildData buildData : run.getActions(BuildData.class)) {
+            for (String remoteUrl : buildData.getRemoteUrls()) {
+                String[] parsed = parseBitbucketRemoteUrl(remoteUrl);
+                if (parsed != null) {
+                    logger.println("Auto-detected Bitbucket project: " + parsed[0] + ", repo: " + parsed[1] + " from " + remoteUrl);
+                    return parsed;
+                }
+            }
+        }
+
+        logger.println("Could not determine Bitbucket project/repo - falling back to legacy build-status API");
+        return null;
     }
 
     /**

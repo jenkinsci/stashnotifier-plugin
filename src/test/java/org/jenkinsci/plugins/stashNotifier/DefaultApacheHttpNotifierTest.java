@@ -156,14 +156,32 @@ class DefaultApacheHttpNotifierTest {
     }
 
     @Test
-    void notifyStash_success() throws Exception {
+    void notifyStash_success204() throws Exception {
         NotificationResult notificationResult = notifyStash(204);
+        assertThat(notificationResult.indicatesSuccess, is(true));
+    }
+
+    @Test
+    void notifyStash_success200() throws Exception {
+        NotificationResult notificationResult = notifyStash(200);
+        assertThat(notificationResult.indicatesSuccess, is(true));
+    }
+
+    @Test
+    void notifyStash_success201() throws Exception {
+        NotificationResult notificationResult = notifyStash(201);
         assertThat(notificationResult.indicatesSuccess, is(true));
     }
 
     @Test
     void notifyStash_fail() throws Exception {
         NotificationResult notificationResult = notifyStash(400);
+        assertThat(notificationResult.indicatesSuccess, is(false));
+    }
+
+    @Test
+    void notifyStash_fail500() throws Exception {
+        NotificationResult notificationResult = notifyStash(500);
         assertThat(notificationResult.indicatesSuccess, is(false));
     }
 
