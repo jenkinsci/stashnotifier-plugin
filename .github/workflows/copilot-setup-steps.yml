@@ -19,6 +19,11 @@ jobs:
         with:
           persist-credentials: false
       - uses: jdx/mise-action@v5.2.7
+      - name: Expose mise to the agent session
+        run: |
+          sudo ln -sf "$(command -v mise)" /usr/local/bin/mise
+          mise reshim
+          echo "$HOME/.local/share/mise/shims" >> "$GITHUB_PATH"
       - name: Install Maven settings
         run: .devcontainer/post-create.sh
       - name: Verify build environment
