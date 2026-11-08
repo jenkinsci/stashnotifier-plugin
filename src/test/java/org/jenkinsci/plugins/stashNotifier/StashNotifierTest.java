@@ -793,7 +793,9 @@ class StashNotifierTest {
         int number = 11;
         String buildName = "buildName";
 
-        when(build.getParent().getName()).thenReturn(parentName);
+        AbstractProject<?, ?> project = mock(FreeStyleProject.class);
+        when(project.getName()).thenReturn(parentName);
+        doReturn(project).when(build).getParent();
         when(build.getNumber()).thenReturn(number);
 
         sn = new StashNotifier(
