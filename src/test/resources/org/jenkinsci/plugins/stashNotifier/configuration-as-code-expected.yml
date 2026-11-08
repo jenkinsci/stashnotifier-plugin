@@ -1,0 +1,7 @@
+considerUnstableAsSuccess: true
+credentialsId: "bitbucket-credentials"
+disableInprogressNotification: true
+ignoreUnverifiedSsl: true
+includeBuildNumberInKey: true
+prependParentProjectKey: true
+stashRootUrl: "https://my.company.intranet/bitbucket"

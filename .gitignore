@@ -1,0 +1,25 @@
+syntax: glob
+
+# Idea trash
+stashNotifier.i*
+.idea/*
+*.iml
+
+# System trash
+.DS_Store
+**/Thumbs.db
+
+# Temp dirs
+target/*
+work/*
+bin/*
+
+*.class
+.classpath
+.project
+.checkstyle
+.settings
+
+build.properties
+release.properties
+pom.xml.releaseBackup
