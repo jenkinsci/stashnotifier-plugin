@@ -158,6 +158,13 @@ pipeline {
 
 Currently Bitbucket Server Build Notifier accepts only raw plaintext credentials as it uses the HTTP REST API of Bitbucket.
 
+Development
+===========
+
+Maven uses `.devcontainer/settings.xml` instead of the default user settings. Pass `-s` explicitly if you need different settings, such as credentials.
+
+For Copilot cloud agent jobs, a repository administrator must add `https://repo.jenkins-ci.org/public/` to the **Copilot in the cloud** custom allowlist under repository Settings > Copilot > Internet access, while keeping the firewall enabled. Organization policy may restrict repository custom rules. See [GitHub's firewall configuration documentation](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-the-firewall).
+
 Maintainers
 ===========
 
