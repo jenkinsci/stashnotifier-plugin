@@ -2,6 +2,7 @@ unclassified:
   notifyBitbucket:
     considerUnstableAsSuccess: true
     credentialsId: "bitbucket-credentials"
+    defaultUseBuildsApi: true
     disableInprogressNotification: true
     ignoreUnverifiedSsl: true
     includeBuildNumberInKey: true
