@@ -60,10 +60,11 @@ class DefaultApacheHttpNotifier implements HttpNotifier {
         try (CloseableHttpClient client = getHttpClient(logger, uri, settings.isIgnoreUnverifiedSSL())) {
             HttpPost req = createRequest(uri, payload, settings.getCredentials(), context);
             HttpResponse res = client.execute(req);
-            if (res.getStatusLine().getStatusCode() != 204) {
-                return NotificationResult.newFailure(EntityUtils.toString(res.getEntity()));
-            } else {
+            int statusCode = res.getStatusLine().getStatusCode();
+            if (statusCode >= 200 && statusCode < 300) {
                 return NotificationResult.newSuccess();
+            } else {
+                return NotificationResult.newFailure(EntityUtils.toString(res.getEntity()));
             }
         } catch (Exception e) {
             LOGGER.warn("{} failed to send {} to Bitbucket Server at {}", context.getRunId(), payload, uri, e);
