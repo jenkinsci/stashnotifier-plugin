@@ -25,6 +25,7 @@ class ConfigAsCodeTest {
 
         assertThat(stashNotifierConfig.isConsiderUnstableAsSuccess(), equalTo(true));
         assertThat(stashNotifierConfig.getCredentialsId(), equalTo("bitbucket-credentials"));
+        assertThat(stashNotifierConfig.isDefaultUseBuildsApi(), equalTo(true));
         assertThat(stashNotifierConfig.isDisableInprogressNotification(), equalTo(true));
         assertThat(stashNotifierConfig.isIgnoreUnverifiedSsl(), equalTo(true));
         assertThat(stashNotifierConfig.isIncludeBuildNumberInKey(), equalTo(true));

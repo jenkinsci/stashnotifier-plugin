@@ -71,7 +71,6 @@ node {
 
     try {
         // Do stuff
-
         currentBuild.result = 'SUCCESS'     // Set result of currentBuild !Important!
     } catch(err) {
         currentBuild.result = 'FAILURE'     // Set result of currentBuild !Important!
@@ -153,6 +152,28 @@ pipeline {
     }
 }
 ```
+
+### Builds API and Required Builds
+
+Bitbucket Data Center 7.4 and newer provides the Builds API used by the
+Required Builds merge check. Select **Builds API** as the global default,
+or override the API for an individual notification:
+
+```groovy
+notifyBitbucket(
+        useBuildsApi: true,
+        bitbucketProjectKey: 'PROJ',
+        repositorySlug: 'my-repository',
+        credentialsId: '00000000-1111-2222-3333-123456789abc',
+        stashServerBaseUrl: 'https://my.company.intranet/bitbucket')
+```
+
+`bitbucketProjectKey` and `repositorySlug` identify the repository in Bitbucket
+and are required whenever the Builds API is selected. Both support token macros.
+When `useBuildsApi` is omitted, `notifyBitbucket` uses the global default. Use
+`useBuildsApi: false` to override a Builds API global default for
+an individual notification. For a multibranch Pipeline, the build parent is the
+full Jenkins path of the multibranch project without the branch name.
 
 ### Note on credentials
 

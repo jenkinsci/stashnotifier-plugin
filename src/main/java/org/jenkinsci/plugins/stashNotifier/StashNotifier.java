@@ -40,6 +40,7 @@ import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import jenkins.branch.MultiBranchProject;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
 import jenkins.tasks.SimpleBuildStep;
@@ -172,6 +173,22 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * whether to consider UNSTABLE builds as failures or success
      */
     private boolean considerUnstableAsSuccess;
+
+    /**
+     * Overrides the globally configured build status API.
+     * If null, the global default is used.
+     */
+    private Boolean useBuildsApi;
+
+    /**
+     * Bitbucket project containing the repository. Required by the Builds API.
+     */
+    private String bitbucketProjectKey;
+
+    /**
+     * Bitbucket repository receiving the build status. Required by the Builds API.
+     */
+    private String repositorySlug;
 
     private JenkinsLocationConfiguration globalConfig;
 
@@ -341,6 +358,33 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         this.considerUnstableAsSuccess = considerUnstableAsSuccess;
     }
 
+    public Boolean getUseBuildsApi() {
+        return useBuildsApi;
+    }
+
+    @DataBoundSetter
+    public void setUseBuildsApi(Boolean useBuildsApi) {
+        this.useBuildsApi = useBuildsApi;
+    }
+
+    public String getBitbucketProjectKey() {
+        return bitbucketProjectKey;
+    }
+
+    @DataBoundSetter
+    public void setBitbucketProjectKey(String bitbucketProjectKey) {
+        this.bitbucketProjectKey = bitbucketProjectKey;
+    }
+
+    public String getRepositorySlug() {
+        return repositorySlug;
+    }
+
+    @DataBoundSetter
+    public void setRepositorySlug(String repositorySlug) {
+        this.repositorySlug = repositorySlug;
+    }
+
     @Inject
     void setHttpNotifierSelector(HttpNotifierSelector httpNotifierSelector) {
         this.httpNotifierSelector = httpNotifierSelector;
@@ -433,8 +477,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * @param workspace the workspace of a non-AbstractBuild build
      * @param listener  the Jenkins build listener
      * @param state     the state of the build (in progress, success, failed)
-     * @return always true in order not to abort the Job in case of
-     * notification failures
+     * @return false for an invalid notifier configuration; true otherwise, so
+     * notification delivery failures do not abort the job
      */
     private boolean processJenkinsEvent(
             final Run<?, ?> run,
@@ -443,6 +487,13 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             final StashBuildState state) {
 
         PrintStream logger = listener.getLogger();
+
+        try {
+            validateBuildsApiConfiguration();
+        } catch (IllegalArgumentException e) {
+            logger.println("Cannot notify Bitbucket! (" + e.getMessage() + ")");
+            return false;
+        }
 
         // Exit if Jenkins root URL is not configured. Bitbucket run API
         // requires valid link to run in CI system.
@@ -532,7 +583,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      */
     @Deprecated
     protected CloseableHttpClient getHttpClient(PrintStream logger, Run<?, ?> run, String stashServer) throws Exception {
-        DescriptorImpl globalSettings = getDescriptor();
+        DescriptorImpl globalSettings = getGlobalDescriptor();
 
         final int timeoutInMilliseconds = 60_000;
 
@@ -638,10 +689,8 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
     }
 
-    @Override
-    public DescriptorImpl getDescriptor() {
-        // see Descriptor javadoc for more about what a descriptor is.
-        return (DescriptorImpl) super.getDescriptor();
+    protected DescriptorImpl getGlobalDescriptor() {
+        return Jenkins.get().getDescriptorByType(DescriptorImpl.class);
     }
 
     @Symbol({"notifyBitbucket", "notifyStash"})
@@ -664,6 +713,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         private boolean includeBuildNumberInKey;
         private boolean prependParentProjectKey;
         private String stashRootUrl;
+        private boolean defaultUseBuildsApi;
 
         public DescriptorImpl() {
             this(true);
@@ -765,6 +815,33 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             this.stashRootUrl = StringUtils.trimToNull(stashRootUrl);
         }
 
+        public boolean isDefaultUseBuildsApi() {
+            return defaultUseBuildsApi;
+        }
+
+        @DataBoundSetter
+        public void setDefaultUseBuildsApi(boolean defaultUseBuildsApi) {
+            this.defaultUseBuildsApi = defaultUseBuildsApi;
+        }
+
+        public ListBoxModel doFillDefaultUseBuildsApiItems() {
+            return bitbucketBuildStatusApiItems(false);
+        }
+
+        public ListBoxModel doFillUseBuildsApiItems() {
+            return bitbucketBuildStatusApiItems(true);
+        }
+
+        private ListBoxModel bitbucketBuildStatusApiItems(boolean includeGlobalDefault) {
+            ListBoxModel items = new ListBoxModel();
+            if (includeGlobalDefault) {
+                items.add("Use global default", "");
+            }
+            items.add("Legacy", "false");
+            items.add("Builds API (Bitbucket 7.4 or newer)", "true");
+            return items;
+        }
+
         public FormValidation doCheckCredentialsId(@QueryParameter String value, @AncestorInPath Item project) {
             if (project != null && StringUtils.isBlank(value) && StringUtils.isBlank(credentialsId)) {
                 return FormValidation.error("Please specify the credentials to use");
@@ -823,6 +900,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             this.includeBuildNumberInKey = false;
             this.prependParentProjectKey = false;
             this.stashRootUrl = null;
+            this.defaultUseBuildsApi = false;
 
             req.bindJSON(this, formData);
 
@@ -862,9 +940,16 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         Credentials stringCredentials
                 = getCredentials(StringCredentials.class, run.getParent());
 
-        URI uri = BuildStatusUriFactory.create(stashURL, commitSha1);
+        URI uri;
+        try {
+            uri = createBuildStatusUri(stashURL, commitSha1, run, listener);
+        } catch (RuntimeException e) {
+            logger.println("Unable to create Bitbucket build status URL: " + e.getMessage());
+            LOGGER.error("{} unable to create Bitbucket build status URL", idOf(run), e);
+            return NotificationResult.newFailure(e.getMessage());
+        }
         NotificationSettings settings = new NotificationSettings(
-                ignoreUnverifiedSSLPeer || getDescriptor().isIgnoreUnverifiedSsl(),
+                ignoreUnverifiedSSLPeer || getGlobalDescriptor().isIgnoreUnverifiedSsl(),
                 stringCredentials != null ? stringCredentials : usernamePasswordCredentials
         );
         NotificationContext context = new NotificationContext(
@@ -873,6 +958,58 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         );
         HttpNotifier notifier = getHttpNotifierSelector().select(new SelectionContext(run.getParent().getFullName()));
         return notifier.send(uri, payload, settings, context);
+    }
+
+    protected URI createBuildStatusUri(
+            String stashURL,
+            String commitSha1,
+            Run<?, ?> run,
+            TaskListener listener) {
+        if (isBuildsApiEnabled()) {
+            try {
+                String expandedProjectKey = expandValue(run, listener, bitbucketProjectKey);
+                String expandedRepositorySlug = expandValue(run, listener, repositorySlug);
+                if (StringUtils.isBlank(expandedProjectKey)) {
+                    throw new IllegalArgumentException("bitbucketProjectKey must not be empty");
+                }
+                if (StringUtils.isBlank(expandedRepositorySlug)) {
+                    throw new IllegalArgumentException("repositorySlug must not be empty");
+                }
+                return BuildStatusUriFactory.createBuildsApi(
+                        stashURL,
+                        expandedProjectKey,
+                        expandedRepositorySlug,
+                        commitSha1);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalArgumentException("Unable to expand Bitbucket repository coordinates", e);
+            } catch (IOException | MacroEvaluationException e) {
+                throw new IllegalArgumentException("Unable to expand Bitbucket repository coordinates", e);
+            }
+        }
+        return BuildStatusUriFactory.create(stashURL, commitSha1);
+    }
+
+    boolean isBuildsApiEnabled() {
+        if (useBuildsApi != null) {
+            return useBuildsApi;
+        }
+        DescriptorImpl descriptor = getGlobalDescriptor();
+        return descriptor != null && descriptor.isDefaultUseBuildsApi();
+    }
+
+    void validateBuildsApiConfiguration() {
+        if (!isBuildsApiEnabled()) {
+            return;
+        }
+        if (StringUtils.isBlank(bitbucketProjectKey)) {
+            throw new IllegalArgumentException(
+                    "bitbucketProjectKey is required when useBuildsApi is true");
+        }
+        if (StringUtils.isBlank(repositorySlug)) {
+            throw new IllegalArgumentException(
+                    "repositorySlug is required when useBuildsApi is true");
+        }
     }
 
     /**
@@ -898,7 +1035,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         }
 
         if (credentials == null) {
-            DescriptorImpl descriptor = getDescriptor();
+            DescriptorImpl descriptor = getGlobalDescriptor();
             if (StringUtils.isBlank(credentialsId) && descriptor != null) {
                 credentialsId = descriptor.getCredentialsId();
             }
@@ -971,7 +1108,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
     private String expandStashURL(Run<?, ?> run, final TaskListener listener) {
         String url = stashServerBaseUrl;
-        DescriptorImpl descriptor = getDescriptor();
+        DescriptorImpl descriptor = getGlobalDescriptor();
         if (url == null || url.isEmpty()) {
             url = descriptor.getStashRootUrl();
         }
@@ -989,6 +1126,14 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             LOGGER.error("{} unable to expand Bitbucket server URL", idOf(run), ex);
         }
         return url;
+    }
+
+    protected String expandValue(Run<?, ?> run, TaskListener listener, String value)
+            throws IOException, InterruptedException, MacroEvaluationException {
+        if (run instanceof AbstractBuild<?, ?>) {
+            return TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, value);
+        }
+        return TokenMacro.expandAll(run, new FilePath(run.getRootDir()), listener, value);
     }
 
     /**
@@ -1017,7 +1162,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
      * @param run the run to notify Bitbucket of
      * @return JSON body for POST to Bitbucket build API
      */
-    private JSONObject createNotificationPayload(
+    protected JSONObject createNotificationPayload(
             final Run<?, ?> run,
             final StashBuildState state,
             TaskListener listener) {
@@ -1028,10 +1173,21 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         json.put("name", abbreviate(getBuildName(run), MAX_FIELD_LENGTH));
         json.put("description", abbreviate(getBuildDescription(run, state), MAX_FIELD_LENGTH));
         json.put("url", abbreviate(getBuildUrl(run), MAX_URL_FIELD_LENGTH));
+        if (isBuildsApiEnabled()) {
+            json.put("parent", abbreviate(getBuildParent(run), MAX_FIELD_LENGTH));
+        }
         return json;
     }
 
-    private static String abbreviate(String text, int maxWidth) {
+    String getBuildParent(Run<?, ?> run) {
+        ItemGroup<?> parent = run.getParent().getParent();
+        if (parent instanceof MultiBranchProject<?, ?>) {
+            return parent.getFullName();
+        }
+        return run.getParent().getFullName();
+    }
+
+    protected static String abbreviate(String text, int maxWidth) {
         if (text == null) {
             return null;
         }
@@ -1055,7 +1211,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         key.append(run.getParent().getName());
         if (includeBuildNumberInKey
-                || getDescriptor().isIncludeBuildNumberInKey()) {
+                || getGlobalDescriptor().isIncludeBuildNumberInKey()) {
             key.append('-').append(run.getNumber());
         }
         key.append('-').append(getRootUrl());
@@ -1079,7 +1235,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 
         StringBuilder key = new StringBuilder();
 
-        if (prependParentProjectKey || getDescriptor().isPrependParentProjectKey()) {
+        if (prependParentProjectKey || getGlobalDescriptor().isPrependParentProjectKey()) {
             if (null != run.getParent().getParent()) {
                 key.append(run.getParent().getParent().getFullName()).append('-');
             }

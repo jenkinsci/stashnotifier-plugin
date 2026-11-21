@@ -6,6 +6,10 @@
              help="${rootURL}/plugin/stashNotifier/help-globalConfig-stashRootUrl.html">
       <f:textbox />
     </f:entry>
+    <f:entry title="Bitbucket build status API"
+             field="defaultUseBuildsApi">
+      <f:select />
+    </f:entry>
     <f:entry title="${%Credentials}" field="credentialsId">
       <c:select/>
     </f:entry>
